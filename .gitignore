@@ -1,0 +1,12 @@
+.ota-secrets/
+/secrets.h
+/.verification/
+/firmware-releases/
+/FIRMWARE_UPDATE_PLAN.md
+/HOTFIX*.txt
+*.bin
+*.elf
+*.map
+*.sig
+__pycache__/
+*.pyc
