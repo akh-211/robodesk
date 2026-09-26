@@ -29,4 +29,4 @@ Hasil 26 September 2026: 11 skenario transport dan 5 skenario mic lulus dengan `
 5. Putuskan Wi-Fi; sambungkan kembali Wi-Fi/WAN. Pastikan sesi setup baru selesai, mic kembali menerima input baru, dan ucapan lama tidak diputar/dikirim ulang.
 6. Ulangi dengan TouchToTalk/WakeWord jika tersedia; pastikan pergantian capture tidak mencampur potongan PCM sebelum/sesudah pause.
 
-Perubahan ini tidak menyediakan model AI offline. Tanpa internet percakapan Gemini tidak tersedia, tetapi layanan lokal robot harus tetap responsif. OTA aplikasi lokal sudah tersedia melalui dashboard; OTA otomatis berbasis manifest internet ditunda sampai Wi-Fi memiliki akses internet.
+Perubahan ini tidak menyediakan model AI offline. Tanpa internet percakapan Gemini tidak tersedia, tetapi layanan lokal robot harus tetap responsif. OTA signed lokal tersedia melalui dashboard. OTA GitHub kini dapat memeriksa manifest dan mengunduh image bertanda tangan melalui HTTPS pada task terpisah; uji redirect dan pemasangan aktual tetap perlu dijalankan pada perangkat yang terhubung ke internet.

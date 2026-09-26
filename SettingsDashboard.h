@@ -14,6 +14,7 @@
 #include "RuntimeSettings.h"
 #include "WakeWordBuildConfig.h"
 #include "RoboBrain.h"
+#include "GitHubOtaUpdate.h"
 
 class SettingsDashboard {
  public:
@@ -29,6 +30,7 @@ class SettingsDashboard {
     soundTestContext_ = soundTestContext;
     firmwareUpdateControl_ = firmwareUpdateControl;
     firmwareUpdateContext_ = firmwareUpdateContext;
+    githubOta_.begin(firmwareUpdateControl, firmwareUpdateContext);
     RuntimeSettings::copy(setupApPassword_, sizeof(setupApPassword_), setupApPassword && setupApPassword[0] ? setupApPassword : "robodesk123");
 
     static const char* requestHeaders[] = {"Origin", "Host", "X-Robo-Signature"};
@@ -43,6 +45,9 @@ class SettingsDashboard {
     server_.on("/sound/test", HTTP_POST, [this]() { handleSoundTest(); });
 #if defined(CONFIG_APP_ROLLBACK_ENABLE)
     server_.on("/ota", HTTP_POST, [this]() { handleFirmwareUpdateComplete(); }, [this]() { handleFirmwareUpdateUpload(); });
+    server_.on("/api/ota", HTTP_GET, [this]() { handleGitHubOtaStatus(); });
+    server_.on("/ota/github/check", HTTP_POST, [this]() { handleGitHubOtaRequest(false); });
+    server_.on("/ota/github/install", HTTP_POST, [this]() { handleGitHubOtaRequest(true); });
 #endif
     server_.onNotFound([this]() { server_.sendHeader("Location", "/", true); server_.send(302, "text/plain", ""); });
     Serial.println("LEV,BOOT,DASHBOARD_ROUTES_READY");
@@ -93,6 +98,7 @@ class SettingsDashboard {
   void* soundTestContext_ = 0;
   FirmwareUpdateControlCallback firmwareUpdateControl_ = 0;
   void* firmwareUpdateContext_ = 0;
+  GitHubOtaUpdate githubOta_;
   bool started_ = false;
   bool apStarted_ = false;
   bool mdnsStarted_ = false;
@@ -331,9 +337,41 @@ class SettingsDashboard {
 #endif
   }
 
+  void handleGitHubOtaRequest(bool install) {
+#if !defined(CONFIG_APP_ROLLBACK_ENABLE)
+    server_.send(503, "application/json", "{\"error\":\"OTA rollback is disabled\"}");
+#else
+    if (!authorized()) return;
+    if (!sameOriginRequest()) { server_.send(403, "application/json", "{\"error\":\"Request origin rejected\"}"); return; }
+    const bool accepted = install ? githubOta_.startInstall() : githubOta_.startCheck();
+    char message[112]; githubOta_.statusText(message, sizeof(message));
+    String response = F("{\"accepted\":"); response += accepted ? "true" : "false";
+    response += F(",\"message\":\""); response += esc(message); response += F("\"}");
+    server_.send(accepted ? 202 : 409, "application/json", response);
+#endif
+  }
+
+  void handleGitHubOtaStatus() {
+    if (!authorized()) return;
+    char message[112]; githubOta_.statusText(message, sizeof(message));
+    String response = F("{\"state\":"); response += String(unsigned(githubOta_.state()));
+    response += F(",\"version\":"); response += String(githubOta_.availableVersion());
+    response += F(",\"message\":\""); response += esc(message); response += F("\"}");
+    server_.send(200, "application/json", response);
+  }
+
+  String githubOtaCard() {
+#if defined(CONFIG_APP_ROLLBACK_ENABLE)
+    return F("<div class='card'><h2>Wi-Fi firmware update</h2><p class='muted'>Check the public RoboDesk release, then install a signed ESP32-S3 update over HTTPS. Keep RoboDesk powered and connected to Wi-Fi while it downloads. The robot restarts after verification.</p><button id='ghCheck' type='button'>Check for updates</button> <button id='ghInstall' type='button' disabled>Install update</button><p id='ghStatus' class='muted' aria-live='polite'>Loading update status...</p><script>(()=>{const c=document.getElementById('ghCheck'),i=document.getElementById('ghInstall'),s=document.getElementById('ghStatus');let busy=false;async function refresh(){try{const r=await fetch('/api/ota',{cache:'no-store'});if(!r.ok)throw Error();const d=await r.json();s.textContent=d.version?'Firmware '+d.version+': '+d.message:d.message;i.disabled=busy||d.state!==3;c.disabled=busy||d.state===1||d.state===4||d.state===5;}catch(e){s.textContent='Could not read update status.';}}async function send(path){busy=true;try{const r=await fetch(path,{method:'POST'});const d=await r.json();s.textContent=d.message||'Request failed.';}catch(e){s.textContent='Connection lost while starting the request.';}busy=false;await refresh();}c.onclick=()=>send('/ota/github/check');i.onclick=()=>send('/ota/github/install');setInterval(refresh,2500);refresh();})();</script></div>");
+#else
+    return String();
+#endif
+  }
+
   void handleRoot() {
     if (!authorized()) return;
     String h = pageHead("RoboDesk Settings");
+    h += githubOtaCard();
     h += F("<div class='card'><h2>Status</h2><p>Wi-Fi: <b>");
     h += WiFi.status() == WL_CONNECTED ? "connected" : "offline";
     h += F("</b> &nbsp; RSSI: "); h += String(WiFi.RSSI());

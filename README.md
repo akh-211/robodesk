@@ -14,4 +14,4 @@ The local dashboard is available at `http://robodesk.local/` or the IP printed i
 
 ## Firmware releases
 
-See [GITHUB_RELEASES.md](GITHUB_RELEASES.md) for preparing public, secret-free GitHub Release assets. `secrets.h`, signing keys, device-specific notes, and compiled firmware are excluded from the public staging tree.
+See [GITHUB_RELEASES.md](GITHUB_RELEASES.md) for preparing public, secret-free GitHub Release assets. Once firmware with the GitHub updater is installed, the dashboard can check and install signed updates over Wi-Fi; no Arduino IDE or USB cable is needed for later releases. `secrets.h`, signing keys, device-specific notes, and compiled firmware are excluded from the public staging tree.

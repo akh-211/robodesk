@@ -47,7 +47,7 @@ $manifest = @(
   "sha256=$digest"
   "image=$asset"
   "signature=$signature"
-  "url=https://github.com/$Repository/releases/latest/download/$asset"
+  "url=https://github.com/$Repository/releases/download/v${Version}/$asset"
 ) -join "`n"
 $manifestPath = Join-Path $build 'manifest.txt'
 Set-Content -LiteralPath $manifestPath -Value $manifest -Encoding ascii

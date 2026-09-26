@@ -27,7 +27,7 @@ The script stages source without `secrets.h`, the signing key, and previous bina
 Create a GitHub Release tagged `v3`, upload all three assets, and publish it. The manifest URL for the device will be:
 `https://github.com/akh-211/robodesk/releases/latest/download/manifest.txt`.
 
-The manifest schema is newline-separated `key=value`: `format`, `board`, `version`, `size`, `sha256`, `image`, `signature`, and `url`. The firmware verifies the signed image/version/size/SHA-256 before activation. The device-side HTTPS manifest checker is not active yet; it still needs the repository slug and a follow-up firmware build before GitHub releases can be installed directly from the dashboard.
+The manifest schema is newline-separated `key=value`: `format`, `board`, `version`, `size`, `sha256`, `image`, `signature`, and `url`. The dashboard checks the latest manifest over HTTPS using the ESP certificate bundle, follows only HTTPS redirects to GitHub's release asset hosts, and downloads the image from the tag-pinned URL. It checks the image size, SHA-256, board, monotonic version, and ECDSA signature before staging the inactive slot. The existing v2 firmware needs one initial update to a release containing this updater; later updates can be checked and installed from the dashboard without Arduino IDE or USB.
 
 Release versions are monotonic. Preparing a package consumes its version locally even if it is not published; use the next higher number if a package needs to be rebuilt.
 
