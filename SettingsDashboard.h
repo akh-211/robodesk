@@ -20,9 +20,10 @@ class SettingsDashboard {
  public:
   typedef bool (*SoundTestCallback)(void*, const char*);
   typedef bool (*FirmwareUpdateControlCallback)(void*, bool);
+  typedef void (*DiagnosticsCallback)(void*, char*, size_t);
   SettingsDashboard() : server_(80) {}
 
-  void begin(RuntimeSettings* settings, RuntimeSettingsStore* store, RoboBrain* brain, const char* setupApPassword, SoundTestCallback soundTest=0, void* soundTestContext=0, FirmwareUpdateControlCallback firmwareUpdateControl=0, void* firmwareUpdateContext=0) {
+  void begin(RuntimeSettings* settings, RuntimeSettingsStore* store, RoboBrain* brain, const char* setupApPassword, SoundTestCallback soundTest=0, void* soundTestContext=0, FirmwareUpdateControlCallback firmwareUpdateControl=0, void* firmwareUpdateContext=0, DiagnosticsCallback diagnostics=0, void* diagnosticsContext=0) {
     settings_ = settings;
     store_ = store;
     brain_ = brain;
@@ -30,6 +31,8 @@ class SettingsDashboard {
     soundTestContext_ = soundTestContext;
     firmwareUpdateControl_ = firmwareUpdateControl;
     firmwareUpdateContext_ = firmwareUpdateContext;
+    diagnostics_ = diagnostics;
+    diagnosticsContext_ = diagnosticsContext;
     githubOta_.begin(firmwareUpdateControl, firmwareUpdateContext);
     RuntimeSettings::copy(setupApPassword_, sizeof(setupApPassword_), setupApPassword && setupApPassword[0] ? setupApPassword : "robodesk123");
 
@@ -98,6 +101,8 @@ class SettingsDashboard {
   void* soundTestContext_ = 0;
   FirmwareUpdateControlCallback firmwareUpdateControl_ = 0;
   void* firmwareUpdateContext_ = 0;
+  DiagnosticsCallback diagnostics_ = 0;
+  void* diagnosticsContext_ = 0;
   GitHubOtaUpdate githubOta_;
   bool started_ = false;
   bool apStarted_ = false;
@@ -134,6 +139,24 @@ class SettingsDashboard {
       else if (c == '>') out += F("&gt;");
       else if (c == '"') out += F("&quot;");
       else out += c;
+    }
+    return out;
+  }
+
+  static String jsonEsc(const char* s) {
+    String out;
+    if (!s) return out;
+    char escaped[7];
+    while (*s) {
+      const uint8_t c = uint8_t(*s++);
+      if (c == '"' || c == '\\') { out += '\\'; out += char(c); }
+      else if (c == '\b') out += F("\\b");
+      else if (c == '\f') out += F("\\f");
+      else if (c == '\n') out += F("\\n");
+      else if (c == '\r') out += F("\\r");
+      else if (c == '\t') out += F("\\t");
+      else if (c < 0x20) { snprintf(escaped, sizeof(escaped), "\\u%04x", unsigned(c)); out += escaped; }
+      else out += char(c);
     }
     return out;
   }
@@ -413,7 +436,11 @@ class SettingsDashboard {
     String s = F("{\"wifi\":"); s += WiFi.status() == WL_CONNECTED ? "true" : "false";
     s += F(",\"rssi\":"); s += String(WiFi.RSSI());
     s += F(",\"heap\":"); s += String(ESP.getFreeHeap());
-    s += F(",\"ssid\":\""); s += esc(settings_->wifiSsid); s += F("\",\"model\":\""); s += esc(settings_->geminiModel); s += F("\",\"voice\":\""); s += esc(settings_->geminiVoice); s += F("\"}");
+    s += F(",\"ssid\":\""); s += jsonEsc(settings_->wifiSsid); s += F("\",\"model\":\""); s += jsonEsc(settings_->geminiModel); s += F("\",\"voice\":\""); s += jsonEsc(settings_->geminiVoice); s += F("\"");
+    char diagnostics[512] = {0};
+    if (diagnostics_) diagnostics_(diagnosticsContext_, diagnostics, sizeof(diagnostics));
+    if (diagnostics[0]) s += diagnostics;
+    s += F("}");
     server_.send(200, "application/json", s);
   }
 

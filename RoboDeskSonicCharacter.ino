@@ -554,6 +554,18 @@ bool dashboardFirmwareUpdateControl(void*,bool starting){
   return true;
 }
 
+void dashboardAudioDiagnostics(void*,char* out,size_t capacity){
+  if(!out||!capacity)return;
+  const auto& metrics=voice.metrics();
+  snprintf(out,capacity,
+    ",\"audio\":{\"state\":\"%s\",\"micOK\":%u,\"speakerOK\":%u,\"geminiConfigured\":%u,\"wss\":%u,\"ready\":%u,\"micFrames\":%lu,\"micSent\":%lu,\"txFail\":%lu,\"serverVad\":%lu,\"localVad\":%lu,\"utterances\":%lu,\"replies\":%lu,\"rxBytes\":%lu,\"speakerFrames\":%lu,\"micDrops\":%lu,\"micRms\":%.1f}",
+    livingeyes::voiceAiStateName(voice.state()),unsigned(micOK),unsigned(speakerOK),unsigned(runtimeSettings.geminiConfigured()),
+    unsigned(gemini.connected()),unsigned(geminiReady),(unsigned long)micCapturedFrames,(unsigned long)micFramesSent,
+    (unsigned long)micTxFailures,(unsigned long)serverVadFinals,(unsigned long)localVadEnds,(unsigned long)metrics.utterances,
+    (unsigned long)metrics.replies,(unsigned long)metrics.rxAudioBytes,(unsigned long)speakerFramesPlayed,
+    (unsigned long)micCaptureDrops,double(micLastRms));
+}
+
 bool reconcileOtaVersionForRunningImage(const esp_partition_t* running){
   if(!running)return false;
   Preferences prefs;
@@ -1052,7 +1064,7 @@ void setup(){
   Serial.println("LEV,BOOT,SETTINGS_LOAD_DONE");
   applySonicSettings();
   Serial.println("LEV,BOOT,SONIC_SETTINGS_DONE");
-  settingsDashboard.begin(&runtimeSettings,&settingsStore,&brain,SETUP_AP_PASSWORD,dashboardSoundTest,nullptr,dashboardFirmwareUpdateControl,nullptr);
+  settingsDashboard.begin(&runtimeSettings,&settingsStore,&brain,SETUP_AP_PASSWORD,dashboardSoundTest,nullptr,dashboardFirmwareUpdateControl,nullptr,dashboardAudioDiagnostics,nullptr);
   Serial.printf("LEV,CFG,source=%s,mode=%s,gain=%.2f,guard=%u,vadStart=%.2f,vadEnd=%.2f,endMs=%u\n",
     loaded?"NVS":"defaults",inputModeName(),runtimeSettings.speakerGain(),unsigned(runtimeSettings.postSpeakGuardMs),runtimeSettings.vadStartMultiplier(),runtimeSettings.vadEndMultiplier(),unsigned(runtimeSettings.vadEndMs));
   if(!runtimeSettings.wifiConfigured()||!runtimeSettings.geminiConfigured())Serial.println("LEV,CFG,SETUP_REQUIRED,use http://192.168.4.1/ after RoboDesk setup AP appears");
