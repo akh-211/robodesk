@@ -10,11 +10,15 @@ g++ -std=c++17 -Wall -Wextra -I tests/stubs -I . tests/gemini_offline_test.cpp -
 if ($LASTEXITCODE -eq 0) { & .verification/gemini_offline_test.exe }
 g++ -std=c++17 -Wall -Wextra -I tests/stubs -I . tests/mic_frame_test.cpp -o .verification/mic_frame_test.exe
 if ($LASTEXITCODE -eq 0) { & .verification/mic_frame_test.exe }
+g++ -std=c++17 -Wall -Wextra -Werror -I tests/stubs -I . tests/wifi_fallback_test.cpp -o .verification/wifi_fallback_test.exe
+if ($LASTEXITCODE -eq 0) { & .verification/wifi_fallback_test.exe }
 ```
 
 Skenario: kepemilikan TLS selama task koneksi, pembatalan koneksi, retry backoff, kegagalan membuat task, snapshot konfigurasi, format/ukuran audio, write macet dan write parsial, heartbeat timeout/pong, speaker backpressure, serta timeout setup.
 
 Uji assembler mic mencakup read parsial, reset pause/resume, potongan kadaluarsa, read yang terlalu lama, dan wraparound `millis()`.
+
+Tes Wi-Fi memeriksa urutan prioritas termasuk slot kosong, wraparound fallback, simpan/muat NVS, serta kompatibilitas pengaturan lama yang hanya memiliki SSID utama.
 
 Build rilis memakai Arduino-ESP32 3.3.11, target ESP32-S3, flash 16 MB, PSRAM OPI, dan tabel partisi proyek `partitions/robodesk_ota_16mb.csv` dengan dua slot OTA 3 MiB. Letakkan direktori build di folder sementara di luar sketch.
 
@@ -29,4 +33,20 @@ Hasil 26 September 2026: 11 skenario transport dan 5 skenario mic lulus dengan `
 5. Putuskan Wi-Fi; sambungkan kembali Wi-Fi/WAN. Pastikan sesi setup baru selesai, mic kembali menerima input baru, dan ucapan lama tidak diputar/dikirim ulang.
 6. Ulangi dengan TouchToTalk/WakeWord jika tersedia; pastikan pergantian capture tidak mencampur potongan PCM sebelum/sesudah pause.
 
-Perubahan ini tidak menyediakan model AI offline. Tanpa internet percakapan Gemini tidak tersedia, tetapi layanan lokal robot harus tetap responsif. OTA signed lokal tersedia melalui dashboard. OTA GitHub kini dapat memeriksa manifest dan mengunduh image bertanda tangan melalui HTTPS pada task terpisah; uji redirect dan pemasangan aktual tetap perlu dijalankan pada perangkat yang terhubung ke internet.
+Tanpa internet, percakapan Gemini tidak tersedia. Saat jendela percakapan dibuka lewat wake word atau sentuhan, MultiNet English dapat menjalankan 12 ekspresi lokal, memeriksa status, serta pause/resume initiative selama bundle `wn9_hiesp` dan `mn7_en` sudah diprovision pada partisi model. Host test memeriksa command mapping dan transisi controller; uji pengenalan, mic ownership, dan respons fisik tetap harus dilakukan pada ESP32-S3. OTA signed lokal tersedia melalui dashboard. OTA GitHub kini dapat memeriksa manifest dan mengunduh image bertanda tangan melalui HTTPS pada task terpisah; uji redirect dan pemasangan aktual tetap perlu dijalankan pada perangkat yang terhubung ke internet.
+
+## Suite pendamping
+
+`powershell -NoProfile -ExecutionPolicy Bypass -File tests/run_host_tests.ps1` menjalankan lima belas suite termasuk regresi lama. Default LivingEyes adalah checkout terpisah `%USERPROFILE%\OneDrive\Documents\LivingEyes-merge\LivingEyes`, **bukan** salinan lama di `Arduino/libraries`. Runner memeriksa hash `library.properties` serta semua file `src/` terhadap `tools/livingeyes-pin.json` sebelum mengompilasi. Set `ROBODESK_LIVINGEYES_ROOT` atau gunakan `-LivingEyesRoot` (prioritas lebih tinggi) untuk memilih checkout; `-LibraryRoot` kini hanya untuk ArduinoJson. Checkout merger yang disetujui harus cocok dengan `tools/livingeyes-pin.json`; checkout dengan hash berbeda akan ditolak sampai source delta ditinjau dan pin diperbarui secara eksplisit. Contoh PowerShell dari folder sketch:
+
+```powershell
+$eyes = Join-Path $env:USERPROFILE 'OneDrive/Documents/LivingEyes-merge/LivingEyes'
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/run_host_tests.ps1 -LivingEyesRoot $eyes -VerificationRoot .verification/merged
+# Hanya untuk membandingkan baseline lama saat migrasi, meski tidak cocok dengan pin akhir:
+$baseline = Join-Path $env:USERPROFILE 'OneDrive/Documents/Arduino/libraries/LivingEyes'
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/run_host_tests.ps1 -LivingEyesRoot $baseline -AllowUnpinnedLivingEyes -VerificationRoot .verification/baseline
+```
+
+`-AllowUnpinnedLivingEyes` memerlukan `-LivingEyesRoot` eksplisit, mencetak hash serta peringatan, dan hanya berlaku untuk tes host; **tidak ada** bypass pin pada build rilis. Test proyek dikompilasi dengan `-Wall -Wextra -Werror`; source renderer LivingEyes terpilih dikompilasi terpisah karena warning upstream yang tidak terkait perubahan ini. Gunakan `-VerificationRoot` untuk menghindari menimpa artefak `.verification` yang ada.
+
+Suite pendamping mencakup core, snapshot, brain, parser Gemini, settings, keamanan origin dashboard, kebijakan redirect HTTPS GitHub OTA, dan interaksi lokal. `companion_interaction_test` memvalidasi pembacaan AHT/BMP gagal atau stale, validitas rentang, freshness wraparound, tren lingkungan dengan baseline/cooldown, dan wraparound waktu. Tes brain juga mencakup antrean reminder penuh/gagal, reminder berteks sama, pelacakan outcome invitation agregat, serta clear memory yang mempertahankan reminder. Host tests tidak mensimulasikan HTTP/browser, WakeNet/model, sensor atau audio fisik, flash power-loss, dan layanan online. Cakupan dan gate perangkat ada di [COMPANION_IMPLEMENTATION.md](../COMPANION_IMPLEMENTATION.md).

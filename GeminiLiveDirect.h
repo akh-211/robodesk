@@ -1,3 +1,4 @@
+#include "RoboLog.h"
 #pragma once
 #include <Arduino.h>
 #include <WiFiClientSecure.h>
@@ -6,6 +7,12 @@
 #include <sys/socket.h>
 #include <errno.h>
 #include <atomic>
+#include <memory>
+#include <new>
+#include <cstdlib>
+#if defined(ARDUINO_ARCH_ESP32)
+#include <esp_heap_caps.h>
+#endif
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
@@ -78,7 +85,32 @@ private:
   static const uint16_t PORT = 443;
   RoboDeskTlsClient tls_;
   uint8_t txSmallFrame_[2048]; // One TLS record for each 40 ms microphone packet.
-  GeminiStreamParser parser_;
+  struct Scratch {
+    GeminiStreamParser parser;
+    char promptEsc[4800],handleEsc[1200],resumeJson[1240],setupBuf[9200];
+    char toolIdEsc[160],toolNameEsc[160],toolMsg[1800];
+    char audioB64[1800],audioMsg[1980];
+    explicit Scratch(GeminiStreamSink* sink):parser(sink){}
+  };
+  struct ScratchDeleter {
+    void operator()(Scratch* p) const {if(p){p->~Scratch();std::free(p);}}
+  };
+  std::unique_ptr<Scratch,ScratchDeleter> scratch_;
+  GeminiStreamSink* sink_=nullptr;
+  bool ensureScratch(){
+    if(scratch_)return true;
+    void* memory=nullptr;
+#if defined(ARDUINO_ARCH_ESP32)
+    memory=heap_caps_malloc(sizeof(Scratch),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
+    if(!memory)memory=heap_caps_malloc(sizeof(Scratch),MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT);
+#else
+    memory=std::malloc(sizeof(Scratch));
+#endif
+    if(!memory){RoboLog.println("LEV,GEMINI,SCRATCH_ALLOC_FAIL");return false;}
+    scratch_.reset(new(memory) Scratch(sink_));
+    RoboLog.printf("LEV,GEMINI,SCRATCH,bytes=%u\n",unsigned(sizeof(Scratch)));
+    return true;
+  }
   Config cfg_;
   std::atomic<bool> connecting_{false},cancelConnect_{false};
   String connectStrings_[8]; // Immutable config snapshot while worker owns TLS.
@@ -118,17 +150,7 @@ private:
   uint8_t currentMessageOpcode_ = 0;
   char preReadyPreview_[384];
   size_t preReadyPreviewLen_ = 0;
-  char promptEsc_[4800];
-  char handleEsc_[1200];
-  char resumeJson_[1240];
-  char setupBuf_[9200];
-  // HOTFIX16: persistent scratch avoids a ~2 KB nested tool-response stack frame.
-  char toolIdEsc_[160];
-  char toolNameEsc_[160];
-  char toolMsg_[1800];
-  // v0.15.1: 40 ms PCM16@16k = 1280 B -> 1708 B base64. Keep scratch off task stack.
-  char audioB64_[1800];
-  char audioMsg_[1980];
+  // Parser and text/audio scratch share a persistent PSRAM block, allocated after boot.
   uint32_t audioEnvelopeMessages_ = 0;
   uint32_t audioEnvelopeBytes_ = 0;
   uint32_t audioEnvelopeLogAt_ = 0;
@@ -205,7 +227,7 @@ private:
     for(uint8_t i=0;i<4;i++)frame[n++]=mask[i];
     for(size_t i=0;i<len;i++)frame[n++]=payload[i]^mask[i&3];
     const size_t wrote=tls_.directTlsWrite(frame,n,millis())?n:0;
-    Serial.printf("LEV,GEMINI,TX_FRAME,opcode=%u,payload=%u,wire=%u,wrote=%u\n",unsigned(opcode),unsigned(len),unsigned(n),unsigned(wrote));
+    RoboLog.printf("LEV,GEMINI,TX_FRAME,opcode=%u,payload=%u,wire=%u,wrote=%u\n",unsigned(opcode),unsigned(len),unsigned(n),unsigned(wrote));
     if(wrote!=n)return false;
     lastTxAt_=millis();return true;
   }
@@ -238,18 +260,18 @@ private:
 
   bool sendSetup(){
     setupBytes_=0;
-    jsonEscape(cfg_.systemPrompt,promptEsc_,sizeof(promptEsc_));
-    jsonEscape(cfg_.resumeHandle,handleEsc_,sizeof(handleEsc_));
-    if(handleEsc_[0])snprintf(resumeJson_,sizeof(resumeJson_),"{\"handle\":\"%s\"}",handleEsc_);
-    else strcpy(resumeJson_,"{}");
+    jsonEscape(cfg_.systemPrompt,scratch_->promptEsc,sizeof(scratch_->promptEsc));
+    jsonEscape(cfg_.resumeHandle,scratch_->handleEsc,sizeof(scratch_->handleEsc));
+    if(scratch_->handleEsc[0])snprintf(scratch_->resumeJson,sizeof(scratch_->resumeJson),"{\"handle\":\"%s\"}",scratch_->handleEsc);
+    else strcpy(scratch_->resumeJson,"{}");
     const char* tools=(cfg_.toolsJson&&cfg_.toolsJson[0])?cfg_.toolsJson:"[]";
-    int n=snprintf(setupBuf_,sizeof(setupBuf_),
+    int n=snprintf(scratch_->setupBuf,sizeof(scratch_->setupBuf),
       "{\"setup\":{\"model\":\"models/%s\",\"generationConfig\":{\"responseModalities\":[\"AUDIO\"],\"speechConfig\":{\"voiceConfig\":{\"prebuiltVoiceConfig\":{\"voiceName\":\"%s\"}}}},\"systemInstruction\":{\"parts\":[{\"text\":\"%s\"}]},\"tools\":%s,\"realtimeInputConfig\":{\"automaticActivityDetection\":{\"disabled\":false,\"startOfSpeechSensitivity\":\"START_SENSITIVITY_HIGH\",\"prefixPaddingMs\":160,\"endOfSpeechSensitivity\":\"END_SENSITIVITY_HIGH\",\"silenceDurationMs\":650}},\"inputAudioTranscription\":{},\"outputAudioTranscription\":{},\"contextWindowCompression\":{\"triggerTokens\":\"25000\",\"slidingWindow\":{\"targetTokens\":\"8000\"}},\"sessionResumption\":%s}}",
-      cfg_.model,cfg_.voice,promptEsc_,tools,resumeJson_);
-    if(n<=0||size_t(n)>=sizeof(setupBuf_))return false;
+      cfg_.model,cfg_.voice,scratch_->promptEsc,tools,scratch_->resumeJson);
+    if(n<=0||size_t(n)>=sizeof(scratch_->setupBuf))return false;
     setupBytes_=size_t(n);
-    const bool ok=sendTextFrame(setupBuf_);
-    if(ok){setupSentAt_=millis();Serial.printf("LEV,GEMINI,SETUP_SENT,profile=v0151_realtime_hybrid,lang=%s,setupBytes=%u\n",(cfg_.languageCode&&cfg_.languageCode[0])?cfg_.languageCode:"id-ID",unsigned(setupBytes_));}
+    const bool ok=sendTextFrame(scratch_->setupBuf);
+    if(ok){setupSentAt_=millis();RoboLog.printf("LEV,GEMINI,SETUP_SENT,profile=v0151_realtime_hybrid,lang=%s,setupBytes=%u\n",(cfg_.languageCode&&cfg_.languageCode[0])?cfg_.languageCode:"id-ID",unsigned(setupBytes_));}
     return ok;
   }
 
@@ -279,10 +301,10 @@ private:
     if(rxOpcode_==0x8){
       unsigned code=0;char reason[96];reason[0]=0;
       if(controlLen_>=2){code=(unsigned(controlBuf_[0])<<8)|unsigned(controlBuf_[1]);size_t rn=0;for(size_t i=2;i<controlLen_&&rn+1<sizeof(reason);++i){char c=char(controlBuf_[i]);reason[rn++]=(uint8_t(c)>=0x20&&uint8_t(c)<=0x7e)?c:'.';}reason[rn]=0;}
-      Serial.printf("LEV,GEMINI,CLOSE,code=%u,reason=%s\n",code,reason);
+      RoboLog.printf("LEV,GEMINI,CLOSE,code=%u,reason=%s\n",code,reason);
       const bool quotaClose=(strstr(reason,"quota")!=0)||(strstr(reason,"Quota")!=0);
       const uint32_t backoff=quotaClose?300000u:2500u;
-      if(quotaClose)Serial.printf("LEV,GEMINI,QUOTA_BACKOFF,ms=%lu\n",(unsigned long)backoff);
+      if(quotaClose)RoboLog.printf("LEV,GEMINI,QUOTA_BACKOFF,ms=%lu\n",(unsigned long)backoff);
       disconnectInternal(millis(),backoff); return;
     }
     if(rxOpcode_==0x9){ sendPong(controlBuf_,controlLen_); }
@@ -290,21 +312,21 @@ private:
       if(controlLen_==2&&memcmp(controlBuf_,"rd",2)==0)heartbeatPending_=false;
       probePongSeen_=true;
       char pong[48];size_t pn=0;for(size_t i=0;i<controlLen_&&pn+1<sizeof(pong);++i){char c=char(controlBuf_[i]);pong[pn++]=(uint8_t(c)>=0x20&&uint8_t(c)<=0x7e)?c:'.';}pong[pn]=0;
-      Serial.printf("LEV,GEMINI,PONG,len=%u,payload=%s\n",unsigned(controlLen_),pong);
+      RoboLog.printf("LEV,GEMINI,PONG,len=%u,payload=%s\n",unsigned(controlLen_),pong);
     }
     if((rxOpcode_==0x1||rxOpcode_==0x2||rxOpcode_==0x0) && rxFin_ && textMessageActive_){
-      parser_.endMessage();++rxMessages_;
-      if(!ready_)Serial.printf("LEV,GEMINI,RX_PRE_READY,opcode=%u,msgBytes=%lu,preview=%s\n",unsigned(currentMessageOpcode_),(unsigned long)currentMessageBytes_,preReadyPreview_);
-      else if(parser_.sawModelTurn()){
-        const uint32_t decoded=parser_.decodedAudioBytes();
+      scratch_->parser.endMessage();++rxMessages_;
+      if(!ready_)RoboLog.printf("LEV,GEMINI,RX_PRE_READY,opcode=%u,msgBytes=%lu,preview=%s\n",unsigned(currentMessageOpcode_),(unsigned long)currentMessageBytes_,preReadyPreview_);
+      else if(scratch_->parser.sawModelTurn()){
+        const uint32_t decoded=scratch_->parser.decodedAudioBytes();
         if(decoded){
           ++audioEnvelopeMessages_; audioEnvelopeBytes_+=decoded;
           const uint32_t logNow=millis();
           if(uint32_t(logNow-audioEnvelopeLogAt_)>=2000u){
             audioEnvelopeLogAt_=logNow;
-            Serial.printf("LEV,GEMINI,AUDIO_FLOW,msgs=%lu,decoded=%lu\n",(unsigned long)audioEnvelopeMessages_,(unsigned long)audioEnvelopeBytes_);
+            RoboLog.printf("LEV,GEMINI,AUDIO_FLOW,msgs=%lu,decoded=%lu\n",(unsigned long)audioEnvelopeMessages_,(unsigned long)audioEnvelopeBytes_);
           }
-        } else if(parser_.sawModelTurn()) Serial.printf("LEV,GEMINI,MODEL_TURN_NO_AUDIO,msgBytes=%lu,inline=%u,data=%u\n",(unsigned long)currentMessageBytes_,unsigned(parser_.sawInlineData()),unsigned(parser_.startedAudioData()));
+        } else if(scratch_->parser.sawModelTurn()) RoboLog.printf("LEV,GEMINI,MODEL_TURN_NO_AUDIO,msgBytes=%lu,inline=%u,data=%u\n",(unsigned long)currentMessageBytes_,unsigned(scratch_->parser.sawInlineData()),unsigned(scratch_->parser.startedAudioData()));
       }
       textMessageActive_=false;
     }
@@ -315,9 +337,9 @@ private:
     if(rxMasked_)b^=rxMask_[rxRead_&3];
     ++rxBytesTotal_;
     if(rxOpcode_==0x1||rxOpcode_==0x2){
-      if(rxRead_==0){parser_.beginMessage();textMessageActive_=true;resetMessagePreview(rxOpcode_);} parser_.feed(&b,1);previewByte(b);
+      if(rxRead_==0){scratch_->parser.beginMessage();textMessageActive_=true;resetMessagePreview(rxOpcode_);} scratch_->parser.feed(&b,1);previewByte(b);
     }
-    else if(rxOpcode_==0x0 && textMessageActive_){parser_.feed(&b,1);previewByte(b);}
+    else if(rxOpcode_==0x0 && textMessageActive_){scratch_->parser.feed(&b,1);previewByte(b);}
     else if((rxOpcode_==0x8||rxOpcode_==0x9||rxOpcode_==0xA) && controlLen_<sizeof(controlBuf_))controlBuf_[controlLen_++]=b;
     ++rxRead_; lastRxAt_=millis(); if(rxRead_>=rxLen_)finishFrame();
   }
@@ -342,8 +364,8 @@ private:
   }
 
 public:
-  explicit GeminiLiveDirectClient(GeminiStreamSink* sink=0):parser_(sink){ memset(&cfg_,0,sizeof(cfg_)); }
-  void setSink(GeminiStreamSink* sink){ parser_.setSink(sink); }
+  explicit GeminiLiveDirectClient(GeminiStreamSink* sink=0):sink_(sink){ memset(&cfg_,0,sizeof(cfg_)); }
+  void setSink(GeminiStreamSink* sink){sink_=sink;if(scratch_)scratch_->parser.setSink(sink);}
   bool connecting()const{return connecting_.load(std::memory_order_acquire);}
   bool connected()const{return !connecting()&&connected_;}
   bool ready()const{return !connecting()&&ready_;}
@@ -358,6 +380,7 @@ public:
 
   bool connectAsync(const Config& cfg){
     if(connecting()||connected())return false;
+    if(!ensureScratch()){reconnectAt_=millis()+30000u;return false;}
     const char* src[]={cfg.apiKey,cfg.model,cfg.voice,cfg.languageCode,cfg.systemPrompt,cfg.rootCaPem,cfg.resumeHandle,cfg.toolsJson};
     for(size_t i=0;i<8;++i){
       const char* value=src[i]?src[i]:"";
@@ -386,13 +409,14 @@ private:
       self->disconnectInternal(millis(),self->connectBackoffMs_);
       self->connectBackoffMs_=self->connectBackoffMs_<15000u?self->connectBackoffMs_*2u:30000u;
     }
-    Serial.printf("LEV,GEMINI,CONNECT_RESULT,ok=%u,cancelled=%u\n",unsigned(ok),unsigned(self->cancelConnect_.load()));
+    RoboLog.printf("LEV,GEMINI,CONNECT_RESULT,ok=%u,cancelled=%u\n",unsigned(ok),unsigned(self->cancelConnect_.load()));
     // Publish TLS/parser state only when the worker has finished all access.
     self->connecting_.store(false,std::memory_order_release);
     vTaskDelete(nullptr);
   }
 
   bool connect(const Config& cfg,uint32_t now){
+    if(!ensureScratch()){reconnectAt_=now+30000u;return false;}
     cfg_=cfg; ready_=false; connected_=false; setupSentAt_=0;setupBytes_=0;probePingSentAt_=0;probePongSeen_=false;rxBytesTotal_=0;rxFrames_=0;rxMessages_=0;audioEnvelopeMessages_=0;audioEnvelopeBytes_=0;audioEnvelopeLogAt_=0;directTlsReads_=0;directTlsBytes_=0;directTlsNoData_=0;serviceCalls_=0;serviceBudgetZero_=0;preReadyForcedPolls_=0;rawPeekData_=0;rawPeekNoData_=0;rawPeekFin_=0;rawPeekErr_=0;lastRawPeek_=-99;lastRawErr_=0;lastTlsReadRet_=0;lastRxOpcode_=0;textMessageActive_=false;resetMessagePreview(0);resetRx();
     if(!cfg.apiKey||!cfg.apiKey[0]||!cfg.model||!cfg.voice)return false;
     tls_.stop(); tls_.setTimeout(3); tls_.setHandshakeTimeout(4);
@@ -408,10 +432,10 @@ private:
     if(!readHttpHeaders(headers,sizeof(headers),5000)||!headerContains(headers," 101 ")||!websocketAcceptMatches(headers,key)){tls_.stop();reconnectAt_=now+2500;return false;}
     const bool directNb=tls_.enableDirectNonBlocking();
     connected_=true;++connects_;lastRxAt_=lastTxAt_=millis();heartbeatPending_=false;
-    Serial.printf("LEV,GEMINI,TLS_RX_MODE,direct=1,nonblock=%u,fd=%d\n",unsigned(directNb),tls_.socketFd());
-    if(!directNb){Serial.println("LEV,GEMINI,TLS_NONBLOCK_FAIL");disconnectInternal(now);return false;}
-    if(!sendSetup()){Serial.println("LEV,GEMINI,SETUP_SEND_FAIL");disconnectInternal(now);return false;}
-    Serial.printf("LEV,GEMINI,WSS_CONNECTED,profile=v0151_realtime_hybrid,model=%s,voice=%s,setupBytes=%u\n",cfg_.model,cfg_.voice,unsigned(setupBytes_));
+    RoboLog.printf("LEV,GEMINI,TLS_RX_MODE,direct=1,nonblock=%u,fd=%d\n",unsigned(directNb),tls_.socketFd());
+    if(!directNb){RoboLog.println("LEV,GEMINI,TLS_NONBLOCK_FAIL");disconnectInternal(now);return false;}
+    if(!sendSetup()){RoboLog.println("LEV,GEMINI,SETUP_SEND_FAIL");disconnectInternal(now);return false;}
+    RoboLog.printf("LEV,GEMINI,WSS_CONNECTED,profile=v0151_realtime_hybrid,model=%s,voice=%s,setupBytes=%u\n",cfg_.model,cfg_.voice,unsigned(setupBytes_));
     return true;
   }
 
@@ -426,9 +450,9 @@ public:
 
   bool sendToolResponse(const char* id,const char* name,const char* responseJson){
     if(!id||!name||!responseJson||!connected())return false;
-    jsonEscape(id,toolIdEsc_,sizeof(toolIdEsc_));jsonEscape(name,toolNameEsc_,sizeof(toolNameEsc_));
-    int m=snprintf(toolMsg_,sizeof(toolMsg_),"{\"toolResponse\":{\"functionResponses\":[{\"id\":\"%s\",\"name\":\"%s\",\"response\":%s}]}}",toolIdEsc_,toolNameEsc_,responseJson);
-    return m>0&&size_t(m)<sizeof(toolMsg_)&&sendTextFrame(toolMsg_);
+    jsonEscape(id,scratch_->toolIdEsc,sizeof(scratch_->toolIdEsc));jsonEscape(name,scratch_->toolNameEsc,sizeof(scratch_->toolNameEsc));
+    int m=snprintf(scratch_->toolMsg,sizeof(scratch_->toolMsg),"{\"toolResponse\":{\"functionResponses\":[{\"id\":\"%s\",\"name\":\"%s\",\"response\":%s}]}}",scratch_->toolIdEsc,scratch_->toolNameEsc,responseJson);
+    return m>0&&size_t(m)<sizeof(scratch_->toolMsg)&&sendTextFrame(scratch_->toolMsg);
   }
 
   bool sendClientTextTurn(const char* text,bool turnComplete=true){
@@ -445,9 +469,9 @@ public:
 
   bool sendAudio(const uint8_t* pcm,size_t n){
     if(!ready()||!pcm||!n||n>1280)return false;
-    size_t bn=base64Encode(pcm,n,audioB64_,sizeof(audioB64_)); if(!bn)return false;
-    int m=snprintf(audioMsg_,sizeof(audioMsg_),"{\"realtimeInput\":{\"audio\":{\"data\":\"%s\",\"mimeType\":\"audio/pcm;rate=16000\"}}}",audioB64_);
-    return m>0&&size_t(m)<sizeof(audioMsg_)&&sendTextFrame(audioMsg_);
+    size_t bn=base64Encode(pcm,n,scratch_->audioB64,sizeof(scratch_->audioB64)); if(!bn)return false;
+    int m=snprintf(scratch_->audioMsg,sizeof(scratch_->audioMsg),"{\"realtimeInput\":{\"audio\":{\"data\":\"%s\",\"mimeType\":\"audio/pcm;rate=16000\"}}}",scratch_->audioB64);
+    return m>0&&size_t(m)<sizeof(scratch_->audioMsg)&&sendTextFrame(scratch_->audioMsg);
   }
 
   void service(uint32_t now,size_t byteBudget){
@@ -489,19 +513,19 @@ public:
           continue;
         }
         if(n==0){++directTlsNoData_;break;}
-        Serial.printf("LEV,GEMINI,TLS_READ_END,ret=%d,rawPeek=%d,rawErr=%d,frames=%lu,bytes=%lu\n",n,lastRawPeek_,lastRawErr_,(unsigned long)rxFrames_,(unsigned long)rxBytesTotal_);
+        RoboLog.printf("LEV,GEMINI,TLS_READ_END,ret=%d,rawPeek=%d,rawErr=%d,frames=%lu,bytes=%lu\n",n,lastRawPeek_,lastRawErr_,(unsigned long)rxFrames_,(unsigned long)rxBytesTotal_);
         disconnectInternal(serviceNow);return;
       }
     }
     if(connected_&&!ready_&&setupSentAt_&&uint32_t(serviceNow-setupSentAt_)>=10000u){
-      Serial.printf("LEV,GEMINI,SETUP_TIMEOUT,setupBytes=%u,rxFrames=%lu,rxMessages=%lu,rxBytes=%lu,lastOpcode=%u,svc=%lu,budget0=%lu,forced=%lu,tlsReads=%lu,tlsBytes=%lu,noData=%lu,lastTls=%d,tlsBuffered=%d,peekData=%lu,peekNoData=%lu,peekFin=%lu,peekErr=%lu,lastPeek=%d,lastErr=%d,fd=%d\n",unsigned(setupBytes_),(unsigned long)rxFrames_,(unsigned long)rxMessages_,(unsigned long)rxBytesTotal_,unsigned(lastRxOpcode_),(unsigned long)serviceCalls_,(unsigned long)serviceBudgetZero_,(unsigned long)preReadyForcedPolls_,(unsigned long)directTlsReads_,(unsigned long)directTlsBytes_,(unsigned long)directTlsNoData_,lastTlsReadRet_,tls_.tlsBuffered(),(unsigned long)rawPeekData_,(unsigned long)rawPeekNoData_,(unsigned long)rawPeekFin_,(unsigned long)rawPeekErr_,lastRawPeek_,lastRawErr_,tls_.socketFd());
+      RoboLog.printf("LEV,GEMINI,SETUP_TIMEOUT,setupBytes=%u,rxFrames=%lu,rxMessages=%lu,rxBytes=%lu,lastOpcode=%u,svc=%lu,budget0=%lu,forced=%lu,tlsReads=%lu,tlsBytes=%lu,noData=%lu,lastTls=%d,tlsBuffered=%d,peekData=%lu,peekNoData=%lu,peekFin=%lu,peekErr=%lu,lastPeek=%d,lastErr=%d,fd=%d\n",unsigned(setupBytes_),(unsigned long)rxFrames_,(unsigned long)rxMessages_,(unsigned long)rxBytesTotal_,unsigned(lastRxOpcode_),(unsigned long)serviceCalls_,(unsigned long)serviceBudgetZero_,(unsigned long)preReadyForcedPolls_,(unsigned long)directTlsReads_,(unsigned long)directTlsBytes_,(unsigned long)directTlsNoData_,lastTlsReadRet_,tls_.tlsBuffered(),(unsigned long)rawPeekData_,(unsigned long)rawPeekNoData_,(unsigned long)rawPeekFin_,(unsigned long)rawPeekErr_,lastRawPeek_,lastRawErr_,tls_.socketFd());
       disconnectInternal(serviceNow);
     }
     if(!effectiveBudget&&heartbeatPending_)heartbeatSentAt_=millis(); // Pause during speaker backpressure.
     if(connected_&&ready_&&effectiveBudget){
       connectBackoffMs_=2500; // Reset after setup succeeded, not just TCP/TLS.
       if(heartbeatPending_&&uint32_t(millis()-heartbeatSentAt_)>=10000u){
-        Serial.println("LEV,GEMINI,HEARTBEAT_TIMEOUT");disconnectInternal(millis(),5000u);
+        RoboLog.println("LEV,GEMINI,HEARTBEAT_TIMEOUT");disconnectInternal(millis(),5000u);
       }else if(!heartbeatPending_&&uint32_t(millis()-lastRxAt_)>=15000u){
         if(sendFrame(0x9,reinterpret_cast<const uint8_t*>("rd"),2)){heartbeatPending_=true;heartbeatSentAt_=millis();}
       }

@@ -14,5 +14,9 @@ public:
   void onGeminiGoAway() override;
   void onGeminiSessionHandle(const char* handle) override;
   void onGeminiToolCall(const char* id,const char* name,const char* argsJson) override;
+  void onGeminiToolCancelled(const char* id) override;
+  void onGeminiUsage(uint32_t tokens) override;
+  void onGeminiTranscriptTruncated(bool user) override;
+  void onGeminiGoAwayTime(const char* timeLeft) override;
   void onGeminiProtocolError(const char* text) override;
 };

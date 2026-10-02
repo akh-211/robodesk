@@ -1,6 +1,6 @@
 # Installed layout: apply or restore only through the documented USB migration flow.
 # Preserve NVS, otadata, SPIFFS, and coredump offsets. App slots are equal-sized.
-# The model partition is reserved for a future ESP-SR build; wake-word stays off.
+# The model partition is reserved for ESP-SR; wake-word use depends on build, model and runtime support.
 nvs,data,nvs,0x9000,0x5000
 otadata,data,ota,0xe000,0x2000
 spiffs,data,spiffs,0x290000,0x160000

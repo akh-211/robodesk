@@ -1,0 +1,7 @@
+#include "RuntimeSettings.h"
+#include <cassert>
+#include <iostream>
+int main(){RuntimeSettings defaults;assert(defaults.inputMode==RuntimeSettings::WakeWord);assert(defaults.wakeFollowupMs==15000);assert(defaults.quietStartMin==1320&&defaults.quietEndMin==420);assert(defaults.autoMemory&&defaults.backgroundDailyLimit==12);assert(!strcmp(defaults.summaryModel,"gemini-3.5-flash-lite"));assert(!strcmp(defaults.geminiModel,"gemini-3.8-live"));assert(!defaults.interactionMetrics);
+  Preferences old;old.begin("robodesk");old.clear();old.putBool("init",true);old.putString("ssid","existing");old.putUChar("mode",0);old.end();RuntimeSettingsStore store;RuntimeSettings loaded;assert(store.load(loaded,defaults));assert(!strcmp(loaded.wifiSsid,"existing"));assert(loaded.inputMode==0);assert(loaded.autoMemory&&loaded.backgroundDailyLimit==12&&!loaded.interactionMetrics);loaded.autoMemory=0;loaded.backgroundDailyLimit=3;loaded.interactionMetrics=1;RuntimeSettings::copy(loaded.summaryModel,sizeof(loaded.summaryModel),"custom-model");assert(store.save(loaded));RuntimeSettings restored;assert(store.load(restored,defaults));assert(!restored.autoMemory&&restored.backgroundDailyLimit==3&&restored.interactionMetrics);assert(!strcmp(restored.summaryModel,"custom-model"));assert(!strcmp(restored.wifiSsid,"existing"));old.begin("robodesk");old.putUChar("bgmax",255);old.end();assert(store.load(restored,defaults));assert(restored.backgroundDailyLimit==12);
+  std::cout<<"PASS: safe companion defaults, legacy settings preservation, summary settings and quota bounds\n";
+}

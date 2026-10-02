@@ -9,9 +9,16 @@ struct RuntimeSettings {
 
   char wifiSsid[33];
   char wifiPassword[65];
+  char wifiSsid2[33];
+  char wifiPassword2[65];
+  char wifiSsid3[33];
+  char wifiPassword3[65];
   char geminiApiKey[160];
   char geminiModel[48];
   char geminiVoice[32];
+  char summaryModel[48];
+  uint8_t autoMemory;
+  uint8_t backgroundDailyLimit;
   char adminPin[32];
   char speechStyle[241];
   char robotName[32];
@@ -28,6 +35,22 @@ struct RuntimeSettings {
   uint8_t memoryEnabled;
   uint8_t proactiveVisual;
   uint8_t proactiveVoice;
+  uint8_t interactionMetrics;
+  uint8_t privacyMicMuted;
+  uint8_t comfortAlertsEnabled;
+  int16_t comfortMinTempX10;
+  int16_t comfortMaxTempX10;
+  uint16_t comfortMinHumidityX10;
+  uint16_t comfortMaxHumidityX10;
+  uint8_t dailyBriefingEnabled;
+  uint16_t dailyBriefingMinute;
+  uint8_t pomodoroFocusMinutes;
+  uint8_t pomodoroBreakMinutes;
+  uint8_t pomodoroLongBreakMinutes;
+  uint8_t pomodoroWasActive;
+  uint8_t pomodoroInterrupted;
+  char notificationAllowlist[192];
+  char phoneBlePeer[18];
   uint8_t faceLifeEnabled;
   uint8_t facePupils;
   uint8_t faceBrows;
@@ -72,10 +95,17 @@ struct RuntimeSettings {
     postSpeakGuardMs = 300;
     wakeFollowupMs = 15000;
     timezoneOffsetMin = 420;
-    inputMode = AlwaysListening;
+    comfortMinTempX10=180; comfortMaxTempX10=300;
+    comfortMinHumidityX10=300; comfortMaxHumidityX10=700;
+    dailyBriefingMinute=480;
+    pomodoroFocusMinutes=25; pomodoroBreakMinutes=5; pomodoroLongBreakMinutes=15;
+    inputMode = WakeWord;
+    autoMemory = 1;
+    backgroundDailyLimit = 12;
+    copy(summaryModel,sizeof(summaryModel),"gemini-3.5-flash-lite");
     memoryEnabled = 1;
     proactiveVisual = 1;
-    proactiveVoice = 0;
+    proactiveVoice = 1;
     faceLifeEnabled = 1;
     facePupils = 1;
     faceBrows = 1;
@@ -110,7 +140,24 @@ struct RuntimeSettings {
   }
 
   bool wifiConfigured() const {
-    return wifiSsid[0] && strcmp(wifiSsid, "CHANGE_ME") != 0 && strcmp(wifiSsid, "YOUR_WIFI_NAME") != 0;
+    return wifiNetworkConfigured(0) || wifiNetworkConfigured(1) || wifiNetworkConfigured(2);
+  }
+  bool wifiNetworkConfigured(uint8_t index) const {
+    const char* ssid = wifiSsidAt(index);
+    return ssid && ssid[0] && strcmp(ssid, "CHANGE_ME") != 0 && strcmp(ssid, "YOUR_WIFI_NAME") != 0;
+  }
+  int8_t findWifiNetworkIndex(uint8_t firstIndex) const {
+    for (uint8_t offset=0;offset<3;++offset) {
+      const uint8_t index=uint8_t((firstIndex+offset)%3);
+      if (wifiNetworkConfigured(index)) return int8_t(index);
+    }
+    return -1;
+  }
+  const char* wifiSsidAt(uint8_t index) const {
+    switch (index) { case 0: return wifiSsid; case 1: return wifiSsid2; case 2: return wifiSsid3; default: return nullptr; }
+  }
+  const char* wifiPasswordAt(uint8_t index) const {
+    switch (index) { case 0: return wifiPassword; case 1: return wifiPassword2; case 2: return wifiPassword3; default: return nullptr; }
   }
   bool geminiConfigured() const {
     return geminiApiKey[0] && strcmp(geminiApiKey, "CHANGE_ME") != 0 && strcmp(geminiApiKey, "YOUR_GEMINI_API_KEY") != 0;
@@ -134,8 +181,15 @@ class RuntimeSettingsStore {
     if (initialized) {
       readString(p, "ssid", out.wifiSsid, sizeof(out.wifiSsid));
       readString(p, "wpass", out.wifiPassword, sizeof(out.wifiPassword));
+      readString(p, "ssid2", out.wifiSsid2, sizeof(out.wifiSsid2));
+      readString(p, "wpass2", out.wifiPassword2, sizeof(out.wifiPassword2));
+      readString(p, "ssid3", out.wifiSsid3, sizeof(out.wifiSsid3));
+      readString(p, "wpass3", out.wifiPassword3, sizeof(out.wifiPassword3));
       readString(p, "gkey", out.geminiApiKey, sizeof(out.geminiApiKey));
       readString(p, "model", out.geminiModel, sizeof(out.geminiModel));
+      readString(p, "summarymodel", out.summaryModel, sizeof(out.summaryModel));
+      out.autoMemory=p.getUChar("automem",out.autoMemory)?1:0;
+      out.backgroundDailyLimit=uint8_t(clampU16(p.getUChar("bgmax",out.backgroundDailyLimit),0,12));
       readString(p, "voice", out.geminiVoice, sizeof(out.geminiVoice));
       readString(p, "pin", out.adminPin, sizeof(out.adminPin));
       readString(p, "style", out.speechStyle, sizeof(out.speechStyle));
@@ -150,6 +204,22 @@ class RuntimeSettingsStore {
       out.memoryEnabled = p.getUChar("memory", out.memoryEnabled) ? 1 : 0;
       out.proactiveVisual = p.getUChar("pvisual", out.proactiveVisual) ? 1 : 0;
       out.proactiveVoice = p.getUChar("pvoice", out.proactiveVoice) ? 1 : 0;
+      out.interactionMetrics = p.getUChar("imetrics", out.interactionMetrics) ? 1 : 0;
+      out.privacyMicMuted=p.getUChar("micmute",out.privacyMicMuted)?1:0;
+      out.comfortAlertsEnabled=p.getUChar("comfort",out.comfortAlertsEnabled)?1:0;
+      out.comfortMinTempX10=clampI16(int16_t(p.getShort("cminT",out.comfortMinTempX10)),-100,600);
+      out.comfortMaxTempX10=clampI16(int16_t(p.getShort("cmaxT",out.comfortMaxTempX10)),-100,600);
+      out.comfortMinHumidityX10=clampU16(p.getUShort("cminH",out.comfortMinHumidityX10),0,1000);
+      out.comfortMaxHumidityX10=clampU16(p.getUShort("cmaxH",out.comfortMaxHumidityX10),0,1000);
+      out.dailyBriefingEnabled=p.getUChar("briefing",out.dailyBriefingEnabled)?1:0;
+      out.dailyBriefingMinute=clampU16(p.getUShort("briefmin",out.dailyBriefingMinute),0,1439);
+      out.pomodoroFocusMinutes=uint8_t(clampU16(p.getUChar("pomfocus",out.pomodoroFocusMinutes),1,90));
+      out.pomodoroBreakMinutes=uint8_t(clampU16(p.getUChar("pombreak",out.pomodoroBreakMinutes),1,60));
+      out.pomodoroLongBreakMinutes=uint8_t(clampU16(p.getUChar("pomlong",out.pomodoroLongBreakMinutes),1,90));
+      out.pomodoroWasActive=p.getUChar("pomactive",out.pomodoroWasActive)?1:0;
+      out.pomodoroInterrupted=p.getUChar("pomint",out.pomodoroInterrupted)?1:0;
+      readString(p,"notifapps",out.notificationAllowlist,sizeof(out.notificationAllowlist));
+      readString(p,"blepeer",out.phoneBlePeer,sizeof(out.phoneBlePeer));
       out.faceLifeEnabled = p.getUChar("flife", out.faceLifeEnabled) ? 1 : 0;
       out.facePupils = p.getUChar("fpupil", out.facePupils) ? 1 : 0;
       out.faceBrows = p.getUChar("fbrow", out.faceBrows) ? 1 : 0;
@@ -188,8 +258,15 @@ class RuntimeSettingsStore {
     ok &= p.putBool("init", true) > 0;
     ok &= p.putString("ssid", s.wifiSsid) > 0 || s.wifiSsid[0] == 0;
     p.putString("wpass", s.wifiPassword);
+    ok &= p.putString("ssid2", s.wifiSsid2) > 0 || s.wifiSsid2[0] == 0;
+    ok &= p.putString("wpass2", s.wifiPassword2) > 0 || s.wifiPassword2[0] == 0;
+    ok &= p.putString("ssid3", s.wifiSsid3) > 0 || s.wifiSsid3[0] == 0;
+    ok &= p.putString("wpass3", s.wifiPassword3) > 0 || s.wifiPassword3[0] == 0;
     ok &= p.putString("gkey", s.geminiApiKey) > 0 || s.geminiApiKey[0] == 0;
     ok &= p.putString("model", s.geminiModel) > 0;
+    ok &= p.putString("summarymodel",s.summaryModel)>0;
+    ok &= p.putUChar("automem",s.autoMemory)>0;
+    ok &= p.putUChar("bgmax",s.backgroundDailyLimit)>0;
     ok &= p.putString("voice", s.geminiVoice) > 0;
     ok &= p.putString("pin", s.adminPin) > 0;
     p.putString("style", s.speechStyle);
@@ -204,6 +281,22 @@ class RuntimeSettingsStore {
     p.putUChar("memory", s.memoryEnabled);
     p.putUChar("pvisual", s.proactiveVisual);
     p.putUChar("pvoice", s.proactiveVoice);
+    ok &= p.putUChar("imetrics", s.interactionMetrics) > 0;
+    ok &= p.putUChar("micmute",s.privacyMicMuted)>0;
+    ok &= p.putUChar("comfort",s.comfortAlertsEnabled)>0;
+    ok &= p.putShort("cminT",s.comfortMinTempX10)>0;
+    ok &= p.putShort("cmaxT",s.comfortMaxTempX10)>0;
+    ok &= p.putUShort("cminH",s.comfortMinHumidityX10)>0;
+    ok &= p.putUShort("cmaxH",s.comfortMaxHumidityX10)>0;
+    ok &= p.putUChar("briefing",s.dailyBriefingEnabled)>0;
+    ok &= p.putUShort("briefmin",s.dailyBriefingMinute)>0;
+    ok &= p.putUChar("pomfocus",s.pomodoroFocusMinutes)>0;
+    ok &= p.putUChar("pombreak",s.pomodoroBreakMinutes)>0;
+    ok &= p.putUChar("pomlong",s.pomodoroLongBreakMinutes)>0;
+    ok &= p.putUChar("pomactive",s.pomodoroWasActive)>0;
+    ok &= p.putUChar("pomint",s.pomodoroInterrupted)>0;
+    ok &= p.putString("notifapps",s.notificationAllowlist)>0||s.notificationAllowlist[0]==0;
+    ok &= p.putString("blepeer",s.phoneBlePeer)>0||s.phoneBlePeer[0]==0;
     p.putUChar("flife", s.faceLifeEnabled);
     p.putUChar("fpupil", s.facePupils);
     p.putUChar("fbrow", s.faceBrows);

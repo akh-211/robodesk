@@ -3,6 +3,21 @@
 #include <cassert>
 #include <iostream>
 static GeminiLiveDirectClient::Config config(){return {"test-key","test-model","test-voice","id-ID","test-prompt",false,"test-ca","","[]"};}
+struct CountingSink : GeminiStreamSink {
+  unsigned setups=0;
+  void onGeminiSetupComplete()override{++setups;}
+  void onGeminiAudio(const uint8_t*,size_t)override{}
+  void onGeminiInputTranscript(const char*)override{}
+  void onGeminiOutputTranscript(const char*)override{}
+  void onGeminiTurnComplete()override{}
+  void onGeminiWaitingForInput()override{}
+  void onGeminiGenerationComplete()override{}
+  void onGeminiInterrupted()override{}
+  void onGeminiGoAway()override{}
+  void onGeminiSessionHandle(const char*)override{}
+  void onGeminiToolCall(const char*,const char*,const char*)override{}
+  void onGeminiProtocolError(const char*)override{}
+};
 static void runWorker(){auto fn=mockTask;mockTask=nullptr;assert(fn);fn(mockTaskArg);}
 static void resetMocks(){mockNow=100;mockConnectCalls=mockWriteCalls=0;mockConnectOK=mockTaskOK=true;mockWriteStalled=false;mockWriteLimit=0;mockTx.clear();mockRx.clear();mockTask=nullptr;}
 static void open(GeminiLiveDirectClient& c){assert(c.connectAsync(config()));runWorker();assert(c.connected());c.markSetupComplete();mockTx.clear();}
@@ -71,5 +86,16 @@ int main(){
     mockRx={0x89,2,'r','d'};mockWriteStalled=true;const uint32_t before=mockNow;
     c.service(mockNow,2048);assert(!c.connected());assert(mockNow-before==12);
   }
-  std::cout<<"PASS: 11 async/offline/audio client regression scenarios\n";
+  resetMocks();{
+    CountingSink first,second;GeminiLiveDirectClient c(&first);open(c);
+    const std::string setup="{\"setupComplete\":{}}";
+    const auto receiveSetup=[&]{mockRx={0x81,uint8_t(setup.size())};mockRx.insert(mockRx.end(),setup.begin(),setup.end());c.service(mockNow,2048);};
+    receiveSetup();assert(first.setups==1&&second.setups==0);
+    c.setSink(&second);receiveSetup();assert(first.setups==1&&second.setups==1);
+  }
+  resetMocks();{
+    GeminiLiveDirectClient c;open(c);assert(c.sendToolResponse("test-id","test-tool","{}"));
+    const auto text=unmaskFirstText();assert(text.find("test-id")!=std::string::npos&&text.find("test-tool")!=std::string::npos);
+  }
+  std::cout<<"PASS: 13 async/offline/audio/parser client regression scenarios\n";
 }

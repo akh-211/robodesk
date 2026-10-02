@@ -1,10 +1,9 @@
 #pragma once
 
-// Wake-word support is intentionally prepared but disabled in the default build.
-// Enabling this requires an ESP-SR model partition (Arduino partition esp_sr_16)
-// and working PSRAM. Keep this at 0 until those prerequisites are qualified.
+// WakeNet uses the existing model partition; loading is checked before ESP-SR starts.
+// Never substitute continuous cloud capture when a model is absent.
 #ifndef ROBODESK_WAKEWORD_ENGINE_ENABLE
-#define ROBODESK_WAKEWORD_ENGINE_ENABLE 0
+#define ROBODESK_WAKEWORD_ENGINE_ENABLE 1
 #endif
 
 // This label documents the wake model expected in the ESP-SR model partition.
