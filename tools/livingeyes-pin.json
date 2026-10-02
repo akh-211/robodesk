@@ -1,5 +1,5 @@
 {
   "format": "robodesk-livingeyes-sha256-v1",
-  "sha256": "afe21dd2700beaf9f119ec0fcba76ae70f803e49a915adac111d41eaa9fcf3c9",
-  "source": "Approved pre-merger LivingEyes legacy renderer/model rollback from the immutable snapshot; current Character director, arbitration, idle behavior, mind, and companion integrations were preserved. RoboDesk host verification, native tests, target custom-slot installation, and physical qualification remain separate pending gates."
+  "sha256": "75dd27680fd89a7b5de702bb2ddcabb60b63ff36334b2eb50b5797fc7bc2b123",
+  "source": "LivingEyes macro-session API for bounded RoboDesk companion activities; host-tested hook, with device qualification pending."
 }

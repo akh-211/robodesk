@@ -20,7 +20,7 @@ For USB logs on the ESP32-S3, use `python tools/serial_monitor.py COM9` instead 
 
 ## Pendamping dengan memori lokal
 
-Implementasi memori 96 fakta/32 pengalaman, delapan pengingat, aktivasi panggilan atau sentuhan, worker ekstraksi terbatas, snapshot terverifikasi, dan dashboard dijelaskan di [COMPANION_IMPLEMENTATION.md](COMPANION_IMPLEMENTATION.md). Raw transcript hanya di RAM; default baru memakai WakeNet "Hi ESP" dengan fallback sentuhan. Pengaturan input lama yang selalu menyimak dialihkan ke jendela sentuhan. Audio tidak dikirim di luar jendela percakapan.
+Implementasi memori 96 fakta/32 pengalaman, delapan pengingat, aktivasi panggilan atau sentuhan, worker ekstraksi terbatas, snapshot terverifikasi, dan dashboard dijelaskan di [COMPANION_IMPLEMENTATION.md](COMPANION_IMPLEMENTATION.md). Roadmap companion aktif, arsitektur aktivitas, dan task implementasi berurutan ada di [docs/companion/ROADMAP.md](docs/companion/ROADMAP.md); status serta bukti kerja ada di [docs/companion/PROGRESS.md](docs/companion/PROGRESS.md). Raw transcript hanya di RAM; default baru memakai WakeNet "Hi ESP" dengan fallback sentuhan. Pengaturan input lama yang selalu menyimak dialihkan ke jendela sentuhan. Audio tidak dikirim di luar jendela percakapan.
 
 Dua TTP223 dibaca terpisah: sensor kepala menggunakan GPIO7 untuk belaian/reaksi afeksi; sensor samping memakai GPIO16 secara default untuk membuka jendela percakapan. Hubungkan pin SIG sensor samping ke GPIO yang dikonfigurasi, atau ubah macro build `ROBODESK_PIN_TOUCH_SIDE` jika kabel memakai GPIO lain. Endpoint dashboard `/api/status` menyertakan nomor pin yang sedang dipakai. Tidak ada mode permainan; sentuhan kepala tetap menjadi input afeksi dan percakapan biasa.
 
