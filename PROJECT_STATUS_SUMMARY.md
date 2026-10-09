@@ -71,7 +71,7 @@ At this snapshot, `Get-PnpDevice -Class Ports` returned no serial ports in the c
 - IP5310 load/low-battery behavior, thermal behavior and two-hour combined operation.
 - Physical microphone/audio, PIR/touch and activity behavior.
 
-No GitHub release was published in this continuation. The repository has extensive modified and untracked implementation files; preserve the working tree. Do not reset, clean, stage, flash or publish as part of routine documentation work.
+No GitHub release was published in this continuation. The former local working tree is committed on branch `claude/quirky-allen-bpvdo7` (`44b25a0`). Do not reset, clean, stage, flash or publish as part of routine documentation work.
 
 ## Recommended sequence
 
