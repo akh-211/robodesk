@@ -36,6 +36,10 @@ fun main() {
         check(secret !in redacted.title && secret !in redacted.snippet) { "unredacted secret: $secret" }
     }
 
+    val bareCode = NotificationTextRedactor.sanitize("Instagram", "Your Instagram code is 482913", AppContentMode.SNIPPET)
+    check("482913" !in bareCode.snippet)
+    check(NotificationTextRedactor.sanitize("Kode masuk Anda", "123456", AppContentMode.SNIPPET) == SafeNotificationText("", ""))
+
     val bounded = NotificationTextRedactor.sanitize("🙂".repeat(80), "🚗".repeat(100), AppContentMode.SNIPPET)
     check(bounded.title.toByteArray(Charsets.UTF_8).size <= 79)
     check(bounded.snippet.toByteArray(Charsets.UTF_8).size <= 180)
