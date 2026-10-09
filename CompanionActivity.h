@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include "CompanionActivityCatalog.h"
 
 namespace companion {
 
@@ -104,7 +105,7 @@ class ActivityTracker {
 
   void sync(uint8_t lifeActivity, uint32_t now, bool allowed,
             ActivityBlock block = ActivityBlock::None) {
-    if (lifeActivity > 9) lifeActivity = 0;
+    if (lifeActivity > activityCatalogSize()) lifeActivity = 0;
     if (!allowed) {
       if (isActive() && lifeActivity == 0) {
         finish(ActivityOutcomeKind::Interrupted, now, block);

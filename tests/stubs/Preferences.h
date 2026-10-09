@@ -5,9 +5,14 @@
 
 class Preferences {
   inline static std::map<std::string, std::string> values_;
+  inline static std::string failNextStringKey_;
+  inline static std::string failNextBytesKey_;
   std::string prefix_;
   std::string scoped(const char*key)const{return prefix_+key;}
 public:
+  static void failNextStringForTest(const char*key){failNextStringKey_=key?key:"";}
+  static void clearStringFailureForTest(){failNextStringKey_.clear();}
+  static void failNextBytesForTest(const char*key){failNextBytesKey_=key?key:"";}
   bool begin(const char*ns, bool = false) { prefix_=std::string(ns)+"/";return true; }
   void end() {}
   bool getBool(const char* key, bool fallback) const {
@@ -26,7 +31,7 @@ public:
     auto it=values_.find(scoped(key));return it==values_.end()?fallback:uint8_t(std::stoul(it->second));
   }
   size_t putBool(const char* key, bool value) { values_[scoped(key)]=value?"1":"0";return 1; }
-  size_t putString(const char* key, const char* value) { values_[scoped(key)]=value;return values_[scoped(key)].size()+1; }
+  size_t putString(const char* key, const char* value) { if(failNextStringKey_==key){failNextStringKey_.clear();return 0;}values_[scoped(key)]=value;return values_[scoped(key)].size(); }
   size_t putUShort(const char* key, uint16_t value) { values_[scoped(key)]=std::to_string(value);return sizeof(value); }
   size_t putShort(const char* key, int16_t value) { values_[scoped(key)]=std::to_string(value);return sizeof(value); }
   size_t putUChar(const char* key, uint8_t value) { values_[scoped(key)]=std::to_string(value);return sizeof(value); }
@@ -34,8 +39,10 @@ public:
   size_t putUInt(const char*key,uint32_t value){values_[scoped(key)]=std::to_string(value);return sizeof(value);}
   size_t getBytesLength(const char*key)const{auto it=values_.find(scoped(key));return it==values_.end()?0:it->second.size();}
   size_t getBytes(const char*key,void*out,size_t cap)const{auto it=values_.find(scoped(key));if(it==values_.end())return 0;size_t n=std::min(cap,it->second.size());memcpy(out,it->second.data(),n);return n;}
-  size_t putBytes(const char*key,const void*data,size_t n){values_[scoped(key)]=std::string(static_cast<const char*>(data),n);return n;}
+  size_t putBytes(const char*key,const void*data,size_t n){if(failNextBytesKey_==key){failNextBytesKey_.clear();return 0;}values_[scoped(key)]=std::string(static_cast<const char*>(data),n);return n;}
+  bool isKey(const char*key)const{return values_.find(scoped(key))!=values_.end();}
   bool remove(const char*key){return values_.erase(scoped(key))!=0;}
+  size_t freeEntries()const{return 64;}
   float getFloat(const char*key,float fallback=0)const{auto it=values_.find(scoped(key));return it==values_.end()?fallback:std::stof(it->second);}
   uint32_t getULong(const char*key,uint32_t fallback=0)const{return getUInt(key,fallback);}
   bool clear(){for(auto it=values_.begin();it!=values_.end();)if(it->first.rfind(prefix_,0)==0)it=values_.erase(it);else ++it;return true;}

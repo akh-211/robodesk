@@ -2,6 +2,22 @@
 
 Firmware memakai Gemini Live langsung melalui Wi-Fi, dengan default `gemini-3.8-live`. Memori dan perilaku lokal tidak melatih ulang model. Build menggunakan ESP32-S3, Arduino-ESP32 3.3.11, flash 16 MB, dan PSRAM OPI. Kredensial/NVS pengaturan dan offset partisi tetap dipertahankan.
 
+## Status perangkat terbaru (2026-10-03)
+
+Firmware optimasi RAM telah ditulis ke slot aktif custom `app0` pada `0x400000`; hash esptool cocok. Upload Arduino generik sebelumnya menulis image ke `0x10000`, yang bukan slot aplikasi pada layout ini, sehingga prosedur rilis harus memeriksa partisi sebelum flash. Build terpasang boot dalam keadaan READY dan bertahan sekitar tiga menit tanpa reset yang terlihat.
+
+Serial mencatat heap internal bebas/minimum/blok terbesar `98,504/57,160/42,996` byte, PSRAM bebas `8,175,104` byte, dan speaker/pre-roll ring memakai PSRAM. Uji `audio_test` menyelesaikan `177,840` frame speaker, lalu kembali READY dengan nol underrun, starvation, atau drop. Bukti tersebut hanya memastikan jalur pemrosesan; suara fisik, input mic, kontrol sentuh/sensor, dashboard browser, soak, serta OTA/rollback belum dikualifikasi. Hostname `robodesk.local` gagal di-resolve pada pemeriksaan terakhir.
+
+Perubahan dashboard saat ini menambahkan ringkasan heap/audio dan ambang peringatan berbasis minimum heap 50 KiB, blok terbesar 32 KiB, lokasi buffer, dan counter drop. Ambang tersebut adalah diagnostik awal, bukan jaminan keselamatan universal; kualifikasi soak tetap diperlukan.
+
+Build sumber dashboard terbaru menggunakan sketch 2.738.171 byte dan binary 2.738.320 byte, muat dalam slot OTA 3 MiB; global statis 129.324 dari 327.680 byte; suite host dan fixture renderer JavaScript lulus. OTA rollback di-arm sebelum alokasi buffer audio, dan timer kesiapan dimulai setelah task audio/layanan aktif. Image telah ditulis dan hash diverifikasi pada app0; tiga jendela UART menunjukkan heartbeat tanpa reset, dan audio_test memproses 152.641 frame dengan nol underrun/starvation/drop. Pemeriksaan GitHub dari robot memvalidasi signature manifest v10 dan melewati instalasi karena v10 sudah terpasang.
+
+Kegagalan `LEV,BRAIN,SAVE_FAIL` cocok dengan upload lama ke `0x10000` yang menimpa sekitar 116.880 byte awal SPIFFS di `0x290000`. Backup SPIFFS 1.441.792 byte, app0, dan metadata tersedia di `%LOCALAPPDATA%\Temp\RoboDeskEnhancement-20261003`; `mklittlefs -l` pada backup melaporkan `Corrupted dir pair at {0x0, 0x1}`. Pemilik menyetujui format; hasil penulisannya tercatat di bawah. Dashboard HTTP di `192.168.1.6` meminta Basic Auth; pengguna telah login lokal, tetapi sesi ini tidak menyediakan browser untuk memverifikasi UI.
+
+Pemilik menyetujui pemulihan SPIFFS. Image LittleFS kosong ditulis dan hash diverifikasi pada `0x290000` dengan ukuran tepat `0x160000`; NVS, app, metadata OTA/tabel partisi, coredump, dan model tidak diubah. Tiga jendela health serial setelah reset lulus. Monitor 90 detik mencatat heartbeat tanpa `BRAIN,SAVE_FAIL`, tetapi belum melihat event `BRAIN,SAVE`, sehingga penyimpanan belum dinyatakan pulih. Langkah verifikasi berikutnya ialah membaca `companion.storageHealthy` dari dashboard terautentikasi dan memicu satu event memori nyata, lalu memastikan save dan reload berhasil.
+
+Pemilik mengonfirmasi panel heap/audio dashboard menampilkan status “Healthy: heap reserve and audio counters are within the monitored thresholds” serta `companion.storageHealthy=true`. Ini mengonfirmasi panel resource dan filesystem berhasil dimount; satu siklus save/reload record memori nyata masih diperlukan untuk kualifikasi penuh.
+
 ## Perilaku yang tersedia
 
 - Sentuhan samping atau WakeNet membuka jendela percakapan 15 detik; aktivitas dan akhir respons memperpanjangnya. Audio tidak dikirim ke Gemini di luar jendela tersebut. Isyarat proaktif lokal tidak membuka jendela mic atau menghubungi Gemini. Nilai mode lama `AlwaysListening` tetap bisa dibaca, kemudian dialihkan ke sentuhan saat boot atau penyimpanan dashboard.

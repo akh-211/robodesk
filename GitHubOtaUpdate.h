@@ -16,6 +16,7 @@
 #include <esp_heap_caps.h>
 #include <esp_sntp.h>
 #include "RoboLog.h"
+#include "RoboBoardProfile.h"
 #include "FirmwareOtaKey.h"
 #include "OtaRedirectPolicy.h"
 #include "OtaWorkflowPolicy.h"
@@ -89,16 +90,42 @@ class GitHubOtaUpdate {
     portEXIT_CRITICAL(&mux_);
   }
 
+ public:
+  struct RemoteImage {
+    const char* board;const char* target;const char* manifest;const char* asset;size_t maximum;void* context;
+    bool(*version)(void*,uint32_t*);
+    bool(*begin)(void*,uint32_t,size_t,const char*,const char*);
+    size_t(*write)(void*,const uint8_t*,size_t);
+    bool(*finish)(void*);void(*abort)(void*);
+  };
+  void setRemoteImage(const RemoteImage*remote){remote_=remote;}
  private:
+  const RemoteImage*remote_=nullptr;
+  const char* targetBoard()const{return remote_?remote_->board:ROBODESK_BOARD_ID;}
+  const char* signingTarget()const{return remote_?remote_->target:ROBODESK_OTA_SIGNING_TARGET;}
+  const char* assetName()const{
+    if(remote_)return remote_->asset;
+#ifdef ROBODESK_OTA_ASSET
+    return ROBODESK_OTA_ASSET;
+#else
+    return !strcmp(ROBODESK_BOARD_ID,"esp32c3")?"RoboDeskSonicCharacter-esp32c3.ino.bin":"RoboDeskSonicCharacter.ino.bin";
+#endif
+  }
   enum class Operation : uint8_t { Check, Install, Diagnostics };
   static constexpr size_t kManifestMax = 1024;
-  static constexpr size_t kImageMax = 0x300000;
+  static constexpr size_t kImageMax = ROBODESK_APP_PARTITION_SIZE;
   // This USB diagnostic build is based on v6; the NVS record may still be older.
   static constexpr uint32_t kMinimumExclusiveVersion = 6;
-  static const char* manifestUrl() { return "https://github.com/akh-211/robodesk/releases/latest/download/manifest.txt"; }
-  static const char* imageUrl(uint32_t version, char* out, size_t size) {
-    snprintf(out, size, "https://github.com/akh-211/robodesk/releases/download/v%u/RoboDeskSonicCharacter.ino.bin", unsigned(version));
-    return out;
+  const char* manifestUrl() const {
+    if(remote_)return remote_->manifest;
+#ifdef ROBODESK_OTA_MANIFEST
+    return "https://github.com/akh-211/robodesk/releases/latest/download/" ROBODESK_OTA_MANIFEST;
+#else
+    return !strcmp(ROBODESK_BOARD_ID,"esp32c3") ? "https://github.com/akh-211/robodesk/releases/latest/download/manifest-esp32c3.txt" : "https://github.com/akh-211/robodesk/releases/latest/download/manifest.txt";
+#endif
+  }
+  const char* imageUrl(uint32_t version,char*out,size_t size)const{
+    snprintf(out,size,"https://github.com/akh-211/robodesk/releases/download/v%u/%s",unsigned(version),assetName());return out;
   }
 
   struct Manifest {
@@ -263,7 +290,7 @@ class GitHubOtaUpdate {
     if (sink->image) {
       ActiveImage& active = sink->self->image_;
       if (active.writeFailed || active.bytes + amount > active.expected) { active.writeFailed = true; return ESP_FAIL; }
-      const size_t written = Update.write(static_cast<uint8_t*>(event->data), amount);
+      const size_t written = sink->self->remote_?sink->self->remote_->write(sink->self->remote_->context,static_cast<uint8_t*>(event->data),amount):Update.write(static_cast<uint8_t*>(event->data), amount);
       if (written != amount || mbedtls_sha256_update(&active.hash, static_cast<uint8_t*>(event->data), amount) != 0) {
         active.writeFailed = true;
         return ESP_FAIL;
@@ -330,7 +357,7 @@ class GitHubOtaUpdate {
     return true;
   }
 
-  static bool parseManifest(char* data, size_t size, Manifest* manifest) {
+  bool parseManifest(char* data, size_t size, Manifest* manifest) {
     if (!data || !size || !manifest || size >= kManifestMax) return false;
     data[size] = 0;
     bool haveFormat = false, haveBoard = false, haveVersion = false, haveSize = false;
@@ -345,11 +372,11 @@ class GitHubOtaUpdate {
       if (!equals) return false;
       *equals++ = 0;
       if (!strcmp(cursor, "format")) { if (strcmp(equals, "robodesk-ota-v1")) return false; haveFormat = true; }
-      else if (!strcmp(cursor, "board")) { if (strcmp(equals, "esp32s3")) return false; haveBoard = true; }
+      else if (!strcmp(cursor, "board")) { if (strcmp(equals, targetBoard())) return false; haveBoard = true; }
       else if (!strcmp(cursor, "version")) { if (!parseUnsigned(equals, &manifest->version)) return false; haveVersion = true; }
-      else if (!strcmp(cursor, "size")) { uint32_t n; if (!parseUnsigned(equals, &n) || n > kImageMax) return false; manifest->size = n; haveSize = true; }
+      else if (!strcmp(cursor, "size")) { uint32_t n; if (!parseUnsigned(equals, &n) || n > (remote_?remote_->maximum:kImageMax)) return false; manifest->size = n; haveSize = true; }
       else if (!strcmp(cursor, "sha256")) { if (strlen(equals) != 64) return false; for (size_t i=0;i<64;++i) if (!isxdigit(static_cast<unsigned char>(equals[i]))) return false; strlcpy(manifest->sha256, equals, sizeof(manifest->sha256)); haveSha = true; }
-      else if (!strcmp(cursor, "image")) { if (strcmp(equals, "RoboDeskSonicCharacter.ino.bin")) return false; haveImage = true; }
+      else if (!strcmp(cursor, "image")) { const char* expected = assetName(); if (strcmp(equals, expected)) return false; haveImage = true; }
       else if (!strcmp(cursor, "signature")) { if (strlen(equals) < 130 || strlen(equals) >= sizeof(manifest->signature)) return false; strlcpy(manifest->signature, equals, sizeof(manifest->signature)); haveSig = true; }
       else if (!strcmp(cursor, "url")) { if (strlen(equals) >= sizeof(manifest->url)) return false; strlcpy(manifest->url, equals, sizeof(manifest->url)); haveUrl = true; }
       else return false;
@@ -362,6 +389,7 @@ class GitHubOtaUpdate {
   }
 
   bool currentVersion(uint32_t* current) {
+    if(remote_)return remote_->version(remote_->context,current);
     Preferences prefs;
     if (!prefs.begin("robodesk_ota", true)) return false;
     *current = prefs.getUInt("version", ROBODESK_OTA_INITIAL_VERSION);
@@ -419,8 +447,8 @@ class GitHubOtaUpdate {
   bool verifySignature(const Manifest& manifest, const uint8_t digest[32]) {
     uint8_t signature[80] = {0}; size_t signatureLength = 0;
     if (!decodeSignature(manifest.signature, manifest.version, signature, &signatureLength)) return false;
-    char message[144];
-    const int count = snprintf(message, sizeof(message), "RoboDeskSonicCharacter|ESP32-S3|%u|%u|%s", unsigned(manifest.version), unsigned(manifest.size), manifest.sha256);
+    char message[192];
+    const int count = snprintf(message, sizeof(message), "RoboDeskSonicCharacter|%s|%u|%u|%s", signingTarget(), unsigned(manifest.version), unsigned(manifest.size), manifest.sha256);
     if (count <= 0 || size_t(count) >= sizeof(message)) return false;
     uint8_t messageDigest[32] = {0};
     mbedtls_sha256_context hash; mbedtls_sha256_init(&hash);
@@ -450,7 +478,7 @@ class GitHubOtaUpdate {
     image_.expected = manifest.size;
     mbedtls_sha256_init(&image_.hash);
     image_.hashStarted = mbedtls_sha256_starts(&image_.hash, 0) == 0;
-    if (!image_.hashStarted || !Update.begin(manifest.size, U_FLASH)) { mbedtls_sha256_free(&image_.hash);setStatus(Failed,"Could not prepare the inactive firmware slot.",0,"image_begin"); return false; }
+    if (!image_.hashStarted || !(remote_?remote_->begin(remote_->context,manifest.version,manifest.size,manifest.sha256,manifest.signature):Update.begin(manifest.size, U_FLASH))) { mbedtls_sha256_free(&image_.hash);setStatus(Failed,"Could not prepare the inactive firmware slot.",0,"image_begin"); return false; }
     HttpSink sink = {this, nullptr, 0, 0, false, false, false, {0}, true, false, 0};
     int status = 0;
     const esp_err_t result = performGet(manifest.url, &sink, &status);
@@ -465,7 +493,8 @@ class GitHubOtaUpdate {
     else if(image_.bytes!=manifest.size)failure="image_size";
     else if(!hashOk||!digestMatches(digest,manifest.sha256))failure="image_hash";
     else if(!verifySignature(manifest,digest))failure="signature";
-    if(failure){Update.abort();setStatus(Failed,"Image verification failed; the running firmware is unchanged.",0,failure);return false;}
+    if(failure){if(remote_)remote_->abort(remote_->context);else Update.abort();setStatus(Failed,"Image verification failed; the running firmware is unchanged.",0,failure);return false;}
+    if(remote_){if(!remote_->finish(remote_->context)){remote_->abort(remote_->context);setStatus(Failed,"Robot image commit failed.",0,"remote_commit");return false;}return true;}
     setStage("version_stage");
     const esp_partition_t* target = esp_ota_get_next_update_partition(nullptr);
     Preferences prefs;
@@ -547,7 +576,8 @@ class GitHubOtaUpdate {
     if(diagnostics)RoboLog.printf("LEV,NETDIAG,OTA_INSTALL,version=%lu,accepted=1\n",static_cast<unsigned long>(manifest.version));
     if (!downloadImage(manifest)) { control_(context_, false); return; }
     setStage("reboot");
-    setStatus(Rebooting, "Firmware verified. RoboDesk is restarting...");
+    setStatus(Rebooting, "Firmware verified. RoboDesk is restarting...",manifest.version);
+    if(remote_)return;
     vTaskDelay(pdMS_TO_TICKS(900));
     ESP.restart();
   }

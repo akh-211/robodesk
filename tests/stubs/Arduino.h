@@ -14,6 +14,7 @@ inline void (*mockTask)(void*)=nullptr;
 inline void* mockTaskArg=nullptr;
 inline uint32_t millis(){return mockNow;}
 inline void delay(uint32_t n){mockNow+=n;}
+inline void feedLoopWDT(){}
 inline uint32_t esp_random(){return 0x12345678;}
 struct MockSerial { template<class... T> void printf(const char*,T...){} void println(const char*){} };
 inline MockSerial Serial;

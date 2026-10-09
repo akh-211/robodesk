@@ -4,7 +4,7 @@
 #include "CompanionActivityCatalog.h"
 
 int main() {
-  assert(companion::activityCatalogSize() == 7);
+  assert(companion::activityCatalogSize() == 13);
   for (uint8_t id = 1; id <= companion::activityCatalogSize(); ++id) {
     const companion::ActivityDefinition* definition = companion::activityDefinition(id);
     assert(definition && definition->lifeActivity >= 1 && definition->lifeActivity <= 9);
@@ -13,7 +13,7 @@ int main() {
     assert(definition->defaultDurationMs <= definition->maxDurationMs);
     assert((definition->resources & companion::ActivityResourceDisplay) != 0);
   }
-  assert(companion::activityDefinition(0) == nullptr && companion::activityDefinition(8) == nullptr);
+  assert(companion::activityDefinition(0) == nullptr && companion::activityDefinition(14) == nullptr);
   assert(std::strcmp(companion::companionActivityName(3), "rhythm_play") == 0);
 
   companion::BehaviorContext context;
@@ -75,6 +75,12 @@ int main() {
   assert(observedIntent.outcomeCount() == 0);
 
   assert(tracker.transitions() == 6);
+  companion::ActivityTracker extended;
+  extended.sync(13, 100, true);
+  assert(extended.activity() == 13 && extended.state() == companion::ActivityState::Running);
+  extended.sync(13, 200, false, companion::ActivityBlock::Busy);
+  extended.sync(13, 300, true);
+  assert(extended.activity() == 13 && extended.state() == companion::ActivityState::Running);
   assert(std::strcmp(companion::activityStateName(tracker.state()), "running") == 0);
   assert(std::strcmp(companion::activityBlockName(companion::ActivityBlock::Disabled), "disabled") == 0);
   assert(std::strcmp(companion::lifeActivityName(7), "self_entertain") == 0);

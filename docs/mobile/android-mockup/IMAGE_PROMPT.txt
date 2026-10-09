@@ -1,0 +1,22 @@
+Use case: ui-mockup
+Asset type: a single high-resolution complete Android companion app review board.
+Primary request: Design twelve consistent polished Android mobile app screens for "RoboDesk Bridge", a mini robot companion notification/navigation bridge. This is a proposed concept, not the shipped APK.
+Style: high-fidelity flat Android UI with legible typography, restrained futuristic warmth. Match the existing RoboDesk dashboard palette: deep midnight navy #050814, layered cards #10182c, cyan #00e5ff, soft violet #a66bff, mint statuses. Rounded corners, generous spacing, accessible contrast, Material-style icons. Cute two cyan OLED eyes used as the hero, no photorealistic robot. Clean sophisticated restrained gradients, not neon clutter.
+Composition: large 4-column by 3-row review board on dark neutral navy, twelve straight-on portrait Android screens with identical proportions and small screen-number labels outside. All twelve screens fully visible, no cropping. A clean top header "RoboDesk Bridge" with subtitle "Android app • UI concept". A bottom footer "KONSEP • DATA SIMULASI • BELUM DIIMPLEMENTASIKAN". Use as large a landscape canvas as needed for readable screens.
+Screens in reading order with concise Indonesian text:
+01 Welcome: OLED eyes hero, title "Teman kecil, tetap dekat.", summary "Notifikasi dan navigasi HP ke RoboDesk.", primary "Hubungkan robot", secondary "Lihat privasi". No account/login requirement.
+02 Permissions: title "Kamu pegang kendali"; Bluetooth and Akses notifikasi cards each explaining purpose; explicit small sentence "Izin notifikasi luas. Hanya aplikasi pilihan yang diteruskan."; CTA "Lanjutkan".
+03 Robot picker: title "Pilih RoboDesk"; nearby list cards "RoboDesk Mini" and "RoboDesk Studio", RSSI bars, clear selection and "Verifikasi robot". Do not falsely present UUID match as verified.
+04 Verify: title "Cocokkan kode"; large six-digit DEMO "482 916"; small "Bandingkan dengan layar robot"; buttons "Kode cocok" and "Batalkan"; proposed verification design.
+05 Home: title "Halo, RoboDesk."; verified connection chip in simulated concept, big cyan-eyes OLED card; cards "Notifikasi", "Navigasi", "Mode tenang"; violet CTA "Jeda bridge"; bottom nav "Beranda", "Aplikasi", "Navigasi", "Robot", "Lainnya".
+06 Applications: title "Aplikasi pilihan"; WhatsApp, Telegram, Kalender, Bank demo list with switches. Bank disabled. Row content modes "Judul saja" and "Cuplikan"; empty-by-default onboarding reflected by disabled sensitive app. Subtitle "Kamu pilih apa yang dibagikan."
+07 Navigation: title "Petunjuk jalan"; large left arrow, "200 m", "Jalan Merdeka", "12 menit"; small OLED preview with arrow; status "Baru diperbarui"; toggle "Teruskan Google Maps"; no full map imagery.
+08 Privacy: title "Privasi"; local-only default card "HP → Bluetooth → robot"; switches "Sembunyikan isi saat HP terkunci", "Samarkan kode sensitif"; cloud readout "Nonaktif" with note "Jika diaktifkan, cuplikan dikirim ke Google"; button "Hapus antrean".
+09 Companion: title "Karakter RoboDesk"; OLED eyes card; three intensity segments "Halus", "Tenang", "Ekspresif"; activity cards "Pixel doodle", "Temani fokus", "Napas tenang", "Touch play"; availability should look planned, not fake production claims.
+10 Diagnostics: title "Kesehatan koneksi"; BLE and robot-link status, queue and last sync metadata, "Uji kirim" and "Bagikan diagnostik"; never show notification text, secrets or full identity.
+11 Settings: title "Pengaturan"; Bahasa Indonesia, Tema Gelap, Baterai & latar belakang, Izin Android, Tentang; "Lupakan robot" as clearly destructive bottom action. No analytics/account/advertising.
+12 Offline: title "Robot terputus"; subdued OLED eyes, "Data belum dikirim"; CTA "Coba lagi"; short queue expiry explanation; no green verified connection status.
+Constraints: accurate short readable Indonesian labels; coherent visual navigation; realistic mobile UI proportions and hierarchy, every screen distinct. No extra device capabilities, no health tracking, no microphone recording or camera permission prompt, no OTP/password/message content in demo, no real map tiles, no watermark. Use obviously invented innocuous demo data. Twelve screens, not fewer.
+
+Final image edit: preserve all twelve screens; correct Offline TTL to notification 5 minutes and navigation 2 minutes, cloud explanation to Google voice readout, and About version to APK 1.1.0 / UI concept. Generated with the built-in image_gen tool; no CLI fallback.
+

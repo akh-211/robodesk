@@ -56,9 +56,6 @@ int main() {
   struct GateCase { bool enabled, presence, clock, sensors, safety; companion::ActivityBlock reason; };
   const GateCase gates[] = {
     {false,true,true,true,false,companion::ActivityBlock::Disabled},
-    {true,false,true,true,false,companion::ActivityBlock::NoPresence},
-    {true,true,false,true,false,companion::ActivityBlock::ClockInvalid},
-    {true,true,true,false,false,companion::ActivityBlock::StaleSensor},
     {true,true,true,true,true,companion::ActivityBlock::Safety}
   };
   for (const auto& gate : gates) {
@@ -70,6 +67,12 @@ int main() {
     const auto result=gated.update(2500,blocked,nullptr,0,
         uint8_t(companion::CompanionActivityId::CuriousLook));
     assert(result.event==companion::SchedulerEvent::Rejected&&result.reason==gate.reason);
+  }
+  {
+    companion::SchedulerContext bare=eligible();bare.probablePresence=false;bare.clockValid=false;bare.sensorsFresh=false;
+    companion::CompanionScheduler manual(37);
+    assert(manual.update(2500,bare,nullptr,0,uint8_t(companion::CompanionActivityId::CuriousLook)).event==companion::SchedulerEvent::Started);
+    assert(manual.update(2600,bare).event==companion::SchedulerEvent::None);
   }
   context=eligible();context.ownerPaused=true;
   companion::CompanionScheduler ownerPaused(31);

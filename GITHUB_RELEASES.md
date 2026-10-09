@@ -23,14 +23,18 @@ $nextVersion = 6 # Example only; check the next unused version before signing.
 .\tools\prepare_github_release.ps1 -Repository akh-211/robodesk -Version $nextVersion -LivingEyesRoot $eyes
 ```
 
-The example release command must **not** be run during merger verification: a successful package consumes its version and signs an image. The script verifies the LivingEyes fingerprint before staging, passes the checkout's parent to Arduino CLI with `--libraries`, and checks the CLI's verbose resolver output for the **exact selected checkout path**. It checks the fingerprint again after compilation and refuses to sign on any mismatch, missing resolver evidence, or wrong library selection. It stages source without `secrets.h`, the signing key, and previous binaries; substitutes `secrets.example.h`; builds the ESP32-S3 16 MB image; signs and verifies it with the local DPAPI key; and writes these assets to a temporary output directory:
+The example release command must **not** be run during merger verification: a successful package consumes its version and signs both images. The script verifies the LivingEyes fingerprint before staging, passes the checkout's parent to Arduino CLI with `--libraries`, and checks the CLI's verbose resolver output for the **exact selected checkout path**. It checks the fingerprint again after each compilation and refuses to sign on any mismatch, missing resolver evidence, or wrong library selection. It stages source without `secrets.h`, the signing key, tests, and previous binaries; substitutes `secrets.example.h`; builds the S3 16 MB image and C3 4 MB image; signs and verifies both with the local DPAPI key; and writes all board assets into one temporary directory. The C3 image defaults to USB/dashboard-only; add `-EnableC3Peripherals` only after the selected C3 wiring is installed:
 
 - `RoboDeskSonicCharacter.ino.bin`
 - `RoboDeskSonicCharacter.ino.bin.sig`
 - `manifest.txt`
+- `RoboDeskSonicCharacter-esp32c3.ino.bin`
+- `RoboDeskSonicCharacter-esp32c3.ino.bin.sig`
+- `manifest-esp32c3.txt`
 
-When release gates have passed and publication is authorized, tag the approved version `v<nextVersion>` (greater than v5), upload all three matching assets, and publish. The manifest URL for the device is:
+When both board builds and applicable device gates have passed, tag the approved version `v<nextVersion>` (greater than v5), upload all six assets to that same release, and publish. Both updater profiles use the GitHub `latest` release; publishing only one board's manifest would break the other board's update check. The manifest URLs are:
 `https://github.com/akh-211/robodesk/releases/latest/download/manifest.txt`.
+`https://github.com/akh-211/robodesk/releases/latest/download/manifest-esp32c3.txt`.
 
 The manifest schema is newline-separated `key=value`: `format`, `board`, `version`, `size`, `sha256`, `image`, `signature`, and `url`. The corrected updater is designed to fetch the latest manifest over HTTPS using the ESP certificate bundle, allow only HTTPS redirects to approved GitHub release-asset hosts, and download the image from the tag-pinned URL. It checks image size, SHA-256, board, monotonic version, and ECDSA signature before staging the inactive slot. These checks and the redirect flow still need end-to-end device verification; host tests or a target build alone do not establish successful on-device GitHub OTA, rollback, or data preservation.
 

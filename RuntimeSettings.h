@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <Preferences.h>
+#include <stddef.h>
 #include <string.h>
 
 struct RuntimeSettings {
@@ -77,6 +78,11 @@ struct RuntimeSettings {
   uint16_t quietStartMin;          // local minute of day
   uint16_t quietEndMin;
   uint16_t quietGainX100;          // 0..100 applied to local SFX
+  // Append-only: keep the original migration-backup prefix readable.
+  uint8_t phonePlatform;          // 0 Android bridge, 1 iPhone ANCS
+  uint8_t navigationEnabled;
+  uint8_t characterIntensity;     // 0 subtle, 1 calm active, 2 expressive
+  char notificationSpeechAllowlist[192]; // explicit permission for cloud readout
 
   RuntimeSettings() { clear(); }
 
@@ -88,6 +94,7 @@ struct RuntimeSettings {
     copy(speechStyle, sizeof(speechStyle),
          "Speak natural conversational Indonesian at a normal speaking pace. Use concise sentences and short natural pauses. Do not deliberately slow down unless the user explicitly asks.");
     copy(robotName, sizeof(robotName), "RoboDesk");
+    navigationEnabled=1;characterIntensity=1;
     speakerGainMilli = 450;
     vadStartX100 = 350;
     vadEndX100 = 190;
@@ -173,18 +180,27 @@ struct RuntimeSettings {
 
 class RuntimeSettingsStore {
  public:
+  uint8_t wifiSaveFailedSlot() const { return wifiSaveFailedSlot_; }
+  uint8_t wifiLegacyMirrorFailedSlot() const { return wifiLegacyMirrorFailedSlot_; }
+  bool wifiLegacyMirrorRestoreFailed() const { return wifiLegacyMirrorRestoreFailed_; }
+  bool wifiCredentialsCommittedThisSave() const { return wifiCredentialsCommittedThisSave_; }
+  size_t wifiFreeEntriesAfterSave() const { return wifiFreeEntriesAfterSave_; }
+
   bool load(RuntimeSettings& out, const RuntimeSettings& defaults) {
     out = defaults;
     Preferences p;
     if (!p.begin("robodesk", true)) return false;
     const bool initialized = p.getBool("init", false);
+    const bool hasWifiRecord=readWifiRecord_(p,out);
     if (initialized) {
-      readString(p, "ssid", out.wifiSsid, sizeof(out.wifiSsid));
-      readString(p, "wpass", out.wifiPassword, sizeof(out.wifiPassword));
-      readString(p, "ssid2", out.wifiSsid2, sizeof(out.wifiSsid2));
-      readString(p, "wpass2", out.wifiPassword2, sizeof(out.wifiPassword2));
-      readString(p, "ssid3", out.wifiSsid3, sizeof(out.wifiSsid3));
-      readString(p, "wpass3", out.wifiPassword3, sizeof(out.wifiPassword3));
+      if(!hasWifiRecord){
+        readString(p, "ssid", out.wifiSsid, sizeof(out.wifiSsid));
+        readString(p, "wpass", out.wifiPassword, sizeof(out.wifiPassword));
+        readString(p, "ssid2", out.wifiSsid2, sizeof(out.wifiSsid2));
+        readString(p, "wpass2", out.wifiPassword2, sizeof(out.wifiPassword2));
+        readString(p, "ssid3", out.wifiSsid3, sizeof(out.wifiSsid3));
+        readString(p, "wpass3", out.wifiPassword3, sizeof(out.wifiPassword3));
+      }
       readString(p, "gkey", out.geminiApiKey, sizeof(out.geminiApiKey));
       readString(p, "model", out.geminiModel, sizeof(out.geminiModel));
       readString(p, "summarymodel", out.summaryModel, sizeof(out.summaryModel));
@@ -220,6 +236,10 @@ class RuntimeSettingsStore {
       out.pomodoroInterrupted=p.getUChar("pomint",out.pomodoroInterrupted)?1:0;
       readString(p,"notifapps",out.notificationAllowlist,sizeof(out.notificationAllowlist));
       readString(p,"blepeer",out.phoneBlePeer,sizeof(out.phoneBlePeer));
+      out.phonePlatform=uint8_t(clampU16(p.getUChar("phoneplat",out.phonePlatform),0,1));
+      out.navigationEnabled=p.getUChar("navon",out.navigationEnabled)?1:0;
+      out.characterIntensity=uint8_t(clampU16(p.getUChar("charlevel",out.characterIntensity),0,2));
+      readString(p,"notifvoice",out.notificationSpeechAllowlist,sizeof(out.notificationSpeechAllowlist));
       out.faceLifeEnabled = p.getUChar("flife", out.faceLifeEnabled) ? 1 : 0;
       out.facePupils = p.getUChar("fpupil", out.facePupils) ? 1 : 0;
       out.faceBrows = p.getUChar("fbrow", out.faceBrows) ? 1 : 0;
@@ -248,27 +268,53 @@ class RuntimeSettingsStore {
       out.inputMode = mode <= uint8_t(RuntimeSettings::WakeWord) ? mode : uint8_t(RuntimeSettings::AlwaysListening);
     }
     p.end();
-    return initialized;
+    return initialized||hasWifiRecord;
   }
 
   bool save(const RuntimeSettings& s) {
+    wifiSaveFailedSlot_=0;
+    wifiLegacyMirrorFailedSlot_=0;
+    wifiLegacyMirrorRestoreFailed_=false;
+    wifiCredentialsCommittedThisSave_=false;
+    wifiFreeEntriesAfterSave_=0;
     Preferences p;
     if (!p.begin("robodesk", false)) return false;
     bool ok = true;
-    ok &= p.putBool("init", true) > 0;
-    ok &= p.putString("ssid", s.wifiSsid) > 0 || s.wifiSsid[0] == 0;
-    p.putString("wpass", s.wifiPassword);
-    ok &= p.putString("ssid2", s.wifiSsid2) > 0 || s.wifiSsid2[0] == 0;
-    ok &= p.putString("wpass2", s.wifiPassword2) > 0 || s.wifiPassword2[0] == 0;
-    ok &= p.putString("ssid3", s.wifiSsid3) > 0 || s.wifiSsid3[0] == 0;
-    ok &= p.putString("wpass3", s.wifiPassword3) > 0 || s.wifiPassword3[0] == 0;
+    WifiCredentialSet previous{};
+    const bool previousRecord=readWifiRecord_(p,previous);
+    if(!previousRecord)readLegacyWifi_(p,previous);
+    WifiCredentialSet next{};
+    makeWifiRecord_(s,next);
+    const bool wifiChanged=!sameWifi_(previous,next);
+    const bool writeRecord=!previousRecord||wifiChanged;
+    if(writeRecord&&!writeWifiRecord_(p,next)){
+      wifiSaveFailedSlot_=changedWifiSlot_(previous,next);
+      wifiFreeEntriesAfterSave_=p.freeEntries();
+      p.end();
+      return false;
+    }
+    wifiCredentialsCommittedThisSave_=previousRecord||writeRecord;
+    const bool recordReady=wifiCredentialsCommittedThisSave_;
+    if(recordReady&&!legacyWifiMatches_(p,next)&&!mirrorLegacyWifi_(p,next)){
+      wifiLegacyMirrorFailedSlot_=changedWifiSlot_(previous,next);
+      // Restore the complete legacy set for older firmware/OTA rollback. The
+      // atomic record remains authoritative for this firmware either way.
+      if(!mirrorLegacyWifi_(p,previous))wifiLegacyMirrorRestoreFailed_=true;
+    }
     ok &= p.putString("gkey", s.geminiApiKey) > 0 || s.geminiApiKey[0] == 0;
     ok &= p.putString("model", s.geminiModel) > 0;
     ok &= p.putString("summarymodel",s.summaryModel)>0;
     ok &= p.putUChar("automem",s.autoMemory)>0;
     ok &= p.putUChar("bgmax",s.backgroundDailyLimit)>0;
     ok &= p.putString("voice", s.geminiVoice) > 0;
-    ok &= p.putString("pin", s.adminPin) > 0;
+    const size_t pinWritten=p.putString("pin", s.adminPin);
+#if ROBODESK_DUAL_ROBOT
+    // This role retires its local login. Preferences returns the string length,
+    // so a successfully persisted empty PIN is zero bytes; verify the readback.
+    ok &= pinWritten>0 || (s.adminPin[0]==0 && p.isKey("pin") && p.getString("pin").isEmpty());
+#else
+    ok &= pinWritten>0;
+#endif
     p.putString("style", s.speechStyle);
     p.putString("rname", s.robotName);
     p.putUShort("gain", s.speakerGainMilli);
@@ -297,6 +343,10 @@ class RuntimeSettingsStore {
     ok &= p.putUChar("pomint",s.pomodoroInterrupted)>0;
     ok &= p.putString("notifapps",s.notificationAllowlist)>0||s.notificationAllowlist[0]==0;
     ok &= p.putString("blepeer",s.phoneBlePeer)>0||s.phoneBlePeer[0]==0;
+    ok &= p.putUChar("phoneplat",s.phonePlatform)==1;
+    ok &= p.putUChar("navon",s.navigationEnabled)==1;
+    ok &= p.putUChar("charlevel",s.characterIntensity)==1;
+    ok &= p.putString("notifvoice",s.notificationSpeechAllowlist)>0||s.notificationSpeechAllowlist[0]==0;
     p.putUChar("flife", s.faceLifeEnabled);
     p.putUChar("fpupil", s.facePupils);
     p.putUChar("fbrow", s.faceBrows);
@@ -322,6 +372,8 @@ class RuntimeSettingsStore {
     p.putUShort("quietend", s.quietEndMin);
     p.putUShort("quietgain", s.quietGainX100);
     p.putUChar("mode", s.inputMode);
+    if(ok)ok &= p.putBool("init",true)>0;
+    wifiFreeEntriesAfterSave_=p.freeEntries();
     p.end();
     return ok;
   }
@@ -335,6 +387,80 @@ class RuntimeSettingsStore {
   }
 
  private:
+  struct WifiCredentialSet {
+    uint32_t magic;
+    uint16_t version;
+    uint16_t reserved;
+    char ssid[3][33];
+    char password[3][65];
+    uint32_t checksum;
+  };
+
+  static constexpr uint32_t WifiRecordMagic=0x57494649u;
+  static constexpr uint16_t WifiRecordVersion=1;
+  static uint32_t wifiChecksum_(const WifiCredentialSet&record){
+    const uint8_t*bytes=reinterpret_cast<const uint8_t*>(&record);uint32_t hash=2166136261u;
+    for(size_t i=0;i<offsetof(WifiCredentialSet,checksum);++i){hash^=bytes[i];hash*=16777619u;}
+    return hash;
+  }
+  static bool validWifiRecord_(const WifiCredentialSet&record){
+    if(record.magic!=WifiRecordMagic||record.version!=WifiRecordVersion||record.checksum!=wifiChecksum_(record))return false;
+    for(uint8_t i=0;i<3;++i)if(!memchr(record.ssid[i],0,sizeof(record.ssid[i]))||!memchr(record.password[i],0,sizeof(record.password[i])))return false;
+    return true;
+  }
+  static void makeWifiRecord_(const RuntimeSettings&s,WifiCredentialSet&record){
+    memset(&record,0,sizeof(record));record.magic=WifiRecordMagic;record.version=WifiRecordVersion;
+    RuntimeSettings::copy(record.ssid[0],sizeof(record.ssid[0]),s.wifiSsid);RuntimeSettings::copy(record.password[0],sizeof(record.password[0]),s.wifiPassword);
+    RuntimeSettings::copy(record.ssid[1],sizeof(record.ssid[1]),s.wifiSsid2);RuntimeSettings::copy(record.password[1],sizeof(record.password[1]),s.wifiPassword2);
+    RuntimeSettings::copy(record.ssid[2],sizeof(record.ssid[2]),s.wifiSsid3);RuntimeSettings::copy(record.password[2],sizeof(record.password[2]),s.wifiPassword3);
+    record.checksum=wifiChecksum_(record);
+  }
+  static void readLegacyWifi_(Preferences&p,WifiCredentialSet&record){
+    memset(&record,0,sizeof(record));record.magic=WifiRecordMagic;record.version=WifiRecordVersion;
+    const char*ssidKeys[]={"ssid","ssid2","ssid3"};const char*passwordKeys[]={"wpass","wpass2","wpass3"};
+    for(uint8_t i=0;i<3;++i){String ssid=p.getString(ssidKeys[i]);String password=p.getString(passwordKeys[i]);RuntimeSettings::copy(record.ssid[i],sizeof(record.ssid[i]),ssid.c_str());RuntimeSettings::copy(record.password[i],sizeof(record.password[i]),password.c_str());}
+    record.checksum=wifiChecksum_(record);
+  }
+  static bool readWifiRecord_(Preferences&p,RuntimeSettings&out){
+    WifiCredentialSet record{};if(p.getBytesLength("wifiset")!=sizeof(record)||p.getBytes("wifiset",&record,sizeof(record))!=sizeof(record)||!validWifiRecord_(record))return false;
+    RuntimeSettings::copy(out.wifiSsid,sizeof(out.wifiSsid),record.ssid[0]);RuntimeSettings::copy(out.wifiPassword,sizeof(out.wifiPassword),record.password[0]);
+    RuntimeSettings::copy(out.wifiSsid2,sizeof(out.wifiSsid2),record.ssid[1]);RuntimeSettings::copy(out.wifiPassword2,sizeof(out.wifiPassword2),record.password[1]);
+    RuntimeSettings::copy(out.wifiSsid3,sizeof(out.wifiSsid3),record.ssid[2]);RuntimeSettings::copy(out.wifiPassword3,sizeof(out.wifiPassword3),record.password[2]);return true;
+  }
+  static bool readWifiRecord_(Preferences&p,WifiCredentialSet&record){
+    return p.getBytesLength("wifiset")==sizeof(record)&&p.getBytes("wifiset",&record,sizeof(record))==sizeof(record)&&validWifiRecord_(record);
+  }
+  static bool writeWifiRecord_(Preferences&p,WifiCredentialSet&record){
+    record.checksum=wifiChecksum_(record);if(p.putBytes("wifiset",&record,sizeof(record))!=sizeof(record))return false;
+    WifiCredentialSet verify{};return readWifiRecord_(p,verify)&&memcmp(&record,&verify,sizeof(record))==0;
+  }
+  static bool sameWifi_(const WifiCredentialSet&a,const WifiCredentialSet&b){
+    for(uint8_t i=0;i<3;++i)if(strcmp(a.ssid[i],b.ssid[i])||strcmp(a.password[i],b.password[i]))return false;
+    return true;
+  }
+  static bool legacyWifiMatches_(Preferences&p,const WifiCredentialSet&record){WifiCredentialSet legacy{};readLegacyWifi_(p,legacy);return sameWifi_(legacy,record);}
+  static bool writeWifiString_(Preferences&p,const char*key,const char*value){
+    const size_t length=strlen(value);const size_t written=p.putString(key,value);
+    if(length&&written!=length)return false;
+    if(!length&&!p.isKey(key))return false;
+    const String verify=p.getString(key);return strcmp(verify.c_str(),value)==0;
+  }
+  static bool mirrorLegacyWifi_(Preferences&p,const WifiCredentialSet&record){
+    const char*ssidKeys[]={"ssid","ssid2","ssid3"};const char*passwordKeys[]={"wpass","wpass2","wpass3"};bool ok=true;
+    for(uint8_t i=0;i<3;++i){const bool ssidOk=writeWifiString_(p,ssidKeys[i],record.ssid[i]);const bool passwordOk=writeWifiString_(p,passwordKeys[i],record.password[i]);ok&=ssidOk&&passwordOk;}
+    return ok;
+  }
+  static uint8_t changedWifiSlot_(const WifiCredentialSet&oldRecord,const WifiCredentialSet&newRecord){
+    for(uint8_t i=0;i<3;++i)if(strcmp(oldRecord.ssid[i],newRecord.ssid[i])||strcmp(oldRecord.password[i],newRecord.password[i]))return uint8_t(i+1);
+    return 1;
+  }
+
+  uint8_t wifiSaveFailedSlot_=0;
+  uint8_t wifiLegacyMirrorFailedSlot_=0;
+  bool wifiLegacyMirrorRestoreFailed_=false;
+  bool wifiCredentialsCommittedThisSave_=false;
+  size_t wifiFreeEntriesAfterSave_=0;
+
   static int16_t clampI16(int16_t v, int16_t lo, int16_t hi) { return v < lo ? lo : (v > hi ? hi : v); }
   static uint16_t clampU16(uint16_t v, uint16_t lo, uint16_t hi) {
     return v < lo ? lo : (v > hi ? hi : v);

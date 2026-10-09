@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "RoboBoardProfile.h"
 #include "driver/i2s_std.h"
 
 // RoboDesk realtime speaker transport.
@@ -70,5 +71,5 @@ class RoboDeskNativeSpeakerI2S {
 
  private:
   i2s_chan_handle_t tx_ = nullptr;
-  i2s_port_t port_ = I2S_NUM_1;
+  i2s_port_t port_ = ROBODESK_SPEAKER_I2S_PORT;
 };

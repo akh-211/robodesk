@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a local DPAPI-protected OTA key and sign RoboDesk ESP32-S3 images."""
+"""Create a local DPAPI-protected OTA key and sign RoboDesk firmware images."""
 
 from __future__ import annotations
 
@@ -18,7 +18,14 @@ from cryptography.exceptions import InvalidSignature
 ROOT = Path(__file__).resolve().parents[1]
 PRIVATE_KEY_PATH = ROOT / ".ota-secrets" / "firmware-signing-key.dpapi"
 PUBLIC_HEADER_PATH = ROOT / "FirmwareOtaKey.h"
-SIGNING_CONTEXT = "RoboDeskSonicCharacter|ESP32-S3|{version}|{size}|{sha256}"
+SIGNING_CONTEXT = "RoboDeskSonicCharacter|{board}|{version}|{size}|{sha256}"
+
+
+def signing_message(board: str, version: int, size: int, sha256: str) -> bytes:
+    """Build the board-bound message signed by both firmware and release tooling."""
+    return SIGNING_CONTEXT.format(
+        board=board, version=version, size=size, sha256=sha256
+    ).encode("ascii")
 
 
 class DataBlob(ctypes.Structure):
@@ -104,7 +111,7 @@ def init_key() -> None:
     print(f"Firmware verification key written to: {PUBLIC_HEADER_PATH}")
 
 
-def sign_image(image_path: Path, version: int) -> None:
+def sign_image(image_path: Path, version: int, board: str) -> None:
     protected_key = PRIVATE_KEY_PATH.read_bytes()
     private_pem = _dpapi(protected_key, protect=False)
     private_key = serialization.load_pem_private_key(private_pem, password=None)
@@ -113,7 +120,7 @@ def sign_image(image_path: Path, version: int) -> None:
 
     image = image_path.read_bytes()
     digest = hashlib.sha256(image).hexdigest()
-    message = SIGNING_CONTEXT.format(version=version, size=len(image), sha256=digest).encode("ascii")
+    message = signing_message(board, version, len(image), digest)
     signature = private_key.sign(message, ec.ECDSA(hashes.SHA256()))
     signature_path = Path(str(image_path) + ".sig")
     signature_path.write_text(f"{version}:{signature.hex()}\n", encoding="ascii")
@@ -121,7 +128,7 @@ def sign_image(image_path: Path, version: int) -> None:
     print(f"Signature: {signature_path}")
 
 
-def verify_image(image_path: Path, signature_path: Path | None = None) -> None:
+def verify_image(image_path: Path, signature_path: Path | None = None, board: str = "ESP32-S3") -> None:
     image = image_path.read_bytes()
     signature_file = signature_path or Path(str(image_path) + ".sig")
     version_text, signature_hex = signature_file.read_text(encoding="ascii").strip().split(":", 1)
@@ -133,7 +140,7 @@ def verify_image(image_path: Path, signature_path: Path | None = None) -> None:
     public_pem = header.split('R"ROBODESKOTA(\n', 1)[1].split("\n)ROBODESKOTA", 1)[0].encode("ascii")
     public_key = serialization.load_pem_public_key(public_pem)
     digest = hashlib.sha256(image).hexdigest()
-    message = SIGNING_CONTEXT.format(version=version, size=len(image), sha256=digest).encode("ascii")
+    message = signing_message(board, version, len(image), digest)
     try:
         public_key.verify(signature, message, ec.ECDSA(hashes.SHA256()))
     except InvalidSignature as exc:
@@ -145,12 +152,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("init-key", help="Generate the local protected signing key and firmware public key")
-    sign_parser = sub.add_parser("sign", help="Sign an application .bin for RoboDesk ESP32-S3")
+    sign_parser = sub.add_parser("sign", help="Sign an application .bin for a RoboDesk target board")
     sign_parser.add_argument("image", type=Path)
     sign_parser.add_argument("--version", type=int, required=True, help="Monotonic release number (always increase)")
+    sign_parser.add_argument("--board", choices=("ESP32-S3", "ESP32-C3", "ESP32-S3/robot-link-v1", "ESP32-C3/gateway-link-v1"), default="ESP32-S3")
     verify_parser = sub.add_parser("verify", help="Verify an application .bin and its .sig file")
     verify_parser.add_argument("image", type=Path)
     verify_parser.add_argument("signature", type=Path, nargs="?")
+    verify_parser.add_argument("--board", choices=("ESP32-S3", "ESP32-C3", "ESP32-S3/robot-link-v1", "ESP32-C3/gateway-link-v1"), default="ESP32-S3")
     args = parser.parse_args()
     try:
         if args.command == "init-key":
@@ -162,9 +171,9 @@ def main() -> int:
                 raise RuntimeError("No signing key yet; run `python tools/ota_signing.py init-key` first.")
             if args.version < 1 or args.version > 0x7FFFFFFF:
                 raise RuntimeError("Version must be between 1 and 2147483647.")
-            sign_image(args.image, args.version)
+            sign_image(args.image, args.version, args.board)
         else:
-            verify_image(args.image, args.signature)
+            verify_image(args.image, args.signature, args.board)
     except (OSError, RuntimeError, ValueError) as exc:
         print(f"OTA signing error: {exc}", file=sys.stderr)
         return 1

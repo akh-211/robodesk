@@ -1,0 +1,26 @@
+#pragma once
+
+// C3 owns Wi-Fi and phone BLE; S3 keeps audio, sensors, and character runtime.
+#ifndef ROBODESK_DUAL_BOARD
+#define ROBODESK_DUAL_BOARD 0
+#endif
+#ifndef ROBODESK_PHONE_BLE_ROBOT
+#define ROBODESK_PHONE_BLE_ROBOT 0
+#endif
+#if ROBODESK_DUAL_BOARD && defined(CONFIG_IDF_TARGET_ESP32C3)
+#define ROBODESK_DUAL_GATEWAY 1
+#define ROBODESK_DUAL_ROBOT 0
+#define ROBODESK_LINK_TX 4
+#define ROBODESK_LINK_RX 5
+#elif ROBODESK_DUAL_BOARD && defined(CONFIG_IDF_TARGET_ESP32S3)
+#define ROBODESK_DUAL_GATEWAY 0
+#define ROBODESK_DUAL_ROBOT 1
+#define ROBODESK_LINK_TX 17
+#define ROBODESK_LINK_RX 18
+#define ROBODESK_PIN_IR_RX 1
+#define ROBODESK_PIN_IR_TX 2
+#else
+#define ROBODESK_DUAL_GATEWAY 0
+#define ROBODESK_DUAL_ROBOT 0
+#endif
+

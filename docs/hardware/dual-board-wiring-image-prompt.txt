@@ -1,0 +1,34 @@
+Use case: scientific-educational / infographic-diagram.
+Create a single complete high-resolution electrical WIRING POSTER for a hobby robot, landscape 4K-style, white background, sharp vector-like symbols, large readable Indonesian labels. Title exactly "RoboDesk — Wiring Lengkap S3 + C3". Subtitle "S3: robot, audio, sensor, IR • C3: Wi-Fi, BLE, dashboard". Functional schematic of breakout modules, NOT a physical header-position pinout. Explicit note "Ikuti label GPIO/pin pada modul, bukan posisi pada gambar".
+Use multiple generous panels in one image: POWER top left, UART top middle, SENSOR I2C top right, TOUCH/PIR middle right, AUDIO lower middle, IR bottom right, central S3 connection reference. Rounded module boxes with each functional terminal clearly labelled. Short orthogonal wires, exact endpoints, connection dots only at actual joins, wire crossing without dot is not connected. Avoid spaghetti. Every peripheral must have explicit power and ground terminals or clearly connected identical named rail tags. Same named rail tags are electrically connected. Colors: red +5V, orange +3V3_S3, dark gray GND, purple UART, blue SDA, green SCL, cyan mic signals, teal speaker signals, violet digital input, brown IR control. Add legend.
+Exact circuit, do not change or invent any GPIO:
+1 POWER:
+Protected 1S Li-ion battery "3,7 V nominal / 4,2 V penuh". Battery positive to module IP5310 B+, negative to B-. IP5310 "USB-C charging" drawn charger port icon. Treat as a MODULE with functional labels "B+", "B-", "OUT +5V", "OUT GND"; do not invent chip pin numbers. "Verifikasi terminal modul dan output 5 V". OUT +5V -> main on/off switch -> three separately routed parallel +5V branches: S3 DevKit N16R8 "5V IN", C3 SuperMini "5V IN", MAX98357A "VIN"; a fourth small +5V branch powers IR LED resistor. OUT GND common reference/star ground to S3 GND, C3 GND, amp GND and all sensors and IR emitter. S3 board uses its own on-board 3.3V regulator and outputs named +3V3_S3 for peripherals. C3 3V3 rail is UNUSED and is never connected to S3 3V3. Draw three polarized capacitors 470 uF / 10 V, each from its respective +5V branch to GND, positive on +5V, negative to GND. Notes: "Jangan satukan output 3V3 kedua board." and "Saat USB PC terpasang, putuskan suplai IP5310 ke board itu." Do not connect battery positive directly to 5V IN. No PD trigger circuit.
+2 UART:
+ESP32-S3 GPIO17 (TX) -> ESP32-C3 GPIO5 (RX).
+ESP32-C3 GPIO4 (TX) -> ESP32-S3 GPIO18 (RX).
+S3 GND <-> C3 GND through common GND rail.
+Caption "UART 921600 baud, 8N1, logika 3,3 V". C3 GPIO8/9 are NC; C3 GPIO18/19 USB not wired to robot peripherals. S3 radio OFF, C3 Wi-Fi/BLE ON, small labels.
+3 I2C shared bus:
+S3 GPIO8 -> SDA bus -> OLED SSD1306 SDA; MPU6050 SDA; AHT20 SDA; BMP280 SDA.
+S3 GPIO9 -> SCL bus -> OLED SSD1306 SCL; MPU6050 SCL; AHT20 SCL; BMP280 SCL.
+Each of the four breakout modules VCC -> +3V3_S3, GND -> GND explicitly.
+OLED address 0x3C, MPU6050 0x68 (AD0 to GND), AHT20 0x38, BMP280 0x77 (SDO to +3V3_S3, CS to +3V3_S3 if exposed).
+Small note "Pull-up I2C hanya ke 3,3 V; cek resistor bawaan modul."
+4 TOUCH + PIR:
+TTP223 kepala VCC -> +3V3_S3, GND -> GND, OUT -> S3 GPIO7.
+TTP223 samping VCC -> +3V3_S3, GND -> GND, OUT -> S3 GPIO16.
+AM312 PIR VCC -> +3V3_S3, GND -> GND, OUT -> S3 GPIO15.
+5 MICROPHONE:
+INMP441 breakout VDD -> +3V3_S3, GND -> GND, L/R -> GND (left channel), WS -> S3 GPIO4, SCK/BCLK -> S3 GPIO5, SD/DOUT -> S3 GPIO6. Add capacitor 100 nF across microphone VDD and GND. Add 100 kOhm pull-down from SD signal net to GND. If CHIPEN is exposed, show small note "CHIPEN ke 3V3". No 5V at microphone.
+6 SPEAKER:
+MAX98357A VIN -> +5V amp branch, GND -> GND, DIN -> S3 GPIO11, BCLK -> S3 GPIO12, LRC/LRCLK -> S3 GPIO13, SD/MODE -> +3V3_S3 enabled left channel, GAIN -> NC (default). SPK+ and SPK- each go ONLY to corresponding terminals of one 8 Ohm speaker. Do not ground SPK-. Local 100 nF across VIN and GND, in addition to its 470uF branch capacitor. "SPK- bukan GND" bold.
+7 IR RECEIVER:
+Generic "IR receiver 38 kHz / 3,3 V compatible" functional pins VCC -> +3V3_S3, GND -> GND, OUT -> S3 GPIO1. 100 nF from VCC to GND. Do not give a physical pin order or suggest arbitrary 5V-only receiver.
+8 IR BLASTER explicit correct transistor schematic:
++5V -> 100 Ohm series resistor -> ANODE (A) of 940 nm IR LED. LED CATHODE (K) -> COLLECTOR (C) of NPN transistor Q1 (2N2222 or equivalent). EMITTER (E) -> GND.
+S3 GPIO2 -> 1 kOhm base resistor -> BASE (B) Q1.
+100 kOhm resistor from BASE node (after the 1k resistor) to EMITTER/GND.
+NPN emitter arrow points outward. Label A/K and B/C/E. LED light arrows point outward. Caption "Driver aktif HIGH, carrier 38 kHz". Small note "Cek urutan kaki transistor; bukan langsung LED ke GPIO".
+Footer "Diagram koneksi fungsional • Semua GND tersambung • Jangan masukkan 5 V ke GPIO". Include concise pin summary table for S3: 17 TX,18 RX;8 SDA,9 SCL;7 touch kepala,16 touch samping,15 PIR;4 mic WS,5 mic BCLK,6 mic DATA;11 spk DIN,12 spk BCLK,13 spk LRC;1 IR RX,2 IR TX.
+Accuracy and legibility outrank decorative realism. No fake physical pin layouts. No extra components such as motor, servo, screen #2 or battery ADC. No incorrect electrical joins. Preserve every connection exactly.

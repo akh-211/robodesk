@@ -10,3 +10,9 @@
 *.sig
 __pycache__/
 *.pyc
+/mobile/android/.gradle/
+/mobile/android/app/build/
+
+.env
+HANDOFF.md
+.claude/settings.local.json

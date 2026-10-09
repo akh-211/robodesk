@@ -1,7 +1,12 @@
 #include "RoboLog.h"
 #pragma once
 #include <Arduino.h>
+#include "RoboBuildRole.h"
+#if ROBODESK_DUAL_ROBOT
+#include "RoboLinkTlsClient.h"
+#else
 #include <WiFiClientSecure.h>
+#endif
 #include <mbedtls/sha1.h>
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -20,6 +25,9 @@
 // NetworkClientSecure::available()/read(), whose zero-length mbedTLS probe can
 // fail to pull newly arrived TLS application records.  The socket is switched
 // to nonblocking mode and application data is read directly through mbedTLS.
+#if ROBODESK_DUAL_ROBOT
+using RoboDeskTlsClient=RoboLinkTlsClient;
+#else
 class RoboDeskTlsClient : public WiFiClientSecure {
 public:
   bool enableDirectNonBlocking(){
@@ -64,6 +72,7 @@ public:
     return r; // >0 encrypted bytes ready, 0 peer FIN
   }
 };
+#endif
 #include "GeminiStreamParser.h"
 
 class GeminiLiveDirectClient {
@@ -421,7 +430,7 @@ private:
     if(!cfg.apiKey||!cfg.apiKey[0]||!cfg.model||!cfg.voice)return false;
     tls_.stop(); tls_.setTimeout(3); tls_.setHandshakeTimeout(4);
     if(cfg.insecureTls||!cfg.rootCaPem||!cfg.rootCaPem[0])tls_.setInsecure(); else tls_.setCACert(cfg.rootCaPem);
-    if(!tls_.connect(HOST,PORT,2500)){reconnectAt_=millis()+2500;return false;}
+    if(!tls_.connect(HOST,PORT,ROBODESK_DUAL_ROBOT?6500:2500)){reconnectAt_=millis()+2500;return false;}
     uint8_t randomKey[16]; for(size_t i=0;i<sizeof(randomKey);i+=4){uint32_t r=esp_random();memcpy(randomKey+i,&r,4);} char key[32];base64Encode(randomKey,sizeof(randomKey),key,sizeof(key));
     char req[1024];
     int rn=snprintf(req,sizeof(req),

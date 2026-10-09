@@ -85,6 +85,35 @@ try {
     throw 'Sulking expression must use LivingEyes mood overlay lifetime.'
   }
   Write-Host 'PASS: dashboard activity status contract'
+  if (!$dashboardSource.Contains("id='resourceHealth'") -or
+      !$dashboardSource.Contains("id='healthInternalMinimum'") -or
+      !$dashboardSource.Contains("window.roboRenderMemoryHealth") -or
+      !$dashboardSource.Contains('m.internalMinimumFree') -or
+      !$dashboardSource.Contains('r.speakerRingPsram') -or
+      !$dashboardSource.Contains('c.audioUnderruns') -or
+      !$firmwareSource.Contains('speakerDrops')) {
+    throw 'Dashboard memory/audio health renderer and /api/status telemetry are out of sync.'
+  }
+  Write-Host 'PASS: dashboard memory/audio health contract'
+  $setupAt = $firmwareSource.IndexOf('void setup(){')
+  $otaSelfTestAt = $firmwareSource.IndexOf('beginOtaBootSelfTest()', $setupAt)
+  $audioAllocationAt = $firmwareSource.IndexOf('speakerRing.begin()', $setupAt)
+  $audioFailureAt = $firmwareSource.IndexOf('fatalStartup("AUDIO_BUFFER")', $setupAt)
+  $micTaskStartAt = $firmwareSource.IndexOf('xTaskCreatePinnedToCore(micCaptureTaskMain', $setupAt)
+  $otaWindowResetAt = $firmwareSource.IndexOf('resetOtaBootSelfTestWindow()', $setupAt)
+  if ($setupAt -lt 0 -or $otaSelfTestAt -lt 0 -or $audioAllocationAt -lt 0 -or
+      $audioFailureAt -lt 0 -or $micTaskStartAt -lt 0 -or $otaWindowResetAt -lt 0 -or
+      $otaSelfTestAt -gt $audioAllocationAt -or $audioAllocationAt -gt $audioFailureAt -or
+      $micTaskStartAt -gt $otaWindowResetAt) {
+    throw 'OTA rollback self-test must be initialized before audio buffer allocation can fail.'
+  }
+  Write-Host 'PASS: OTA rollback is armed before audio allocation and readiness timing starts after task startup'
+  & python (Join-Path $root 'tests/test_dual_board_contract.py')
+  if ($LASTEXITCODE -ne 0) { throw 'Dual-board migration/reset ordering contract failed.' }
+  Write-Host 'PASS: dual-board migration window, factory erasure ordering and gateway rollback service contract'
+  & python (Join-Path $root 'tests/test_ble_profile.py')
+  if ($LASTEXITCODE -ne 0) { throw 'BLE profile and diagnostic release safety checks failed.' }
+  Write-Host 'PASS: BLE profile, diagnostic output separation and release rejection checks'
   # Existing upstream renderer warnings are outside this change; compile it
   # separately, while all project tests retain -Wall -Wextra -Werror.
   $objects = @()
@@ -94,10 +123,11 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "LivingEyes $source failed to compile" }
     $objects += $object
   }
-  foreach ($name in @('gemini_offline_test','mic_frame_test','wifi_fallback_test','offline_voice_commands_test','wake_word_command_mode_test','companion_core_test','companion_activity_test','companion_scheduler_test','life_macro_session_test','character_mind_test','presence_ritual_test','preference_learner_test','touch_game_test','snapshot_test','gemini_companion_parser_test','brain_companion_test','companion_settings_test','dashboard_security_test','dashboard_json_writer_test','ota_redirect_policy_test','ota_workflow_policy_test','tls_memory_test','companion_interaction_test')) {
+  foreach ($name in @('phone_bridge_test','phone_bridge_protocol_test','phone_ancs_event_support_test','phone_bridge_auth_record_test','phone_companion_command_test','robo_link_protocol_test','robo_tunnel_protocol_test','robo_behavior_wire_test','gemini_offline_test','mic_frame_test','wifi_fallback_test','offline_voice_commands_test','wake_word_command_mode_test','companion_core_test','companion_activity_test','companion_scheduler_test','life_macro_session_test','character_mind_test','presence_ritual_test','preference_learner_test','touch_game_test','snapshot_test','gemini_companion_parser_test','brain_companion_test','companion_settings_test','dashboard_security_test','dashboard_json_writer_test','ota_redirect_policy_test','ota_workflow_policy_test','tls_memory_test','companion_interaction_test')) {
     $compilerArgs = @('-std=c++17','-Wall','-Wextra','-Werror') + $includes + @("tests/$name.cpp")
     if ($name -eq 'wake_word_command_mode_test') { $compilerArgs += @('-I','tests/offline_voice_stubs') }
     if ($name -eq 'tls_memory_test') { $compilerArgs += @('-I','tests/tls_memory_stubs') }
+    if ($name -in @('phone_bridge_protocol_test','phone_ancs_event_support_test')) { $compilerArgs += @('-pthread') }
     if ($name -eq 'brain_companion_test') { $compilerArgs += $objects }
     $exe = Join-Path $verification "$name.exe"
     & g++ @compilerArgs -o $exe
@@ -105,4 +135,22 @@ try {
     & $exe
     if ($LASTEXITCODE -ne 0) { throw "$name failed" }
   }
+  foreach($chip in @('ESP32C3','ESP32S3')) {
+    $exe=Join-Path $verification "robo_link_queue_$chip.exe"
+    $queueArgs=@('-std=c++17','-Wall','-Wextra','-Werror','-Wno-misleading-indentation',"-DCONFIG_IDF_TARGET_${chip}=1",'-DROBODESK_DUAL_BOARD=1','-I','tests/robo_link_queue_stubs')+$includes+@('tests/robo_link_queue_test.cpp','-o',$exe)
+    & g++ @queueArgs
+    if($LASTEXITCODE -ne 0){throw "robo_link_queue_test failed to compile for $chip"}
+    & $exe
+    if($LASTEXITCODE -ne 0){throw "robo_link_queue_test failed for $chip"}
+  }
+  foreach($chip in @('ESP32C3','ESP32S3')) {
+    $runtimeExe=Join-Path $verification "robo_dual_runtime_$chip.exe"
+    $runtimeArgs=@('-std=c++17','-Wall','-Wextra','-Werror','-Wno-misleading-indentation',"-DCONFIG_IDF_TARGET_${chip}=1",'-DROBODESK_DUAL_BOARD=1','-I','tests/robo_dual_runtime_stubs','-I','tests/robo_link_queue_stubs')+$includes+@('tests/robo_dual_runtime_test.cpp','-o',$runtimeExe)
+    & g++ @runtimeArgs
+    if($LASTEXITCODE -ne 0){throw "robo_dual_runtime_test failed to compile for $chip"}
+    & $runtimeExe
+    if($LASTEXITCODE -ne 0){throw "robo_dual_runtime_test failed for $chip"}
+  }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'tools/test_android_privacy.ps1')
+  if ($LASTEXITCODE -ne 0) { throw 'Android local security tests failed.' }
 } finally { Pop-Location }

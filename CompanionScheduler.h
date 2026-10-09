@@ -21,7 +21,8 @@ struct SchedulerContext {
   float curiosity = 0.6f;
   float boredom = 0.1f;
   float socialNeed = 0.2f;
-  int8_t preferenceBias[8]{};
+  uint8_t intensity=1;
+  int8_t preferenceBias[activityCatalogSize()+1]{};
 };
 
 enum class SchedulerEvent : uint8_t { None, Started, Paused, Resumed, Completed, Interrupted, Cancelled, Rejected };
@@ -47,8 +48,9 @@ class CompanionScheduler {
   SchedulerDecision update(uint32_t now, const SchedulerContext& context,
                            const uint8_t* recentIds = nullptr, uint8_t recentCount = 0,
                            uint8_t explicitActivity = 0) {
+    intensity_=context.intensity;
     if (activeId_) {
-      const ActivityBlock blocked = eligibility(context, activityDefinition(activeId_));
+      const ActivityBlock blocked = eligibility(context, activityDefinition(activeId_), manual_);
       if (blocked == ActivityBlock::PausedByOwner) {
         if (!paused_) {
           const uint32_t used = elapsed(now, startedAt_);
@@ -75,10 +77,10 @@ class CompanionScheduler {
     if (explicitActivity) {
       const ActivityDefinition* definition = activityDefinition(explicitActivity);
       if (!definition) return decision(SchedulerEvent::Rejected, ActivityBlock::NoEligibleActivity, explicitActivity, 0);
-      const ActivityBlock blocked = eligibility(context, definition);
+      const ActivityBlock blocked = eligibility(context, definition, true);
       if (blocked != ActivityBlock::None)
         return decision(SchedulerEvent::Rejected, blocked, explicitActivity, 0);
-      return begin(now, *definition);
+      { const SchedulerDecision started = begin(now, *definition); manual_ = true; return started; }
     }
 
     const ActivityBlock blocked = eligibility(context, nullptr);
@@ -87,8 +89,8 @@ class CompanionScheduler {
     if (hasSelection_ && !due(now, nextEligibleAt_))
       return decision(SchedulerEvent::None, ActivityBlock::Cooldown, 0, 0);
 
-    const ActivityDefinition* candidates[7]{};
-    uint8_t weights[7]{};
+    const ActivityDefinition* candidates[activityCatalogSize()]{};
+    uint8_t weights[activityCatalogSize()]{};
     uint8_t count = 0;
     for (uint8_t id = 1; id <= activityCatalogSize(); ++id) {
       const ActivityDefinition* candidate = activityDefinition(id);
@@ -137,18 +139,19 @@ class CompanionScheduler {
   }
 
  private:
+  uint8_t intensity_=1;
   static uint32_t elapsed(uint32_t now, uint32_t then) { return uint32_t(now - then); }
   static bool due(uint32_t now, uint32_t deadline) { return int32_t(now - deadline) >= 0; }
 
-  static ActivityBlock eligibility(const SchedulerContext& context, const ActivityDefinition* definition) {
+  static ActivityBlock eligibility(const SchedulerContext& context, const ActivityDefinition* definition, bool manual = false) {
     if (context.safetyRecovery) return ActivityBlock::Safety;
     if (context.busy) return ActivityBlock::Busy;
     if (context.ownerPaused) return ActivityBlock::PausedByOwner;
     if (!context.enabled) return ActivityBlock::Disabled;
     if (context.microphonePrivate) return ActivityBlock::MicrophonePrivate;
-    if (!context.probablePresence) return ActivityBlock::NoPresence;
-    if (!context.clockValid) return ActivityBlock::ClockInvalid;
-    if (!context.sensorsFresh) return ActivityBlock::StaleSensor;
+    if (!manual && !context.probablePresence) return ActivityBlock::NoPresence;
+    if (!manual && !context.clockValid) return ActivityBlock::ClockInvalid;
+    if (!manual && !context.sensorsFresh) return ActivityBlock::StaleSensor;
     if (definition && (definition->resources & ActivityResourceLocalAudio) && !context.localAudioAllowed)
       return ActivityBlock::QuietHours;
     return ActivityBlock::None;
@@ -164,6 +167,12 @@ class CompanionScheduler {
       case CompanionActivityId::StretchReset: need += context.energy < 0.6f ? 2.0f : 0.5f; break;
       case CompanionActivityId::Rest: need += (1.0f - context.energy) * 3.0f; break;
       case CompanionActivityId::QuietCompany: need += context.socialNeed * 2.0f; break;
+      case CompanionActivityId::PixelDoodle: need += context.curiosity+context.boredom*2.0f; break;
+      case CompanionActivityId::WatchRoom: need += context.curiosity*2.0f; break;
+      case CompanionActivityId::TouchPlay: need += context.socialNeed*2.0f+context.energy; break;
+      case CompanionActivityId::RhythmImprov: need += context.energy*2.0f+context.boredom; break;
+      case CompanionActivityId::FocusCompany: need += (1.0f-context.energy)+context.socialNeed; break;
+      case CompanionActivityId::CalmBreathing: need += (1.0f-context.energy)*3.0f; break;
     }
     const int8_t preference = context.preferenceBias[uint8_t(definition.id)];
     need += float(preference) * 0.35f;
@@ -194,9 +203,12 @@ class CompanionScheduler {
   SchedulerDecision end(uint32_t now, SchedulerEvent event, ActivityBlock reason) {
     const uint8_t endedId = activeId_;
     activeId_ = 0;
+    manual_ = false;
     paused_ = false;
     pausedRemainingMs_ = 0;
-    const uint32_t gap = MinimumGapMs + random32() % (MaximumGapMs - MinimumGapMs + 1u);
+    const uint32_t low=intensity_==0?300000u:intensity_==2?60000u:MinimumGapMs;
+    const uint32_t high=intensity_==0?600000u:intensity_==2?180000u:MaximumGapMs;
+    const uint32_t gap=low+random32()%(high-low+1u);
     nextEligibleAt_ = now + gap;
     hasSelection_ = true;
     return decision(event, reason, endedId, durationMs_);
@@ -219,6 +231,7 @@ class CompanionScheduler {
   uint8_t activeId_ = 0;
   bool hasSelection_ = false;
   bool paused_ = false;
+  bool manual_ = false;
   uint32_t pausedRemainingMs_ = 0;
 };
 

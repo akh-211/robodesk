@@ -2,7 +2,21 @@
 
 This checklist turns the roadmap into an ordered implementation and qualification sequence. Update `PROGRESS.md` after each gate; mark an item `DONE` only with its listed evidence. Source changes, host tests, a target build, and robot qualification are separate gates.
 
-## Current handoff
+## Phone/character implementation handoff (2026-10-05)
+
+Google Maps Android navigation, keyed notifications, iPhone ANCS software, thirteen companion activities and dashboard controls are implemented. Follow [PHONE_CHARACTER_TASKS.md](PHONE_CHARACTER_TASKS.md) for current build evidence and the final device qualification stage. HawkFi is deferred. No device was available for this workstream; previous flash/serial results below describe older firmware.
+
+## Latest handoff (2026-10-03)
+
+- Companion scheduler, character behavior, Android phone bridge, privacy controls, dashboard actions, and RAM buffer changes are present in source. Dashboard memory/audio health telemetry is implemented; host checks, JavaScript fixtures, and target build pass. The sketch uses 2,738,171 bytes and the generated binary is 2,738,320 bytes, within the 3 MiB app slot; static global RAM is 129,324 / 327,680 bytes. OTA rollback is armed before risky audio allocation, and its readiness timer starts after audio tasks/services start. The current image is now flashed/hash-verified at app0 `0x400000`; serial boot/heartbeats and audio frame processing passed.
+- The previous wrong-address upload overlapped the start of SPIFFS (`0x290000`) by about 116,880 bytes. Recurring `LEV,BRAIN,SAVE_FAIL` plus the backed-up partition failing LittleFS directory validation confirmed damaged filesystem metadata. Full SPIFFS, app0, and metadata backups are preserved in `%LOCALAPPDATA%\Temp\RoboDeskEnhancement-20261003`. Dashboard `/api/status` requires Basic Auth; user logged in locally, but no browser surface is available here to verify the UI.
+- The previous RAM-optimized image was correctly flashed and hash-verified at active custom `app0=0x400000`. Do not use generic Arduino upload address `0x10000` for this custom partition map. The latest source image has also been flashed at app0 after creating a full app-slot backup.
+- Owner approved recovery of the corrupted SPIFFS partition. A valid empty LittleFS image was written at `0x290000` for exactly `0x160000` bytes and hash-verified. App0, NVS, OTA metadata, partition table, model, and coredump were preserved. Three post-recovery serial windows passed; no save failure appeared during 90 seconds, but there was no save-success event. Owner now reports `companion.storageHealthy=true`, confirming the mount. Still exercise one real persistence write/reload before calling memory persistence fully qualified.
+- Owner reports the dashboard heap/audio panel is currently green and `companion.storageHealthy=true`. One actual memory save/reload remains to complete the storage gate.
+- Device telemetry after boot: internal free/minimum/largest block `98,504/57,160/42,996` bytes; PSRAM free `8,175,104` bytes; speaker and pre-roll rings allocated in PSRAM. `audio_test` processed `177,840` speaker frames with zero underrun/starvation/drop counters and returned to READY.
+- Still required: flash and boot verification, physical microphone/speaker/touch/PIR confirmation, dashboard browser qualification, two-hour offline soak, 24-hour soak after pass, signed OTA/rollback, and release decision. `robodesk.local` resolution failed during the latest check.
+
+## Historical handoff (pre-device flash)
 
 - Source baseline is v9 (`709958e`). The companion foundation currently reports LivingEyes activity, keeps 16 terminal outcomes, uses local invitation cues, maps head double-tap to `RepeatedPet`, and shows activity in the dashboard.
 - The final 23-suite host run passed, including PIR and preference persistence. `git diff --check` passed.
@@ -219,7 +233,7 @@ Pass/fail and follow-up:
 
 ## Current remaining work
 
-Software acceptance gates are complete: 23 pinned host suites and the ESP32-S3 build pass. Finish the final physical/browser qualification with a backed-up device identity check, verify the dashboard activity start/pause/resume/cancel and privacy/DND gates, then decide on a signed release after the device reports healthy boot and OTA status. Do not call OTA qualification complete based on USB enumeration alone.
+Software acceptance gates for the companion foundation are complete; the new RAM/audio dashboard work is being verified separately. Next device work is authenticated dashboard/browser qualification, hands-on mic/speaker/touch/PIR checks, the offline/soak runs, and signed OTA/rollback. Do not call OTA qualification complete based on USB enumeration or a direct USB flash alone.
 
 
 ### Device gate result (2026-10-02)

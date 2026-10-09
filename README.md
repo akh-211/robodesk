@@ -12,6 +12,10 @@ The example dashboard PIN (`robodesk`) and setup-AP password (`robodesk123`) are
 
 The local dashboard is available at `http://robodesk.local/` or the IP printed in the serial log. Gemini conversation needs an internet connection. The dashboard and signed local OTA upload work without internet when the client and robot share a trusted Wi-Fi network.
 
+## ESP32-S3 + ESP32-C3 gateway
+
+The opt-in dual-board build keeps Wi-Fi/BLE/dashboard on the C3 and robot peripherals/audio/companion logic on the S3. Optional Home Assistant, Open-Meteo weather, and read-only iCalendar context can be configured from **Integrasi luar** in the C3 dashboard. See [P3 integration setup and limits](docs/integrations/P3_EXTERNAL_INTEGRATIONS.md) and the [dual-board wiring guide](docs/hardware/dual-board-wiring.md).
+
 ## Firmware releases
 
 See [GITHUB_RELEASES.md](GITHUB_RELEASES.md) for preparing public, secret-free GitHub Release assets. Dashboard **GitHub** signed OTA requires the robot to be connected to station/router Wi-Fi with internet access and synchronized time for HTTPS; the setup AP or a local-only network is insufficient. If WakeNet is armed, select Touch-to-talk in the dashboard, save, and allow the robot to reboot before installing. A device still running the old updater (including the published v5 image) has a broken redirect path: do not rely on its GitHub Check/Install buttons to bootstrap a fix. Use a backup-first USB application update, or a local signed dashboard upload if the installed firmware supports it, to install a compatible signed version **greater than v5** with the corrected updater. Only subsequent releases can be checked/installed through that corrected GitHub path, subject to device verification. Local signed dashboard upload on trusted Wi-Fi is separate and does not require internet. The release script stages a build with example credentials and excludes `secrets.h`, signing keys, and previously compiled firmware; review the public asset set before publication.
