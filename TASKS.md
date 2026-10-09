@@ -6,7 +6,10 @@
 - [ ] BLE: nama BLE belum muncul + forget current phone & start pairing belum bisa
 
 ## NEXT
-- [ ] Sesi cloud: gabung panduan CLAUDE.md lama, review kode dual-board/BLE, verifikasi host, handoff
+- [x] Sesi cloud: gabung panduan CLAUDE.md lama, review kode dual-board/BLE, verifikasi host, handoff
+- [ ] Review-1: pairing BLE tolak HP beralamat privat (lease alamat connect vs identitas) — lihat AGENT_HANDOFF.md
+- [ ] Review-2/3: link UART reset saat penerima sibuk + key Gemini S3 hilang setelah reset link C3
+- [ ] Build C3 untuk cek perbaikan auth /ota/s3 + jalankan run_host_tests.ps1 penuh di PC
 - [ ] BLE-H5: pangkas puncak heap boot C3 (buffer RPC idle, gatewaySyncSettings, migrasi sebelum BLE init)
 - [ ] v13: perbaiki fitur dashboard (companion activity, activity history, style face) + rilis
 - [ ] Fase C (jeda): BLE diag ready=true, heap C3 12 KB; uji iPhone ANCS

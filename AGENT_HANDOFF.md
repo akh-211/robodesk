@@ -1,9 +1,29 @@
 # RoboDeskSonicCharacterV2 — Agent Handoff
 
-**Last updated:** 2026-10-06
+**Last updated:** 2026-10-09
 **Repository:** `C:\Users\imipi\OneDrive\Documents\RoboDeskSonicCharacterV2`
 **Current device connection:** No serial port was visible from the workspace when this handoff was refreshed. Older COM9/COM16 entries below are historical.
 **Purpose:** Continue the dual-board companion implementation and finish device qualification without repeating completed work or making unsupported hardware claims.
+
+## Sesi cloud 2026-10-09 — handoff (branch `claude/quirky-allen-bpvdo7`)
+
+- **Tujuan:** ambil WIP PC (`44b25a0`), bersihkan repo, pulihkan batasan `CLAUDE.md`, review diff `5428770..HEAD`, verifikasi host.
+- **Selesai:**
+  - Hapus `ccinit.py`, prompt gambar wiring (`docs/hardware/*.txt`) dan dok desain tak dirujuk (`EMO_DIRECTIVE_hidup.md`, `emo-eye-engine*.md`, `REALTIME_AUDIO_NOTES.md`).
+  - `CLAUDE.md`: bagian "Batasan wajib" (partisi, LittleFS tanpa format otomatis, OTA bertanda tangan, privasi memori, dashboard tepercaya), sudah dicek ke kode.
+  - Perbaikan: `/ota/s3` di `RoboC3Gateway.h` kini cek auth + same-origin juga di handler selesai.
+  - Perbaikan: `NotificationTextRedactor.kt` menyamarkan kode 4–8 digit polos, memblokir frasa kode masuk tambahan, dan memotong UTF-8 secara linear; test ditambah.
+- **Belum diperbaiki (butuh keputusan/uji perangkat):**
+  - (1) Pairing BLE: lease cocokkan alamat saat connect vs alamat identitas setelah bonding (`PhoneBleTransport.h` `offerCandidate_`/`onAuthenticationComplete`, `PhoneBridgeProtocol.h` `CandidateLeaseState::authenticated`). HP dengan alamat privat (RPA) kemungkinan selalu ditolak. Usul: ikat ke handle koneksi lalu adopsi alamat identitas.
+  - (2) `RoboBoardLink.h`: penerima sibuk (tanpa Ack) dianggap link mati setelah ~1,2 s → reset semua tunnel/RPC.
+  - (3) Key Gemini di S3 terhapus setelah reset link sisi C3 dan tidak dikirim ulang (`RoboC3Gateway.h` sync key, `RoboDualRuntime.h` `wipeGeminiKey`); ada juga race memset/memcpy.
+- **Hasil test (container Linux, g++/python3/kotlinc 2.0.21, ArduinoJson HEAD tanpa pin):**
+  - Lulus: 26 suite C++ host, `robo_link_queue`/`robo_dual_runtime` (C3 & S3), 3 test Python, test Android privasi/protokol.
+  - Tidak dijalankan: 5 suite butuh LivingEyes (`companion_core`, `life_macro_session`, `character_mind`, `snapshot`, `brain_companion`).
+  - Tidak dijalankan: build Arduino, `run_host_tests.ps1`, Gradle, perangkat.
+  - Catatan: `tests/test_ota_signing_context.py` tidak dipanggil runner dan butuh `PYTHONPATH=.`.
+- **Jebakan:** tidak ada flash/build firmware di sesi ini. Perubahan `RoboC3Gateway.h` belum dikompilasi untuk C3. Jangan klaim lulus perangkat.
+- **Perintah di PC:** `powershell -NoProfile -File tools/build_dual_board.ps1 -Board both`; `powershell -NoProfile -File tests/run_host_tests.ps1 | tail -n 50`; `tools/test_android_privacy.ps1`.
 
 ## Current project state — authoritative (2026-10-06)
 
