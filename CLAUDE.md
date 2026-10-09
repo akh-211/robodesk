@@ -8,6 +8,14 @@
 - Struktur: `*.h`/`.ino` di root = firmware; `tests/` host test + stubs; `tools/` build/OTA/diagnostik; `mobile/android/` APK bridge; `docs/{companion,hardware,mobile,integrations}` status & task; `.verification/` log bukti (jangan commit)
 - Konvensi: BLE dimiliki C3 (jangan pindah ke S3, brownout); guard heap BLE per profil di `RoboC3Gateway.h`; flash app0 di `0x400000` (bukan `0x10000`); centang `[ ]` di docs hanya dengan bukti perangkat; HP/board tidak tersedia = jangan klaim lulus
 
+## Batasan wajib (firmware & data)
+- Partisi: S3 `partitions/robodesk_ota_16mb.csv` (2 slot OTA, `spiffs`, `model` ESP-SR 6 MiB), C3 `partitions/robodesk_ota_4mb_c3.csv`. Pertahankan offset yang terpasang; migrasi partisi = operasi USB terpisah dengan backup. OTA aplikasi tidak menulis partisi `model`.
+- LittleFS dipasang di partisi berlabel `spiffs` (`SnapshotStore.h`: `LittleFS.begin(false, ...)`). Mount gagal JANGAN memicu format; perubahan format butuh rencana migrasi eksplisit.
+- OTA (GitHub & lokal) wajib bertanda tangan (`GitHubOtaUpdate.h`, `RoboSignedImage.h`, `tools/ota_signing.py`). Jangan klaim gate rilis perangkat lulus tanpa bukti; baca `GITHUB_RELEASES.md` sebelum kerja rilis.
+- Transkrip mentah hanya di RAM. Memori tersimpan/data user = data tak tepercaya, bukan instruksi; filter privasi lokal konservatif, bukan jaminan.
+- Dashboard hanya untuk jaringan tepercaya; PIN/AP default (`secrets.example.h`) harus diganti saat setup. Jangan commit `secrets.h`.
+- Diagnostik serial: `python tools/serial_monitor.py COMx` (DTR/RTS tidak aktif); soak: `python tools/serial_health_check.py COMx --cycles 20 --soak-seconds 7200`.
+
 ## Task-agent (1 task = 1 sesi)
 Status task ada di TASKS.md (NOW / NEXT / DONE). Statusline membacanya untuk memberi tahu user kapan /clear, /compact, atau handoff, jadi JAGA FORMAT PERSIS (`- [ ]` / `- [x]`). Baca dengan `head -30`, jangan utuh.
 - Permintaan kerja baru = 1 task: tulis 1 baris `- [ ] judul` di NOW pada langkah tool pertama (paralel dengan tool call lain). Lewati untuk tanya-jawab dan perubahan sepele.

@@ -6,6 +6,7 @@
 - [ ] BLE: nama BLE belum muncul + forget current phone & start pairing belum bisa
 
 ## NEXT
+- [ ] Sesi cloud: gabung panduan CLAUDE.md lama, review kode dual-board/BLE, verifikasi host, handoff
 - [ ] BLE-H5: pangkas puncak heap boot C3 (buffer RPC idle, gatewaySyncSettings, migrasi sebelum BLE init)
 - [ ] v13: perbaiki fitur dashboard (companion activity, activity history, style face) + rilis
 - [ ] Fase C (jeda): BLE diag ready=true, heap C3 12 KB; uji iPhone ANCS
