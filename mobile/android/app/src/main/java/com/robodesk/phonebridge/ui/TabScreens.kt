@@ -24,6 +24,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.robodesk.phonebridge.BridgeSettingsProtocol as P
+import com.robodesk.phonebridge.GeminiKeyHelp
 import com.robodesk.phonebridge.MoodDiary
 import com.robodesk.phonebridge.PhoneBridgeStatus
 import com.robodesk.phonebridge.Res
@@ -71,13 +72,19 @@ private fun ColumnScope.GeminiCard(installed: Boolean?, w: Boolean) {
     RoboCard("Kunci API Gemini") {
         RoboRow("Status", last = true) { Tag(if (installed == null) "-" else if (installed) "terpasang" else "belum ada", if (installed == true) TagKind.OK else TagKind.NEUTRAL) }
         Gap(10)
-        RoboField("Kunci baru (A-Z a-z 0-9 - _ . · maks 96)") { PasswordField(key, { key = it }, placeholder = "AIza…", enabled = w, maxLength = 96) }
+        val ctx = LocalContext.current
+        Note(GeminiKeyHelp.STEPS) // PD-4.16
+        RoboButton("Buka halaman kunci", { runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(GeminiKeyHelp.KEY_PAGE))) } }, Modifier.fillMaxWidth(), ButtonKind.SECONDARY)
+        Gap(10)
+        RoboField("Kunci baru") { PasswordField(key, { key = GeminiKeyHelp.normalize(it) }, placeholder = "AIza…", enabled = w, maxLength = 96) }
+        val hint = if (key.isEmpty()) null else GeminiKeyHelp.check(key)
+        if (hint != null) Note(hint.removePrefix("!"))
         ButtonRow {
             RoboButton("Kirim kunci", {
                 val value = key
                 key = "" // never kept after sending
                 app.call("Kunci dikirim lewat BLE terenkripsi", { d -> app.repo.sendGeminiKey(value, d) }, onOk = { app.refreshStatus() })
-            }, Modifier.weight(1f), enabled = w && key.isNotEmpty())
+            }, Modifier.weight(1f), enabled = w && key.isNotEmpty() && hint?.startsWith("!") != true)
             RoboButton("Hapus kunci", { app.call("Kunci dihapus dari robot", { d -> app.repo.clearGeminiKey(d) }, onOk = { app.refreshStatus() }) }, Modifier.weight(1f), ButtonKind.DANGER, w)
         }
         Note("Kunci diteruskan C3 → S3 hanya di RAM. Nilai tidak pernah ditampilkan ulang.")

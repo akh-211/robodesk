@@ -116,6 +116,10 @@ try {
   Write-Host 'PASS: BLE profile, diagnostic output separation and release rejection checks'
   & python (Join-Path $root 'tests/test_behavior_log_report.py')
   if ($LASTEXITCODE -ne 0) { throw 'Behavior log report (LEV,BEH) test failed.' }
+  & python (Join-Path $root 'tests/test_sbom.py')
+  if ($LASTEXITCODE -ne 0) { throw 'SBOM generator test failed.' }
+  & python (Join-Path $root 'tests/test_ota_signing_context.py')
+  if ($LASTEXITCODE -ne 0) { throw 'OTA signing context/production key test failed.' }
   # Existing upstream renderer warnings are outside this change; compile it
   # separately, while all project tests retain -Wall -Wextra -Werror.
   $objects = @()

@@ -106,6 +106,30 @@ object MoodDiary {
         }
 }
 
+/** PD-4.16 user-owned Gemini key (owner decision PD-4.0): paste clean-up and friendly checks before sending. */
+object GeminiKeyHelp {
+    const val KEY_PAGE = "https://aistudio.google.com/apikey"
+    const val STEPS = "1. Buka halaman kunci Google AI Studio dan masuk dengan akun Google Anda.\n" +
+        "2. Pilih Create API key, lalu salin kuncinya.\n" +
+        "3. Tempel di sini dan kirim. Kunci disimpan di robot, bukan di server kami; kuota dan biaya mengikuti akun Google Anda."
+
+    /** Removes whitespace/newlines that come with copy-paste. */
+    fun normalize(raw: String): String = raw.filterNot { it.isWhitespace() }
+
+    /** Null = looks fine; otherwise a short Indonesian hint. Blocking problems start with "!". */
+    fun check(raw: String): String? {
+        val key = normalize(raw)
+        return when {
+            key.isEmpty() -> "!Tempel kunci dulu"
+            key.length > P.MAX_GEMINI_KEY || !key.all { it in 'A'..'Z' || it in 'a'..'z' || it in '0'..'9' || it == '-' || it == '_' || it == '.' } ->
+                "!Kunci hanya berisi huruf, angka, - _ . (maks ${P.MAX_GEMINI_KEY})"
+            !key.startsWith("AIza") -> "Kunci Gemini biasanya diawali AIza. Pastikan yang disalin kunci API, bukan nama proyek."
+            key.length != 39 -> "Panjang kunci Gemini biasanya 39 karakter (ini ${key.length}). Periksa apakah tersalin utuh."
+            else -> null
+        }
+    }
+}
+
 /** Status numbers prepared for the Home/Diagnostics screens. */
 class StatusView(val s: P.StatusSnapshot) {
     fun moodText(hour: Int): String? = MoodText.describe(s.moodId, s.moodCause, s.sleepState, hour)
@@ -223,7 +247,8 @@ class RobotRepository(private val client: BridgeSettingsClient, private val nowS
     fun clearWifi(slot: Int, done: Done<Unit>) = command(P.secretWifi(slot, "", "", false), "Slot tidak valid", done)
 
     // Row 12: Gemini key
-    fun sendGeminiKey(key: String, done: Done<Unit>) {
+    fun sendGeminiKey(raw: String, done: Done<Unit>) {
+        val key = GeminiKeyHelp.normalize(raw)
         if (key.isEmpty()) return done(invalid("Kunci kosong"))
         command(P.secretGemini(key), "Kunci hanya boleh A-Z a-z 0-9 - _ . (maks 96)", done)
     }

@@ -153,6 +153,14 @@ private fun verifySettingsPipeline() {
     check(MoodText.describe(7, 0, 2, 22) == "Ngantuk · sudah malam" && MoodText.describe(7, 0, 2, 14) == "Ngantuk")
     check(MoodText.describe(4, 2, 1, 10) == "Sayang · baru dielus" && MoodText.describe(10, 11, 1, 10) == "Ngambek · disentuh terus")
     check(MoodText.describe(2, 0, 4, 2) == "Tidur nyenyak · sudah malam" && MoodText.describe(0, 0, 0, 10) == null && MoodText.describe(99, 99, 99, 10) == null)
+    // PD-4.16 user-owned Gemini key: paste clean-up and friendly checks.
+    run {
+        val good = "AIza" + "B".repeat(35)
+        check(GeminiKeyHelp.normalize(" $good\n") == good && GeminiKeyHelp.check(" $good\n") == null)
+        check(GeminiKeyHelp.check("")!!.startsWith("!") && GeminiKeyHelp.check("AIza/bad")!!.startsWith("!"))
+        check(GeminiKeyHelp.check("X".repeat(39))!!.contains("AIza") && !GeminiKeyHelp.check("X".repeat(39))!!.startsWith("!"))
+        check(GeminiKeyHelp.check("AIzaShort")!!.contains("39") && GeminiKeyHelp.KEY_PAGE.startsWith("https://"))
+    }
     // PD-3.4 mood diary: one entry per hour, 7-day window, round trip, garbage dropped, per-day summary.
     run {
         val t0 = 1_800_000_000L

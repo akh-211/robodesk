@@ -14,7 +14,7 @@ int main(){
   assert(strstr(call("remember_fact",R"({"key":"drink","value":"kopi","source_quote":"Saya suka kopi","category":"preference"})"),"completed"));brain.transcripts().finish(130,false);
   assert(brain.companionState().addSummary("Kopi saat sarapan bersama keluarga",1,1800000000u,150));assert(brain.companionState().addSummary("Hujan turun saat perjalanan pulang",2,1800000001u,120));
   const char*topicRecall=call("recall_memory",R"({"query":""})");assert(strstr(topicRecall,"drink")&&strstr(topicRecall,"Kopi saat sarapan"));
-  char prompt[4600];brain.buildSystemPrompt(prompt,sizeof(prompt),"RoboDesk","",20833);assert(strstr(prompt,"Kopi saat sarapan")&&strstr(prompt,"Hujan turun"));
+  char prompt[4600];brain.buildSystemPrompt(prompt,sizeof(prompt),"RoboDesk","",20833);assert(strstr(prompt,"Kopi saat sarapan")&&strstr(prompt,"Hujan turun"));assert(strstr(prompt,"general 14+ audience")&&strstr(prompt,"119 ext 8")&&strstr(prompt,"Never claim to be human")&&strlen(prompt)+400<sizeof(prompt)); // PD-4.15 fence, prompt headroom
   char turn[900],longSensorContext[500];memset(longSensorContext,'x',sizeof(longSensorContext)-1);longSensorContext[sizeof(longSensorContext)-1]=0;brain.setSensorContext(longSensorContext);
   companion::ActivityTracker activity;
   activity.sync(uint8_t(companion::CompanionActivityId::CuriousLook),100,true);auto activityContext=activity.promptContext(150);

@@ -66,3 +66,6 @@ foreach($profile in $profiles){
   Write-Host "${artifactId} (BLE profile: $BleProfile): $($image.Length) bytes; slot margin $($profile.Slot-$image.Length) bytes."
   Get-Content $log -Tail 5
 }
+# PD-4.13: SBOM from what this build actually compiled (.verification/sbom).
+& python (Join-Path $PSScriptRoot 'sbom.py')
+if($LASTEXITCODE -ne 0){throw 'SBOM generation failed.'}

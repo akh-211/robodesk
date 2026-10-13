@@ -3,148 +3,566 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>RoboDesk – Usulan IA 5 Tab</title>
-<!-- PD-4.1 USULAN, belum disetujui pemilik. Acuan tampilan yang berlaku tetap android_app_mockup.html (6 tab).
-     Setelah disetujui, isi file ini menggantikan android_app_mockup.html dan baru kemudian kode (PD-4.2). -->
+<title>AILI – Usulan IA 5 Tab</title>
+<!-- PD-4.1 USULAN rev 2 (2026-10-13), belum disetujui pemilik. Acuan yang berlaku tetap android_app_mockup.html (6 tab).
+     Setelah disetujui, isi file ini menggantikan android_app_mockup.html, baru kemudian kode (PD-4.2). -->
 <style>
 :root{
-  --bg:#0e1116;--panel:#171b22;--card:#1e232c;--line:#2a313c;--text:#e8ecf2;--mute:#8d97a7;
-  --accent:#4fd1c5;--accent2:#7c9cff;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;
+  --bg:#101214;--surface:#17191c;--raised:#1d2024;--line:#2a2e33;--line2:#353a40;
+  --text:#eceae6;--sub:#a3a19b;--mute:#76746f;
+  --accent:#f2b45a;--accent-ink:#2a1c06;--accent-soft:#2d2417;
+  --ok:#7cc79a;--warn:#e7b15c;--bad:#ef8a7a;--bad-soft:#2f1c19;
+  --r:14px;--r-sm:10px;
 }
-*{box-sizing:border-box;margin:0}
-body{background:#07090c;color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif;min-height:100vh;display:flex;gap:40px;justify-content:center;align-items:flex-start;padding:28px 16px;flex-wrap:wrap}
-.side{max-width:360px;color:var(--mute);font-size:13px}
-.side h2{color:var(--text);font-size:16px;margin:0 0 8px}
-.side li{margin:4px 0 4px 18px}
-.phone{width:390px;max-width:100%;height:800px;background:var(--bg);border-radius:38px;border:10px solid #000;box-shadow:0 0 0 2px #262c36,0 30px 80px #000a;display:flex;flex-direction:column;overflow:hidden}
-.sb{height:26px;display:flex;justify-content:space-between;align-items:center;padding:0 20px;font-size:12px;color:var(--mute);flex:none}
-.appbar{padding:6px 18px 10px;flex:none;display:flex;align-items:center;justify-content:space-between}
-.appbar h1{font-size:20px}
-.chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:4px 10px;border-radius:99px;background:#12301f;color:var(--ok);border:1px solid #1d5a35}
-.dot{width:7px;height:7px;border-radius:50%;background:currentColor}
-.view{flex:1;overflow-y:auto;padding:4px 16px 20px;display:none}
-.view.on{display:block}
-nav{flex:none;display:flex;border-top:1px solid var(--line);background:var(--panel);padding:6px 4px 10px}
-nav button{flex:1;min-height:48px;background:none;border:0;color:var(--mute);font:inherit;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer}
-nav button .ic{font-size:19px;line-height:1}
-nav button.on{color:var(--accent)}
-nav button.on .ic{background:#173532;border-radius:14px;padding:2px 16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
-.card h3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-bottom:10px;font-weight:600}
-.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);min-height:48px}
-.row:last-child{border-bottom:0}
-.row small{display:block;color:var(--mute);font-size:11.5px}
-.v{color:var(--mute);text-align:right}
-.hero{display:flex;gap:14px;align-items:center}
-.face{width:96px;height:96px;border-radius:24px;background:#0a0d12;border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;gap:16px;flex:none}
-.face i{width:15px;height:26px;border-radius:8px;background:var(--accent);animation:b 4s infinite}
-.face.sleep i{height:4px;animation:none}
-@keyframes b{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
-.mood{font-size:18px;font-weight:600}
-.btn{border:0;border-radius:12px;min-height:48px;padding:11px 14px;font:inherit;font-weight:600;cursor:pointer;background:var(--accent);color:#04201d}
-.btn.sec{background:#262d39;color:var(--text)}
-.btn.bad{background:#4a1c1c;color:#ffb4b4}
-.btns{display:flex;gap:8px;flex-wrap:wrap}
-.btns .btn{flex:1;min-width:100px}
-.seg{display:flex;background:#12161c;border:1px solid var(--line);border-radius:12px;padding:3px}
-.seg b{flex:1;text-align:center;padding:10px 0;border-radius:9px;font-weight:600;color:var(--mute);cursor:pointer}
-.seg b.on{background:#173532;color:var(--accent)}
-.note{color:var(--mute);font-size:12px;margin-top:8px}
-.bubble{max-width:80%;padding:9px 12px;border-radius:14px;margin:6px 0}
-.me{background:#173532;margin-left:auto}
-.bot{background:#262d39}
-.tag{font-size:11px;padding:2px 8px;border-radius:99px;background:#262d39;color:var(--mute)}
-.ms{display:flex;gap:10px;align-items:center}
-.ms span{font-size:22px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0b0c;color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh;display:flex;gap:40px;justify-content:center;align-items:flex-start;padding:28px 16px;flex-wrap:wrap}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* phone */
+.phone{width:390px;max-width:100%;height:820px;background:var(--bg);border-radius:40px;border:10px solid #000;box-shadow:0 0 0 1px #24272b,0 24px 70px #0009;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.sb{height:28px;display:flex;justify-content:space-between;align-items:center;padding:0 22px;font-size:12px;color:var(--sub);flex:none}
+.bar{height:56px;display:flex;align-items:center;gap:6px;padding:0 10px 0 16px;flex:none}
+.bar h1{font-size:20px;font-weight:650;letter-spacing:-.01em;flex:1}
+.bar .back{width:44px;height:44px;border-radius:12px;display:none;align-items:center;justify-content:center;margin-left:-8px}
+.bar.sub .back{display:flex}
+.bar.sub h1{font-size:18px}
+.link{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--sub);padding:6px 10px;border-radius:99px;border:1px solid var(--line)}
+.link i{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.scroll{flex:1;overflow-y:auto;padding:4px 16px 24px}
+.scroll::-webkit-scrollbar{width:0}
+.screen{display:none}.screen.on{display:block}
+
+/* nav */
+nav{flex:none;display:flex;background:var(--surface);border-top:1px solid var(--line);padding:6px 4px 12px}
+nav button{flex:1;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11.5px;color:var(--mute)}
+nav button .pill{width:56px;height:30px;border-radius:15px;display:flex;align-items:center;justify-content:center}
+nav button.on{color:var(--text)}
+nav button.on .pill{background:var(--accent-soft);color:var(--accent)}
+
+/* building blocks */
+.sec{font-size:12.5px;color:var(--mute);font-weight:600;margin:20px 4px 8px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.pad{padding:14px}
+.row{display:flex;align-items:center;gap:12px;min-height:56px;padding:10px 14px;border-top:1px solid var(--line);width:100%;text-align:left}
+.row:first-child{border-top:0}
+.row .ic{width:36px;height:36px;border-radius:10px;background:var(--raised);display:flex;align-items:center;justify-content:center;color:var(--sub);flex:none}
+.row .t{flex:1;min-width:0}
+.row .t b{display:block;font-weight:550}
+.row .t small{display:block;color:var(--sub);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .v{color:var(--sub);font-size:13.5px}
+.chev{color:var(--mute)}
+.btn{min-height:48px;border-radius:12px;padding:0 16px;font-weight:600;background:var(--accent);color:var(--accent-ink);display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.ghost{background:var(--raised);color:var(--text)}
+.btn.danger{background:var(--bad-soft);color:var(--bad)}
+.btn.full{width:100%}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.act{min-height:76px;border-radius:var(--r);background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;padding:12px 14px;text-align:left}
+.act span{font-weight:550;font-size:14.5px}
+.act svg{color:var(--accent)}
+.sw{width:46px;height:28px;border-radius:14px;background:var(--line2);position:relative;flex:none}
+.sw::after{content:"";position:absolute;width:22px;height:22px;border-radius:50%;background:#d9d6cf;top:3px;left:3px;transition:.15s}
+.sw.on{background:var(--accent)}.sw.on::after{left:21px;background:var(--accent-ink)}
+.seg{display:flex;background:var(--raised);border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;min-height:40px;border-radius:9px;color:var(--sub);font-weight:550;font-size:14px}
+.seg button.on{background:var(--bg);color:var(--text);box-shadow:0 0 0 1px var(--line2)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.chips::-webkit-scrollbar{height:0}
+.chip{min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line2);color:var(--sub);white-space:nowrap;font-size:14px}
+.chip.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.note{color:var(--mute);font-size:12.5px;padding:10px 4px 0}
+.field{display:block;margin-bottom:12px}
+.field span{display:block;font-size:12.5px;color:var(--sub);margin-bottom:6px}
+.input{width:100%;min-height:48px;background:var(--raised);border:1px solid var(--line);border-radius:12px;color:var(--text);padding:0 14px;font:inherit}
+.range{display:flex;align-items:center;gap:12px}
+.range i{flex:1;height:4px;border-radius:2px;background:var(--line2);position:relative}
+.range i b{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--accent)}
+.range i b::after{content:"";position:absolute;right:-9px;top:-7px;width:18px;height:18px;border-radius:50%;background:var(--text)}
+.tag{font-size:11.5px;color:var(--sub);border:1px solid var(--line2);border-radius:99px;padding:2px 8px}
+
+/* robot face */
+.hero{padding:18px 14px 16px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.oled{width:236px;height:118px;border-radius:18px;background:#000;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:40px}
+.oled i{width:46px;height:56px;border-radius:16px;background:#e9f4ff;transition:height .35s,border-radius .35s;animation:blink 5s infinite}
+.oled.sleep i{height:6px;border-radius:3px;animation:none}
+@keyframes blink{0%,95%,100%{transform:scaleY(1)}97%{transform:scaleY(.08)}}
+.mood{text-align:center}
+.mood b{font-size:20px;font-weight:650;display:block}
+.mood small{color:var(--sub);font-size:13.5px}
+.stat{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.stat span{font-size:12px;color:var(--sub);background:var(--raised);border-radius:99px;padding:5px 10px;display:inline-flex;align-items:center;gap:6px}
+.stat svg{width:14px;height:14px}
+
+/* chat */
+.msgs{display:flex;flex-direction:column;gap:8px;padding:6px 0 12px}
+.msg{max-width:78%;padding:10px 13px;border-radius:16px;font-size:14.5px}
+.msg.me{align-self:flex-end;background:var(--accent-soft);color:#f5dcb3;border-bottom-right-radius:6px}
+.msg.bot{align-self:flex-start;background:var(--raised);border-bottom-left-radius:6px}
+.composer{display:flex;gap:8px;padding:10px 16px 12px;border-top:1px solid var(--line);background:var(--bg)}
+
+/* timeline & diary */
+.tl{display:flex;flex-direction:column}
+.tl .it{display:flex;gap:12px;padding:10px 14px;border-top:1px solid var(--line)}
+.tl .it:first-child{border-top:0}
+.dot{width:10px;height:10px;border-radius:50%;margin-top:6px;background:var(--line2);flex:none}
+.dot.done{background:var(--accent)}
+.bars{display:flex;align-items:flex-end;gap:6px;height:84px;padding:0 14px 6px}
+.bars div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
+.bars span{display:block;border-radius:3px}
+.days{display:flex;gap:6px;padding:0 14px 12px;font-size:11px;color:var(--mute)}
+.days span{flex:1;text-align:center}
+.legend{display:flex;gap:12px;flex-wrap:wrap;padding:0 14px 14px;font-size:12px;color:var(--sub)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}
+
+/* side panel */
+.side{width:560px;max-width:100%;color:var(--sub);font-size:13.5px}
+.side h2{color:var(--text);font-size:18px;margin-bottom:6px}
+.side p{margin-bottom:10px}
+.side table{width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:12.5px}
+.side th,.side td{text-align:left;padding:6px 8px;border-bottom:1px solid #22252a;vertical-align:top}
+.side th{color:var(--text);font-weight:600;background:#121417;position:sticky;top:0}
+.side td:first-child{color:var(--text)}
+.side .grp td{color:var(--accent);font-weight:600;padding-top:12px}
+.principles li{margin:4px 0 4px 18px}
 </style>
 </head>
 <body>
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-face" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="4"/><path d="M9 11v2M15 11v2"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4V6z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="10" rx="5"/><path d="M8 11v4M6 13h4M15.5 12.5h.01M17.5 14.5h.01"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/></symbol>
+  <symbol id="i-micoff" viewBox="0 0 24 24"><path d="M15 9V6a3 3 0 0 0-5.7-1.3M9 9v2a3 3 0 0 0 4.6 2.5M6 11a6 6 0 0 0 9.3 5M18 11a6 6 0 0 1-.4 2M12 17v4M4 4l16 16"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V6a1.5 1.5 0 0 1 3 0v5M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V6a1.5 1.5 0 0 1 3 0v7a7 7 0 0 1-7 7h-.5A5.5 5.5 0 0 1 5 15.5L4 12a1.4 1.4 0 0 1 2.5-1.2L8 13"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M4 9a12 12 0 0 1 16 0M7 12.5a7.5 7.5 0 0 1 10 0M10 16a3 3 0 0 1 4 0M12 19.5h.01"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.5-8 6 6 0 0 1 11.5 1.5A3.5 3.5 0 0 1 17.5 18z"/></symbol>
+  <symbol id="i-bat" viewBox="0 0 24 24"><rect x="3" y="8" width="16" height="9" rx="2"/><path d="M21 11v3"/></symbol>
+  <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></symbol>
+  <symbol id="i-remote" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="3"/><path d="M12 7h.01M10 12h4M10 15h4"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+  <symbol id="i-dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 8.5h.01M15.5 15.5h.01M12 12h.01M15.5 8.5h.01M8.5 15.5h.01"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></symbol>
+  <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10zM17 9a4 4 0 0 1 0 6M19.5 6.5a8 8 0 0 1 0 11"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z"/><path d="M5 16a4 4 0 0 1 4-4h10"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.5"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="14" r="4"/><path d="M11 11l9-9M17 5l2 2M15 7l2 2"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6z"/></symbol>
+  <symbol id="i-update" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-3-7z"/></symbol>
+  <symbol id="i-focus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></symbol>
+</svg>
+
 <div class="phone">
-  <div class="sb"><span>09:41</span><span>BLE · 82%</span></div>
-  <div class="appbar"><h1 id="title">Robot</h1><span class="chip"><span class="dot"></span>Terhubung</span></div>
+  <div class="sb"><span>21:40</span><span>BLE terhubung</span></div>
+  <div class="bar" id="bar">
+    <button class="back" onclick="back()" aria-label="Kembali"><svg><use href="#i-back"/></svg></button>
+    <h1 id="title">AILI</h1>
+    <span class="link" id="linkpill"><i></i>Terhubung</span>
+  </div>
+  <div class="scroll" id="scroll">
 
-  <section class="view on" data-t="Robot">
-    <div class="card"><div class="hero"><div class="face" id="face"><i></i><i></i></div>
-      <div><div class="mood" id="mood">Ngantuk</div><div class="v" style="text-align:left">sudah malam · energi rendah</div></div></div></div>
-    <div class="card"><h3>Aksi cepat</h3>
-      <div class="btns"><button class="btn">Ajak main</button><button class="btn sec" onclick="sleepToggle()" id="sleepBtn">Tidurkan</button></div>
-      <div class="btns" style="margin-top:8px"><button class="btn sec">Elus</button><button class="btn sec">Jangan ganggu 1 jam</button></div></div>
-    <div class="card"><h3>Status</h3>
-      <div class="row"><span>Baterai</span><span class="v">82%</span></div>
-      <div class="row"><span>Koneksi</span><span class="v">BLE · Wi-Fi rumah</span></div>
-      <div class="row"><span>Mikrofon</span><span class="v">aktif · wake word</span></div></div>
-  </section>
-
-  <section class="view" data-t="Ngobrol">
-    <div class="card"><h3>Mode jawaban</h3><div class="seg"><b>Suara</b><b class="on">Teks</b><b>Keduanya</b></div></div>
-    <div class="card"><div class="bubble me">Lempar koin dong</div><div class="bubble bot">Hasilnya… gambar! 🪙</div>
-      <div class="btns" style="margin-top:10px"><input style="flex:1;min-height:48px;background:#12161c;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px" placeholder="Tulis pesan"><button class="btn">Kirim</button></div>
-      <div class="note">Riwayat chat hanya selama sesi.</div></div>
-  </section>
-
-  <section class="view" data-t="Main &amp; Alat">
-    <div class="card"><h3>Main</h3><div class="btns"><button class="btn">Tebak sentuh</button><button class="btn sec">Koin</button><button class="btn sec">Dadu</button><button class="btn sec">Suit</button></div></div>
-    <div class="card"><h3>Aktivitas & fokus</h3>
-      <div class="row"><span>Pomodoro<small>25 menit fokus</small></span><button class="btn sec">Mulai</button></div>
-      <div class="row"><span>Aktivitas<small>Peregangan, napas, cerita</small></span><span class="v">›</span></div></div>
-    <div class="card"><h3>Alat</h3>
-      <div class="row"><span>Pengingat</span><span class="v">3 aktif ›</span></div>
-      <div class="row"><span>Remote IR</span><span class="v">2 profil ›</span></div>
-      <div class="row"><span>Integrasi</span><span class="v">Cuaca, kalender ›</span></div></div>
-  </section>
-
-  <section class="view" data-t="Kenangan">
-    <div class="card"><h3>Milestone</h3>
-      <div class="ms"><span>💗</span><div>Hari ke-30 bersama<small class="v" style="display:block;text-align:left">dirayakan 12 Okt</small></div></div>
-      <div class="note">Berikutnya: hari ke-100.</div></div>
-    <div class="card"><h3>Diary mood <span class="tag">opt-in · di HP saja</span></h3>
-      <div class="row"><span>Sen 13 Okt</span><span class="v">Ceria 5 jam, Ngantuk 3 jam</span></div>
-      <div class="row"><span>Min 12 Okt</span><span class="v">Tenang 6 jam, Penasaran 2 jam</span></div>
-      <div class="btns" style="margin-top:8px"><button class="btn bad">Hapus diary</button></div></div>
-    <div class="card"><h3>Yang diingat robot</h3>
-      <div class="row"><span>Nama pemilik</span><span class="v">Faisal</span></div>
-      <div class="row"><span>Minuman favorit</span><span class="v">kopi</span></div>
-      <div class="btns" style="margin-top:8px"><button class="btn sec">Tambah</button><button class="btn bad">Hapus semua</button></div></div>
-  </section>
-
-  <section class="view" data-t="Setelan">
-    <div class="card"><h3>Karakter</h3><div class="seg"><b>Kalem</b><b class="on">Ceria</b><b>Usil</b></div>
-      <div class="row"><span>Jadwal tidur<small>22:00 – 07:00</small></span><span class="v">›</span></div>
-      <div class="row"><span>Ulang tahun pemilik</span><span class="v">17 Mei ›</span></div></div>
+  <!-- ===================== ROBOT ===================== -->
+  <section class="screen on" data-s="robot" data-t="AILI">
+    <div class="card hero">
+      <div class="oled" id="oled"><i></i><i></i></div>
+      <div class="mood"><b id="moodTxt">Ngantuk</b><small id="moodWhy">sudah malam · energi rendah</small></div>
+      <div class="stat">
+        <span><svg><use href="#i-mic"/></svg>Mic aktif</span>
+        <span><svg><use href="#i-wifi"/></svg>Wi-Fi rumah</span>
+        <span><svg><use href="#i-cloud"/></svg>Gemini siap</span>
+        <span><svg><use href="#i-bat"/></svg>USB</span>
+      </div>
+    </div>
+    <div class="grid2">
+      <button class="act"><svg><use href="#i-chat"/></svg><span>Ajak bicara</span></button>
+      <button class="act" onclick="sleepToggle()"><svg><use href="#i-moon"/></svg><span id="sleepLbl">Tidurkan</span></button>
+      <button class="act"><svg><use href="#i-hand"/></svg><span>Elus</span></button>
+      <button class="act" onclick="go('pause')"><svg><use href="#i-pause"/></svg><span>Jangan ganggu</span></button>
+    </div>
+    <div class="sec">Tunjukkan ekspresi</div>
+    <div class="card pad">
+      <div class="chips" id="exprs"></div>
+      <button class="btn full" style="margin-top:12px">Tampilkan di robot</button>
+    </div>
+    <div class="sec">Sedang berjalan</div>
     <div class="card">
-      <div class="row"><span>Suara & mic</span><span class="v">›</span></div>
-      <div class="row"><span>Notifikasi HP</span><span class="v">3 app ›</span></div>
-      <div class="row"><span>Jaringan & AI</span><span class="v">›</span></div>
-      <div class="row"><span>Privasi<small>mute, hapus semua data</small></span><span class="v">›</span></div>
-      <div class="row"><span>Pembaruan<small>OTA + catatan rilis</small></span><span class="v">›</span></div>
-      <div class="row"><span>Bantuan & Tentang<small>diagnostik ada di sini</small></span><span class="v">›</span></div>
-      <div class="row"><span style="color:var(--bad)">Zona bahaya</span><span class="v">›</span></div></div>
+      <button class="row" onclick="tab('play');go('pomodoro')"><span class="ic"><svg><use href="#i-timer"/></svg></span><span class="t"><b>Fokus Pomodoro</b><small>Sisa 18:42 · sesi 2 dari 4</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row"><span class="ic"><svg><use href="#i-mic"/></svg></span><span class="t"><b>Mikrofon</b><small>Matikan untuk privasi penuh</small></span><span class="sw"></span></button>
+    </div>
+    <div class="card">
+      <button class="row" onclick="tab('settings');go('update')"><span class="ic"><svg><use href="#i-update"/></svg></span><span class="t"><b>Pembaruan tersedia</b><small>Versi 2026.10.13 · lihat catatan rilis</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+    </div>
   </section>
 
+  <section class="screen" data-s="pause" data-t="Jangan ganggu" data-sub>
+    <div class="card">
+      <button class="row"><span class="t"><b>15 menit</b></span></button>
+      <button class="row"><span class="t"><b>1 jam</b></span></button>
+      <button class="row"><span class="t"><b>Sampai saya lanjutkan</b><small>Robot tetap hidup, tanpa ajakan dan bunyi spontan</small></span></button>
+    </div>
+    <button class="btn ghost full">Lanjutkan sekarang</button>
+  </section>
+
+  <!-- ===================== NGOBROL ===================== -->
+  <section class="screen" data-s="chat" data-t="Ngobrol">
+    <div class="seg" style="margin:4px 0 6px"><button>Suara</button><button class="on">Teks di layar</button><button>Keduanya</button></div>
+    <div class="note" style="padding-top:2px">Mode jawaban untuk pesan dari app. Mode untuk bicara langsung ada di Setelan › Suara & bicara.</div>
+    <div class="msgs">
+      <div class="msg me">Lempar koin dong</div>
+      <div class="msg bot">Hasilnya gambar. Mau lempar lagi?</div>
+      <div class="msg me">Ingatkan minum air 30 menit lagi</div>
+      <div class="msg bot">Siap, pengingat jam 22.12 sudah dibuat.</div>
+    </div>
+    <div class="note">Riwayat chat hanya selama sesi ini dan tidak disimpan.</div>
+  </section>
+
+  <!-- ===================== MAIN & ALAT ===================== -->
+  <section class="screen" data-s="play" data-t="Main & Alat">
+    <div class="sec">Main</div>
+    <div class="grid2">
+      <button class="act" onclick="go('touchgame')"><svg><use href="#i-hand"/></svg><span>Tebak sentuh</span></button>
+      <button class="act" onclick="go('games')"><svg><use href="#i-dice"/></svg><span>Koin, dadu, suit</span></button>
+      <button class="act" onclick="go('activities')"><svg><use href="#i-activity"/></svg><span>Aktivitas</span></button>
+      <button class="act" onclick="go('pomodoro')"><svg><use href="#i-timer"/></svg><span>Pomodoro</span></button>
+    </div>
+    <div class="sec">Alat</div>
+    <div class="card">
+      <button class="row" onclick="go('reminders')"><span class="ic"><svg><use href="#i-bell"/></svg></span><span class="t"><b>Pengingat</b><small>3 aktif · berikutnya 22.12</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('ir')"><span class="ic"><svg><use href="#i-remote"/></svg></span><span class="t"><b>Remote IR</b><small>2 profil tersimpan</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('integrations')"><span class="ic"><svg><use href="#i-link"/></svg></span><span class="t"><b>Integrasi</b><small>Cuaca, kalender, Home Assistant</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('soundtest')"><span class="ic"><svg><use href="#i-sound"/></svg></span><span class="t"><b>Tes suara karakter</b><small>12 suara</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+    </div>
+  </section>
+
+  <section class="screen" data-s="touchgame" data-t="Tebak sentuh" data-sub>
+    <div class="card pad"><b>Robot menawarkan permainan</b><div class="note" style="padding:4px 0 12px">Sentuh kepala robot sesuai arah matanya. Tawaran muncul saat robot santai.</div>
+      <div class="grid2"><button class="btn">Main</button><button class="btn ghost">Batalkan</button></div></div>
+  </section>
+  <section class="screen" data-s="games" data-t="Koin, dadu, suit" data-sub>
+    <div class="card pad"><div class="note" style="padding:0 0 12px">Hasil diacak di robot (adil) lalu ditampilkan di layarnya. Butuh Gemini aktif.</div>
+      <div class="grid2"><button class="btn ghost">Lempar koin</button><button class="btn ghost">Lempar dadu</button></div>
+      <div class="seg" style="margin-top:10px"><button>Batu</button><button>Kertas</button><button>Gunting</button></div></div>
+  </section>
+  <section class="screen" data-s="activities" data-t="Aktivitas" data-sub>
+    <div class="card">
+      <button class="row"><span class="t"><b>Peregangan 2 menit</b><small>Terakhir kemarin · favorit</small></span><span class="tag">Mulai</span></button>
+      <button class="row"><span class="t"><b>Napas tenang</b><small>3 menit</small></span><span class="tag">Mulai</span></button>
+      <button class="row"><span class="t"><b>Cerita pendek</b><small>Butuh Gemini</small></span><span class="tag">Mulai</span></button>
+      <button class="row"><span class="t"><b>Semua aktivitas (13)</b></span><svg class="chev"><use href="#i-chev"/></svg></button>
+    </div>
+    <div class="sec">Saat berjalan</div>
+    <div class="card pad"><div class="grid2"><button class="btn ghost">Jeda / lanjut</button><button class="btn ghost">Lewati</button></div><div class="grid2" style="margin-top:8px"><button class="btn ghost">Favorit</button><button class="btn ghost">Batalkan</button></div></div>
+    <button class="btn danger full">Hapus riwayat aktivitas</button>
+  </section>
+  <section class="screen" data-s="pomodoro" data-t="Pomodoro" data-sub>
+    <div class="card hero"><b style="font-size:40px;font-weight:650;font-variant-numeric:tabular-nums">18:42</b><small style="color:var(--sub)">Fokus · sesi 2 dari 4</small></div>
+    <div class="grid2"><button class="btn ghost">Jeda</button><button class="btn danger">Berhenti</button></div>
+    <div class="sec">Atur</div>
+    <div class="card">
+      <div class="row"><span class="t"><b>Durasi fokus</b></span><span class="v">25 mnt</span></div>
+      <div class="row"><span class="t"><b>Istirahat pendek / panjang</b></span><span class="v">5 / 15 mnt</span></div>
+      <div class="row"><span class="t"><b>Lanjutkan setelah robot restart</b></span><span class="sw on"></span></div>
+    </div>
+  </section>
+  <section class="screen" data-s="reminders" data-t="Pengingat" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>Minum air</b><small>Timer · 22.12</small></span><span class="tag">Hapus</span></div>
+      <div class="row"><span class="t"><b>Sarapan</b><small>Harian · 08.00</small></span><span class="tag">Hapus</span></div>
+      <div class="row"><span class="t"><b>Rapat tim</b><small>Sekali · Rab 15 Okt 10.00</small></span><span class="tag">Hapus</span></div>
+    </div>
+    <div class="sec">Tambah (3/8)</div>
+    <div class="card pad">
+      <div class="seg" style="margin-bottom:12px"><button class="on">Sekali</button><button>Harian</button><button>Timer</button></div>
+      <label class="field"><span>Teks</span><input class="input" value="Telepon ibu"></label>
+      <label class="field"><span>Waktu</span><input class="input" value="Kam 16 Okt · 19.00"></label>
+      <button class="btn full"><svg><use href="#i-plus"/></svg>Tambah pengingat</button>
+    </div>
+  </section>
+  <section class="screen" data-s="ir" data-t="Remote IR" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>TV power</b></span><span class="tag">Kirim</span></div>
+      <div class="row"><span class="t"><b>Kipas</b></span><span class="tag">Kirim</span></div>
+    </div>
+    <div class="card pad"><label class="field"><span>Pelajari tombol baru (maks 4 profil)</span><input class="input" placeholder="Nama, mis. AC dingin"></label><button class="btn full">Mulai belajar 10 detik</button></div>
+    <div class="card pad"><label class="field"><span>Kirim kode NEC (lanjutan)</span><input class="input" placeholder="20DF10EF"></label><button class="btn ghost full">Kirim kode</button></div>
+  </section>
+  <section class="screen" data-s="integrations" data-t="Integrasi" data-sub>
+    <div class="card">
+      <div class="row"><span class="ic"><svg><use href="#i-cloud"/></svg></span><span class="t"><b>Cuaca</b><small>Lokasi -6,2 · 106,8 · diperbarui 10 mnt lalu</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="ic"><svg><use href="#i-book"/></svg></span><span class="t"><b>Kalender (ICS)</b><small>Disimpan, tidak ditampilkan</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="ic"><svg><use href="#i-link"/></svg></span><span class="t"><b>Home Assistant</b><small>2 entitas · token tersimpan</small></span><span class="sw"></span></div>
+    </div>
+    <div class="grid2"><button class="btn ghost">Segarkan</button><button class="btn danger">Hapus semua</button></div>
+  </section>
+  <section class="screen" data-s="soundtest" data-t="Tes suara karakter" data-sub>
+    <div class="card pad"><div class="chips" style="flex-wrap:wrap"><button class="chip">bangun</button><button class="chip">senang</button><button class="chip">penasaran</button><button class="chip">sayang</button><button class="chip">berpikir</button><button class="chip">kaget</button><button class="chip">sedih</button><button class="chip">ngantuk</button><button class="chip">galat</button><button class="chip">berhasil</button><button class="chip">diangkat</button><button class="chip">digoyang</button></div></div>
+  </section>
+
+  <!-- ===================== KENANGAN ===================== -->
+  <section class="screen" data-s="memories" data-t="Kenangan">
+    <div class="card pad" style="display:flex;gap:14px;align-items:center">
+      <div style="font-size:34px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums">32</div>
+      <div><b>hari bersama AILI</b><div style="color:var(--sub);font-size:13px">Berikutnya: hari ke-100 · 68 hari lagi</div></div>
+    </div>
+    <div class="sec">Milestone</div>
+    <div class="card tl">
+      <div class="it"><span class="dot done"></span><div><b>Hari ke-30</b><div style="color:var(--sub);font-size:13px">12 Okt · robot merayakan dengan hati</div></div></div>
+      <div class="it"><span class="dot done"></span><div><b>Hari ke-7</b><div style="color:var(--sub);font-size:13px">19 Sep</div></div></div>
+      <div class="it"><span class="dot"></span><div><b>Ulang tahun Anda</b><div style="color:var(--sub);font-size:13px">17 Mei · ubah di Setelan › Profil</div></div></div>
+    </div>
+    <div class="sec">Diary mood <span class="tag" style="margin-left:6px">hanya di HP ini</span></div>
+    <div class="card">
+      <div class="row"><span class="t"><b>Catat mood per jam</b><small>Tanpa percakapan · terenkripsi · 7 hari</small></span><span class="sw on"></span></div>
+      <div class="bars" id="bars"></div>
+      <div class="days"><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span><span>Min</span><span>Sen</span><span>Sel</span></div>
+      <div class="legend"><span><i style="background:#f2b45a"></i>Ceria</span><span><i style="background:#8fb8d8"></i>Tenang</span><span><i style="background:#a99be0"></i>Ngantuk/tidur</span><span><i style="background:#e58f7e"></i>Ngambek</span></div>
+      <div class="pad" style="padding-top:0"><button class="btn danger full">Hapus diary</button></div>
+    </div>
+    <div class="sec">Yang diingat AILI</div>
+    <div class="card">
+      <button class="row" onclick="go('facts')"><span class="ic"><svg><use href="#i-book"/></svg></span><span class="t"><b>Fakta tentang Anda</b><small>12 dari 24 · nama, minuman favorit, ...</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('learning')"><span class="ic"><svg><use href="#i-spark"/></svg></span><span class="t"><b>Kebiasaan yang dipelajari</b><small>Aktivitas favorit per waktu</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+    </div>
+  </section>
+  <section class="screen" data-s="facts" data-t="Fakta tentang Anda" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>Nama panggilan</b><small>Faisal</small></span><span class="tag">Hapus</span></div>
+      <div class="row"><span class="t"><b>Minuman favorit</b><small>kopi</small></span><span class="tag">Hapus</span></div>
+      <div class="row"><span class="t"><b>Hobi</b><small>bersepeda</small></span><span class="tag">Hapus</span></div>
+    </div>
+    <div class="card pad"><label class="field"><span>Tambah fakta</span><input class="input" placeholder="mis. warna favorit"></label><input class="input" placeholder="nilai" style="margin-bottom:12px"><button class="btn full">Simpan</button></div>
+    <div class="grid2"><button class="btn danger">Hapus semua fakta</button><button class="btn danger">Hapus ringkasan obrolan</button></div>
+    <div class="note">Teks memori diperlakukan sebagai data, bukan perintah.</div>
+  </section>
+  <section class="screen" data-s="learning" data-t="Kebiasaan" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>Belajar kebiasaan</b><small>Robot menyesuaikan tawaran aktivitas</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Pagi</b><small>Peregangan · sering diterima</small></span></div>
+      <div class="row"><span class="t"><b>Malam</b><small>Napas tenang</small></span></div>
+    </div>
+    <button class="btn danger full">Reset yang dipelajari</button>
+  </section>
+
+  <!-- ===================== SETELAN ===================== -->
+  <section class="screen" data-s="settings" data-t="Setelan">
+    <div class="card">
+      <button class="row" onclick="go('profile')"><span class="ic"><svg><use href="#i-face"/></svg></span><span class="t"><b>Profil & kepribadian</b><small>Nama, Kalem/Ceria/Usil, ulang tahun</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('sleep')"><span class="ic"><svg><use href="#i-moon"/></svg></span><span class="t"><b>Jadwal tidur & rutinitas</b><small>22.00 – 07.00 · briefing pagi</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('face')"><span class="ic"><svg><use href="#i-eye"/></svg></span><span class="t"><b>Wajah & ekspresi</b><small>Gaya mata, pupil, alis, mulut</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('sound')"><span class="ic"><svg><use href="#i-sound"/></svg></span><span class="t"><b>Suara & bicara</b><small>Volume, efek suara, mode jawaban, mikrofon</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('comfort')"><span class="ic"><svg><use href="#i-focus"/></svg></span><span class="t"><b>Fokus & kenyamanan</b><small>Pomodoro, suhu & kelembapan</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+    </div>
+    <div class="card">
+      <button class="row" onclick="go('notif')"><span class="ic"><svg><use href="#i-phone"/></svg></span><span class="t"><b>Notifikasi HP</b><small>3 app · navigasi Maps</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('network')"><span class="ic"><svg><use href="#i-wifi"/></svg></span><span class="t"><b>Jaringan & AI</b><small>Wi-Fi, kunci Gemini, memori</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('privacy')"><span class="ic"><svg><use href="#i-shield"/></svg></span><span class="t"><b>Privasi</b><small>Mikrofon, data, hapus semua</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('update')"><span class="ic"><svg><use href="#i-update"/></svg></span><span class="t"><b>Pembaruan</b><small>Tersedia 2026.10.13</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('help')"><span class="ic"><svg><use href="#i-help"/></svg></span><span class="t"><b>Bantuan & tentang</b><small>Koneksi, diagnostik, versi</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+    </div>
+    <div class="card"><button class="row" onclick="go('danger')"><span class="ic" style="color:var(--bad)"><svg><use href="#i-warn"/></svg></span><span class="t"><b style="color:var(--bad)">Zona bahaya</b><small>Restart, reset pabrik, lupakan robot</small></span><svg class="chev"><use href="#i-chev"/></svg></button></div>
+  </section>
+
+  <section class="screen" data-s="profile" data-t="Profil & kepribadian" data-sub>
+    <div class="card pad">
+      <label class="field"><span>Nama robot</span><input class="input" value="AILI"></label>
+      <label class="field"><span>Nama panggilan Anda</span><input class="input" value="Faisal"></label>
+      <span style="display:block;font-size:12.5px;color:var(--sub);margin-bottom:6px">Kepribadian</span>
+      <div class="seg"><button>Kalem</button><button class="on">Ceria</button><button>Usil</button></div>
+      <div class="note" style="padding:6px 0 12px">Mengatur intensitas karakter, frekuensi suara dan sifat awal sekaligus.</div>
+      <label class="field"><span>Ulang tahun Anda (opsional)</span><input class="input" value="17 Mei"></label>
+      <label class="field" style="margin-bottom:0"><span>Gaya bicara (opsional)</span><input class="input" value="Santai, singkat, sesekali bercanda"></label>
+    </div>
+  </section>
+  <section class="screen" data-s="sleep" data-t="Jadwal tidur & rutinitas" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>Jadwal tidur</b><small>Robot tidur, layar redup, tanpa bunyi spontan</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Tidur</b></span><span class="v">22.00</span></div>
+      <div class="row"><span class="t"><b>Bangun</b></span><span class="v">07.00</span></div>
+      <div class="row"><span class="t"><b>Zona waktu</b></span><span class="v">WIB (UTC+7)</span></div>
+    </div>
+    <div class="card">
+      <div class="row"><span class="t"><b>Briefing pagi</b><small>Cuaca dan agenda, dibacakan sekali</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Waktu briefing</b></span><span class="v">07.30</span></div>
+    </div>
+  </section>
+  <section class="screen" data-s="face" data-t="Wajah & ekspresi" data-sub>
+    <div class="card pad">
+      <span style="display:block;font-size:12.5px;color:var(--sub);margin-bottom:6px">Gaya mata</span>
+      <div class="seg"><button class="on">Klasik</button><button>Kontur (EmoOled)</button></div>
+      <div class="note" style="padding:6px 0 0">Pilihan final menunggu perbandingan di perangkat.</div>
+    </div>
+    <div class="card">
+      <div class="row"><span class="t"><b>Wajah hidup</b><small>Napas, lirikan, gerak mikro</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Pupil & kilau</b></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Alis</b><small>Hanya saat ekspresif</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Bulu mata</b><small>Hanya saat lembut</small></span><span class="sw"></span></div>
+      <div class="row"><span class="t"><b>Mulut</b></span><span class="v">Otomatis</span></div>
+      <div class="row"><span class="t"><b>Jangkauan lirikan</b></span><span class="range" style="width:120px"><i><b style="width:70%"></b></i></span></div>
+    </div>
+  </section>
+  <section class="screen" data-s="sound" data-t="Suara & bicara" data-sub>
+    <div class="card pad"><span style="display:block;font-size:12.5px;color:var(--sub);margin-bottom:10px">Volume</span><div class="range"><svg><use href="#i-sound"/></svg><i><b style="width:62%"></b></i></div></div>
+    <div class="card">
+      <div class="row"><span class="t"><b>Robot bicara</b></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Jawaban saat bicara langsung</b></span><span class="v">Suara</span></div>
+      <div class="row"><span class="t"><b>Suara Gemini</b></span><span class="v">Puck</span></div>
+      <div class="row"><span class="t"><b>Cara memulai</b><small>Kata bangun atau sentuh</small></span><span class="v">Kata bangun</span></div>
+    </div>
+    <div class="sec">Efek suara karakter</div>
+    <div class="card">
+      <div class="row"><span class="t"><b>Efek suara</b></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Seberapa sering</b></span><span class="v">Normal</span></div>
+      <div class="row"><span class="t"><b>Sentuh, gerak, notifikasi, kata bangun</b><small>Atur per jenis</small></span><svg class="chev"><use href="#i-chev"/></svg></div>
+    </div>
+    <div class="card"><div class="row"><span class="t"><b>Mikrofon lanjutan</b><small>Ambang suara, jeda bicara</small></span><svg class="chev"><use href="#i-chev"/></svg></div></div>
+  </section>
+  <section class="screen" data-s="comfort" data-t="Fokus & kenyamanan" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>Peringatan kenyamanan ruangan</b><small>Suhu 20–28 °C · kelembapan 30–70 %</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Durasi Pomodoro</b></span><span class="v">25 / 5 / 15</span></div>
+      <div class="row"><span class="t"><b>Reaksi visual proaktif</b></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Ajakan suara proaktif</b><small>Tidak membuka mikrofon</small></span><span class="sw on"></span></div>
+    </div>
+  </section>
+  <section class="screen" data-s="notif" data-t="Notifikasi HP" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>Tampilkan notifikasi di robot</b><small>Izin akses notifikasi Android</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>WhatsApp</b><small>Tampilkan · bacakan</small></span><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="row"><span class="t"><b>Gmail</b><small>Tampilkan</small></span><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="row"><span class="t"><b>Google Maps</b><small>Arah navigasi di layar robot</small></span><span class="sw on"></span></div>
+    </div>
+    <div class="note">Kode OTP dan data sensitif tidak pernah dikirim ke robot.</div>
+  </section>
+  <section class="screen" data-s="network" data-t="Jaringan & AI" data-sub>
+    <div class="card">
+      <div class="row"><span class="ic"><svg><use href="#i-wifi"/></svg></span><span class="t"><b>Wi-Fi 1 · Rumah</b><small>Terhubung</small></span><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="row"><span class="ic"><svg><use href="#i-wifi"/></svg></span><span class="t"><b>Wi-Fi 2 · Kantor</b></span><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="row"><span class="ic"><svg><use href="#i-plus"/></svg></span><span class="t"><b>Tambah Wi-Fi 3</b></span></div>
+    </div>
+    <div class="card">
+      <div class="row"><span class="ic"><svg><use href="#i-key"/></svg></span><span class="t"><b>Kunci Gemini Anda</b><small>Tersimpan di robot · ganti atau hapus</small></span><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="row"><span class="t"><b>Model</b></span><span class="v">gemini-live</span></div>
+      <div class="row"><span class="t"><b>Memori</b><small>Robot boleh mengingat fakta</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Simpan memori otomatis</b></span><span class="sw on"></span></div>
+    </div>
+  </section>
+  <section class="screen" data-s="privacy" data-t="Privasi" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>Matikan mikrofon</b><small>Robot tidak mendengar sama sekali</small></span><span class="sw"></span></div>
+      <div class="row"><span class="t"><b>Diagnostik interaksi lokal</b><small>Tanpa transkrip</small></span><span class="sw"></span></div>
+    </div>
+    <div class="card pad"><b>Hapus semua data</b><div class="note" style="padding:4px 0 12px">Memori robot, diary, cache HP. Setelan tetap.</div><button class="btn danger full">Hapus semua data</button></div>
+  </section>
+  <section class="screen" data-s="update" data-t="Pembaruan" data-sub>
+    <div class="card pad"><b>Versi 2026.10.13 tersedia</b><div class="note" style="padding:4px 0 10px">Terpasang 2026.10.12 · rilis bertanda tangan</div>
+      <div style="font-size:14px;color:var(--sub);line-height:1.6">Robot kini bisa tidur sendiri dan dibangunkan dari app, punya diary mood, dan bisa menari mengikuti musik.</div>
+      <button class="btn full" style="margin-top:14px">Perbarui sekarang</button></div>
+    <div class="note">Robot dan gateway diperbarui berurutan, sekitar 5 menit. Jangan cabut daya.</div>
+  </section>
+  <section class="screen" data-s="help" data-t="Bantuan & tentang" data-sub>
+    <div class="card">
+      <div class="row"><span class="ic"><svg><use href="#i-phone"/></svg></span><span class="t"><b>Koneksi HP</b><small>Terhubung aman · pasangkan ulang</small></span><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="row"><span class="ic"><svg><use href="#i-activity"/></svg></span><span class="t"><b>Diagnostik</b><small>Link, memori, Wi-Fi, BLE, log pairing</small></span><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="row"><span class="ic"><svg><use href="#i-help"/></svg></span><span class="t"><b>Panduan singkat</b></span><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="row"><span class="t"><b>Versi</b><small>App 1.4 · Robot 2026.10.12 · Gateway 2026.10.12</small></span></div>
+    </div>
+  </section>
+  <section class="screen" data-s="danger" data-t="Zona bahaya" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>Restart robot</b></span><span class="tag">S3</span></div>
+      <div class="row"><span class="t"><b>Restart gateway</b></span><span class="tag">C3</span></div>
+      <div class="row"><span class="t"><b style="color:var(--bad)">Reset pabrik</b><small>Hapus semua setelan dan pasangan</small></span></div>
+      <div class="row"><span class="t"><b style="color:var(--bad)">Lupakan robot ini</b><small>Cabut kepercayaan HP ini</small></span></div>
+    </div>
+  </section>
+  </div>
+
+  <div class="composer" id="composer" style="display:none"><input class="input" placeholder="Tulis pesan ke AILI"><button class="btn" aria-label="Kirim"><svg><use href="#i-send"/></svg></button></div>
   <nav id="nav">
-    <button class="on" data-i="0"><span class="ic">◉</span>Robot</button>
-    <button data-i="1"><span class="ic">💬</span>Ngobrol</button>
-    <button data-i="2"><span class="ic">🎲</span>Main &amp; Alat</button>
-    <button data-i="3"><span class="ic">💗</span>Kenangan</button>
-    <button data-i="4"><span class="ic">⚙</span>Setelan</button>
+    <button class="on" data-tab="robot"><span class="pill"><svg><use href="#i-face"/></svg></span>Robot</button>
+    <button data-tab="chat"><span class="pill"><svg><use href="#i-chat"/></svg></span>Ngobrol</button>
+    <button data-tab="play"><span class="pill"><svg><use href="#i-play"/></svg></span>Main & Alat</button>
+    <button data-tab="memories"><span class="pill"><svg><use href="#i-heart"/></svg></span>Kenangan</button>
+    <button data-tab="settings"><span class="pill"><svg><use href="#i-gear"/></svg></span>Setelan</button>
   </nav>
 </div>
+
 <div class="side">
-  <h2>PD-4.1 · Usulan IA 5 tab (menunggu persetujuan)</h2>
-  <p>Dari 6 tab sekarang (Beranda, Setelan, Koneksi, Memori, Ingat, Lainnya) ke 5 tab konsumen, sesuai PRODUCT_DIRECTION bagian IA.</p>
-  <ul>
-    <li><b>Robot</b>: wajah cermin mood + alasan (status schema 4), aksi cepat Tidurkan/Bangunkan/Elus (PD-2.5/3.3).</li>
-    <li><b>Ngobrol</b>: chat yang sudah ada + mode jawaban.</li>
-    <li><b>Main &amp; Alat</b>: permainan, Pomodoro, aktivitas, pengingat (dari tab Ingat), IR dan integrasi (dari Lainnya).</li>
-    <li><b>Kenangan</b>: milestone, diary mood opt-in (PD-3.4), memori (dari tab Memori).</li>
-    <li><b>Setelan</b>: preset kepribadian, jadwal tidur, ulang tahun; Koneksi dan diagnostik pindah ke Jaringan dan Bantuan.</li>
+  <h2>PD-4.1 · Usulan IA 5 tab, revisi 2</h2>
+  <p>Menunggu persetujuan pemilik. Klik tab dan baris untuk masuk ke halaman detail.</p>
+  <ul class="principles">
+    <li>Satu warna aksen hangat, sisanya netral. Tanpa gradien, cahaya neon, atau emoji sebagai ikon.</li>
+    <li>Beranda menjawab tiga hal: robot sedang apa, kenapa, dan apa yang bisa dilakukan sekarang.</li>
+    <li>Istilah teknis (nama kunci setelan, VAD, NEC) pindah ke halaman lanjutan; label pakai bahasa sehari-hari.</li>
+    <li>Target sentuh minimal 48 dp, teks dasar 15 sp, kontras tinggi.</li>
   </ul>
-  <p>Target sentuh ≥48 dp. Teks pindah ke strings.xml (ID/EN) di PD-4.2. Setelah disetujui, file ini menggantikan android_app_mockup.html.</p>
+  <h2 style="margin-top:14px">Cakupan fitur (semua fitur app sekarang)</h2>
+  <table>
+    <tr><th>Fitur sekarang</th><th>Lokasi lama</th><th>Lokasi baru</th></tr>
+    <tr class="grp"><td colspan="3">Robot</td></tr>
+    <tr><td>Status robot, mood + alasan</td><td>Beranda</td><td>Robot (wajah cermin)</td></tr>
+    <tr><td>Ajak bicara, jeda/lanjut</td><td>Beranda › Kontrol langsung</td><td>Robot › aksi cepat, Jangan ganggu</td></tr>
+    <tr><td>Tidurkan/Bangunkan, Elus</td><td>Beranda</td><td>Robot › aksi cepat</td></tr>
+    <tr><td>Tampilkan ekspresi</td><td>Beranda</td><td>Robot › Tunjukkan ekspresi</td></tr>
+    <tr><td>Matikan mikrofon</td><td>Beranda</td><td>Robot › Sedang berjalan; Setelan › Privasi</td></tr>
+    <tr class="grp"><td colspan="3">Ngobrol</td></tr>
+    <tr><td>Chat app → robot, mode jawaban</td><td>Chat</td><td>Ngobrol</td></tr>
+    <tr class="grp"><td colspan="3">Main & Alat</td></tr>
+    <tr><td>Permainan sentuh</td><td>Lainnya</td><td>Main & Alat › Tebak sentuh</td></tr>
+    <tr><td>Koin/dadu/suit (play_game)</td><td>(lewat chat)</td><td>Main & Alat › Koin, dadu, suit</td></tr>
+    <tr><td>Aktivitas robot (13), riwayat</td><td>Lainnya</td><td>Main & Alat › Aktivitas</td></tr>
+    <tr><td>Pomodoro (mulai/jeda/lanjut/stop)</td><td>Beranda</td><td>Main & Alat › Pomodoro</td></tr>
+    <tr><td>Pengingat (sekali/harian/timer)</td><td>Pengingat</td><td>Main & Alat › Pengingat</td></tr>
+    <tr><td>IR: profil, belajar, kirim NEC</td><td>Lainnya</td><td>Main & Alat › Remote IR</td></tr>
+    <tr><td>Cuaca, kalender, Home Assistant, status penyedia</td><td>Lainnya</td><td>Main & Alat › Integrasi</td></tr>
+    <tr><td>Tes suara karakter</td><td>Setelan</td><td>Main & Alat › Tes suara</td></tr>
+    <tr class="grp"><td colspan="3">Kenangan</td></tr>
+    <tr><td>Milestone, ulang tahun</td><td>(baru, PD-2.2/2.6)</td><td>Kenangan</td></tr>
+    <tr><td>Diary mood + hapus</td><td>Memori</td><td>Kenangan › Diary mood</td></tr>
+    <tr><td>Fakta memori: lihat/tambah/hapus/hapus semua</td><td>Memori</td><td>Kenangan › Fakta tentang Anda</td></tr>
+    <tr><td>Hapus pengalaman (ringkasan)</td><td>Memori</td><td>Kenangan › Fakta tentang Anda</td></tr>
+    <tr><td>Pembelajaran preferensi, reset</td><td>Lainnya</td><td>Kenangan › Kebiasaan</td></tr>
+    <tr class="grp"><td colspan="3">Setelan</td></tr>
+    <tr><td>Nama robot, nama panggilan, preset, ultah, gaya bicara</td><td>Setelan</td><td>Setelan › Profil & kepribadian</td></tr>
+    <tr><td>Jam tenang, briefing harian, zona waktu</td><td>Setelan</td><td>Setelan › Jadwal tidur & rutinitas</td></tr>
+    <tr><td>Wajah (LivingEyes), mulut, gaya mata</td><td>Setelan</td><td>Setelan › Wajah & ekspresi</td></tr>
+    <tr><td>Suara & bicara, SFX per jenis, frekuensi, mode input, VAD</td><td>Setelan</td><td>Setelan › Suara & bicara</td></tr>
+    <tr><td>Pomodoro & kenyamanan, proaktif visual/suara</td><td>Setelan</td><td>Setelan › Fokus & kenyamanan</td></tr>
+    <tr><td>Notifikasi HP, allowlist bacakan, navigasi Maps</td><td>Setelan</td><td>Setelan › Notifikasi HP</td></tr>
+    <tr><td>Wi-Fi 3 slot, kunci Gemini, model, memori</td><td>Koneksi, Setelan</td><td>Setelan › Jaringan & AI</td></tr>
+    <tr><td>Diagnostik interaksi, hapus semua data</td><td>Setelan, Lainnya</td><td>Setelan › Privasi</td></tr>
+    <tr><td>OTA bertanda tangan + hasil update</td><td>Koneksi</td><td>Setelan › Pembaruan (+ catatan rilis)</td></tr>
+    <tr><td>Pairing & keamanan, sambungan HP, diagnostik, tentang</td><td>Koneksi, Lainnya</td><td>Setelan › Bantuan & tentang</td></tr>
+    <tr><td>Reboot S3/C3, reset pabrik, lupakan robot</td><td>Koneksi, Lainnya</td><td>Setelan › Zona bahaya</td></tr>
+    <tr><td>Onboarding (pindai, pasangkan)</td><td>Onboarding</td><td>Tetap; "kelahiran + beri nama" di PD-4.3</td></tr>
+  </table>
 </div>
+
 <script>
-const views=[...document.querySelectorAll('.view')],btns=[...document.querySelectorAll('#nav button')];
-btns.forEach(b=>b.onclick=()=>{const i=+b.dataset.i;views.forEach((v,k)=>v.classList.toggle('on',k===i));btns.forEach((x,k)=>x.classList.toggle('on',k===i));document.getElementById('title').innerHTML=views[i].dataset.t;});
-let asleep=false;function sleepToggle(){asleep=!asleep;document.getElementById('face').classList.toggle('sleep',asleep);document.getElementById('mood').textContent=asleep?'Tidur':'Ngantuk';document.getElementById('sleepBtn').textContent=asleep?'Bangunkan':'Tidurkan';}
+const EXPR=['senang','penasaran','malu','sayang','sedih','kaget','berpikir','setuju','tidak setuju','kedip','tertawa','ngantuk','kesal','pusing','semangat','tenang'];
+const ex=document.getElementById('exprs');EXPR.forEach((e,i)=>{const b=document.createElement('button');b.className='chip'+(i===0?' on':'');b.textContent=e;b.onclick=()=>{[...ex.children].forEach(c=>c.classList.remove('on'));b.classList.add('on')};ex.appendChild(b)});
+const DIARY=[[5,3,2,0],[4,4,3,1],[6,2,3,0],[3,5,4,0],[7,2,2,0],[4,3,3,1],[5,4,2,0]],COL=['#f2b45a','#8fb8d8','#a99be0','#e58f7e'];
+const bars=document.getElementById('bars');DIARY.forEach(d=>{const c=document.createElement('div');d.forEach((v,i)=>{if(!v)return;const s=document.createElement('span');s.style.height=(v*5)+'px';s.style.background=COL[i];c.appendChild(s)});bars.appendChild(c)});
+const screens=[...document.querySelectorAll('.screen')],navs=[...document.querySelectorAll('#nav button')];let stack=[];
+function show(id){screens.forEach(s=>s.classList.toggle('on',s.dataset.s===id));const s=screens.find(s=>s.dataset.s===id);document.getElementById('title').textContent=s.dataset.t;document.getElementById('bar').classList.toggle('sub',s.hasAttribute('data-sub'));document.getElementById('linkpill').style.display=s.hasAttribute('data-sub')?'none':'';document.getElementById('composer').style.display=id==='chat'?'flex':'none';document.getElementById('scroll').scrollTop=0}
+function tab(id){stack=[id];navs.forEach(n=>n.classList.toggle('on',n.dataset.tab===id));show(id)}
+function go(id){stack.push(id);show(id)}
+function back(){if(stack.length>1){stack.pop();show(stack[stack.length-1])}}
+navs.forEach(n=>n.onclick=()=>tab(n.dataset.tab));tab('robot');
+let asleep=false;function sleepToggle(){asleep=!asleep;document.getElementById('oled').classList.toggle('sleep',asleep);document.getElementById('moodTxt').textContent=asleep?'Tidur':'Ngantuk';document.getElementById('moodWhy').textContent=asleep?'ditidurkan dari app':'sudah malam · energi rendah';document.getElementById('sleepLbl').textContent=asleep?'Bangunkan':'Tidurkan'}
 </script>
 </body>
 </html>

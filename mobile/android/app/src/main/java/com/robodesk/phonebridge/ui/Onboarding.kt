@@ -49,6 +49,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.robodesk.phonebridge.GeminiKeyHelp
 import com.robodesk.phonebridge.LinkPhase
 import com.robodesk.phonebridge.RobotScanner
 import com.robodesk.phonebridge.ScannedRobot
@@ -292,13 +293,19 @@ private fun StepGemini() {
     var key by remember { mutableStateOf("") }
     Title("Kunci API Gemini", "Dibutuhkan agar robot bisa bercakap. Boleh dilewati dan diatur nanti di tab Koneksi.")
     Gap(14)
-    RoboField("Kunci (A-Z a-z 0-9 - _ . · maks 96)") { PasswordField(key, { key = it }, placeholder = "AIza…", maxLength = 96) }
+    val ctx = LocalContext.current
+    Note(GeminiKeyHelp.STEPS) // PD-4.16
+    RoboButton("Buka halaman kunci", { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(GeminiKeyHelp.KEY_PAGE))) } }, Modifier.fillMaxWidth(), ButtonKind.SECONDARY)
+    Gap(10)
+    RoboField("Kunci") { PasswordField(key, { key = GeminiKeyHelp.normalize(it) }, placeholder = "AIza…", maxLength = 96) }
+    val hint = if (key.isEmpty()) null else GeminiKeyHelp.check(key)
+    if (hint != null) Note(hint.removePrefix("!"))
     Buttons {
         RoboButton("Lewati", { Onb.step = 0; app.finishOnboarding() }, Modifier.weight(1f), ButtonKind.SECONDARY)
         RoboButton("Kirim & selesai", {
             val k = key
             key = ""
             app.call("Kunci terkirim", { d -> app.repo.sendGeminiKey(k, d) }, onOk = { Onb.step = 0; app.finishOnboarding() })
-        }, Modifier.weight(1f), enabled = key.isNotEmpty() && app.ready)
+        }, Modifier.weight(1f), enabled = key.isNotEmpty() && app.ready && hint?.startsWith("!") != true)
     }
 }

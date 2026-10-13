@@ -13,6 +13,12 @@ Sumber: inventaris kode working tree 2026-10-13, ditambah direktif lama yang dih
 3. **Hidup penuh secara offline.** Lapisan L0 sampai L2 (bagian 3) tidak boleh butuh Wi-Fi atau Gemini.
 4. **Mirip EMO di rasa, bukan di aset.** Jangan pakai nama "EMO", jangan salin desain mata, suara, atau animasi Living.ai, dan jangan pakai kata "Sonic" di nama dagang (bagian 12J).
 5. **Urutan kerja:** tutup blocker stabilitas di `TASKS.md` NEXT, lalu Fase 1 Hidup, Fase 2 Kenal, Fase 3 Main, Fase 4 Siap jual (bagian 13).
+6. **Jawaban memo PD-4.0 (pemilik, 2026-10-13):**
+   - Pasar: **14+ / dewasa** (teman meja). Tanpa mode anak; pagar konten umum saja (4.15). Komdigi dan UU PDP tetap berlaku.
+   - Akses AI: **kunci milik pengguna** (seperti sekarang). Rapikan UX kunci (4.16) dan persetujuan sebelum audio pertama ke Gemini (4.14).
+   - Nama dagang: **AILI** (calon wake word di 4.4; cek PDKI kelas 9 dan 28 di 4.19).
+   - Layar v1: **tetap OLED 0,96" 128x64** (proteksi burn-in 1.3 wajib).
+   - Servo kepala: **tetap v2**.
 
 ## 1. Kondisi sekarang (fakta kode, belum semuanya terbukti di perangkat)
 
