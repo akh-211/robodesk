@@ -94,9 +94,12 @@ class CandidateLeaseState {
     advance_(); live_=false; authenticated_=false; connection_=connection;
     copyAddress_(address); live_=address_[0]!=0;
   }
+  // The lease is bound to the connection handle: a phone using a resolvable
+  // private address connects with its RPA, but after bonding the stack reports
+  // its identity address. Adopt that identity address for the same handle.
   bool authenticated(uint16_t connection, const char* address) {
-    if(!live_||connection_!=connection||!address||strcmp(address_,address)!=0)return false;
-    authenticated_=true;return true;
+    if(!live_||connection_!=connection||!address||!address[0]||strlen(address)>=sizeof(address_))return false;
+    copyAddress_(address);authenticated_=true;return true;
   }
   void disconnected(uint16_t connection) {
     if(live_&&connection_==connection)invalidate();

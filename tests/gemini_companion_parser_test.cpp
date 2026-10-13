@@ -19,5 +19,6 @@ int main(){Sink sink;GeminiStreamParser parser(&sink);
   message(parser,R"({"goAway":{"timeLeft":"30s"}})");assert(sink.goAway=="30s");message(parser,R"({"toolCallCancellation":{"ids":["one","two"]}})");assert(sink.cancelled=="onetwo");message(parser,R"({"usageMetadata":{"totalTokenCount":321}})");assert(sink.tokens==321);
   std::string longText(1100,'x');message(parser,"{\"serverContent\":{\"inputTranscription\":{\"text\":\""+longText+"\"}}}");assert(sink.truncated);
   unsigned errors=sink.errors;message(parser,"{\"unknown\":\""+std::string(9000,'x')+"\",\"toolCall\":{\"functionCalls\":[{\"id\":\"a\",\"name\":\"remember_fact\",\"args\":{}}]}}");assert(sink.errors==errors+1&&sink.tools==0);
+  {const unsigned before=sink.tools;message(parser,R"({"toolCall":{"functionCalls":[{"id":"e1","name":"express_character","args":{"emotion":"dizzy","level":3}}]}})");assert(sink.tools==before+1&&sink.errors==errors+1);} // PD-1.12 tool args with level
   std::cout<<"PASS: fragmented transcripts, speaker provenance, resume invalidation, GoAway, cancellation, usage and oversized metadata\n";
 }

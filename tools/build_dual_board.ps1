@@ -4,11 +4,14 @@ param(
   [string]$LivingEyesRoot=(Join-Path $env:USERPROFILE 'OneDrive\Documents\LivingEyes-merge\LivingEyes'),
   [string]$OutputRoot='.verification\dual-board',
   [switch]$BleDiagnostic,
+  [switch]$NoDashboard,
   [ValidateSet('baseline','msys1-6')][string]$BleProfile='baseline'
 )
 $ErrorActionPreference='Stop'
 if($BleDiagnostic -and $Board -notin @('gateway','both')){throw 'BLE diagnostic builds require the dual-board C3 gateway or both-board build.'}
 if($BleProfile -ne 'baseline' -and !$BleDiagnostic){throw 'Non-baseline BLE profiles are diagnostic-only; pass -BleDiagnostic.'}
+if($NoDashboard -and $Board -notin @('gateway','both')){throw 'No-dashboard builds apply only to the dual-board C3 gateway or both-board build.'}
+if($NoDashboard -and $BleDiagnostic){throw '-NoDashboard and -BleDiagnostic cannot be combined.'}
 $root=(Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if(![IO.Path]::IsPathRooted($OutputRoot)){$OutputRoot=Join-Path $root $OutputRoot}
 $output=[IO.Path]::GetFullPath($OutputRoot)
@@ -24,7 +27,7 @@ $profiles=@(
 foreach($profile in $profiles){
   if($Board -eq 'both' -and !$profile.Dual){continue}
   if($Board -ne 'both' -and $Board -ne $profile.Id){continue}
-  $artifactId=if($BleDiagnostic -and $profile.Id -eq 'gateway' -and $BleProfile -ne 'baseline'){"gateway-diagnostic-$BleProfile"}elseif($BleDiagnostic -and $profile.Id -eq 'gateway'){'gateway-diagnostic'}else{$profile.Id}
+  $artifactId=if($BleDiagnostic -and $profile.Id -eq 'gateway' -and $BleProfile -ne 'baseline'){"gateway-diagnostic-$BleProfile"}elseif($BleDiagnostic -and $profile.Id -eq 'gateway'){'gateway-diagnostic'}elseif($NoDashboard -and $profile.Id -eq 'gateway'){'gateway-nodashboard'}else{$profile.Id}
   $stage=Join-Path $output "$artifactId\RoboDeskSonicCharacter"
   $build=Join-Path $output "$artifactId\build"
   New-Item -ItemType Directory -Force -Path $stage,$build | Out-Null
@@ -41,6 +44,7 @@ foreach($profile in $profiles){
     $nimble=& (Join-Path $PSScriptRoot 'prepare_nimble.ps1') -Destination (Join-Path $output 'dependencies')
     $bleLibrary=@('--library',$nimble)
     $flags+=' -DROBODESK_NIMBLE_EXTERNAL=1'
+    if($NoDashboard){$flags+=' -DROBODESK_NO_DASHBOARD=1'}
     if($BleDiagnostic){
       $flags+=' -DROBODESK_BLE_DIAGNOSTIC=1'
       if($BleProfile -eq 'msys1-6'){$flags+=' -DROBODESK_NIMBLE_PROFILE_MSYS1_6=1'}

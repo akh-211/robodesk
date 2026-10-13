@@ -4,7 +4,7 @@ import android.app.KeyguardManager
 import android.content.Context
 import java.util.Locale
 
-/** Local controls can only narrow the robot dashboard allowlist. */
+/** Local controls can only narrow the robot allowlist. */
 object NotificationPrivacy {
     private const val PREFS = "privacy_modes"
     private const val PREFIX = "mode."
@@ -14,6 +14,9 @@ object NotificationPrivacy {
             .getInt(PREFIX + packageName, AppContentMode.OFF.ordinal)
         return AppContentMode.entries.getOrElse(stored) { AppContentMode.OFF }
     }
+
+    fun sharedCount(context: Context): Int = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).all
+        .count { (key, value) -> key.startsWith(PREFIX) && value != AppContentMode.OFF.ordinal }
 
     fun setMode(context: Context, packageName: String, mode: AppContentMode) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()

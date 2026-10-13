@@ -12,6 +12,7 @@
 #include <esp_http_client.h>
 #include <esp_heap_caps.h>
 #include "DashboardSecurity.h"
+#include "RoboBuildRole.h"
 #include <time.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -214,6 +215,7 @@ inline size_t contextText(char*out,size_t cap,uint32_t now,const char*category) 
   return n;
 }
 
+#if !ROBODESK_NO_DASHBOARD
 inline bool authorize(WebServer& server,bool mutation,const char* adminPin){
   if(!server.authenticate("admin",adminPin)){server.requestAuthentication();return false;}
   if(mutation&&!roboSameOriginHttp(server.header("Host").c_str(),server.header("Origin").c_str())){server.send(403,"text/plain","Origin rejected");return false;}
@@ -238,5 +240,6 @@ inline void configureDashboardRoutes(WebServer& server,RuntimeSettings* settings
   server.on("/external/refresh",HTTP_POST,[&server,settings](){if(!authorize(server,true,settings->adminPin))return;requestRefresh();server.send(202,"text/plain","Refresh queued; provider requests run one at a time.");});
   server.on("/external/clear",HTTP_POST,[&server,settings](){if(!authorize(server,true,settings->adminPin))return;if(busy()){server.send(409,"text/plain","Wait for the current provider request before clearing");return;}if(!save(Config{})){server.send(500,"text/plain","Could not clear C3 integration settings");return;}portENTER_CRITICAL(&stateLock);snapshot=Snapshot{};portEXIT_CRITICAL(&stateLock);server.send(200,"text/plain","External settings and cached values cleared from C3 NVS/RAM.");});
 }
+#endif // !ROBODESK_NO_DASHBOARD
 
 } // namespace roboexternal

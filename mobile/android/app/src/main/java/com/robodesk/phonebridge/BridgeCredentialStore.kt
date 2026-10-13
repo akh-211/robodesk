@@ -57,6 +57,10 @@ class BridgeCredentialStore(context: Context) {
         }
     }
 
+    /** True when a trust record exists (no decryption, no key material touched): the phone has been paired with a robot. */
+    @Synchronized
+    fun hasRecord(): Boolean = prefs.getString(RECORD, null) != null
+
     @Synchronized
     fun read(): ReadResult {
         val record = prefs.getString(RECORD, null) ?: return ReadResult.Missing

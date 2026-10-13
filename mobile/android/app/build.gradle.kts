@@ -1,4 +1,4 @@
-plugins { id("com.android.application"); id("org.jetbrains.kotlin.android") }
+plugins { id("com.android.application"); id("org.jetbrains.kotlin.android"); id("org.jetbrains.kotlin.plugin.compose") }
 
 val releaseStorePath = providers.environmentVariable("ROBODESK_ANDROID_KEYSTORE").orNull
 val releaseStorePassword = providers.environmentVariable("ROBODESK_ANDROID_STORE_PASSWORD").orNull
@@ -26,10 +26,22 @@ android {
             if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
         }
     }
+    buildFeatures { compose = true }
     compileOptions { sourceCompatibility=JavaVersion.VERSION_17; targetCompatibility=JavaVersion.VERSION_17 }
 }
 
 kotlin { jvmToolchain(17) }
+
+dependencies {
+    val composeBom = platform("androidx.compose:compose-bom:2025.02.00")
+    implementation(composeBom)
+    implementation("androidx.activity:activity-compose:1.10.1")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+}
 
 val verifyReleaseSigning = tasks.register("verifyReleaseSigning") {
     doLast {

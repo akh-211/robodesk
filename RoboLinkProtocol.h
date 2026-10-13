@@ -7,7 +7,11 @@
 namespace robolink {
 constexpr uint8_t Version=1;
 constexpr size_t PayloadMax=1024, HeaderSize=12, RawMax=HeaderSize+PayloadMax+4, WireMax=RawMax+RawMax/254+2;
-enum Type:uint8_t { Hello=1, HelloAck, Heartbeat, Ack, Credit, TcpOpen, TcpState, TcpData, TcpClose, Rpc, Reply, Clock, Notification, OtaBegin, OtaData, OtaFinish, OtaAbort, PairingPasskey, PairingPasskeyDisplayed, GeminiKey };
+enum Type:uint8_t { Hello=1, HelloAck, Heartbeat, Ack, Credit, TcpOpen, TcpState, TcpData, TcpClose, Rpc, Reply, Clock, Notification, OtaBegin, OtaData, OtaFinish, OtaAbort, PairingPasskey, PairingPasskeyDisplayed, GeminiKey, Settings, SettingsReply, PairingRequest, PairingState };
+// PairingState (C3->S3, 3 bytes): [state u8][ttlMs u16 LE]. state: 1 open, 2 expired, 3 approved, 4 cleared. ttl only for open.
+enum PairState:uint8_t { PairNone=0, PairOpen=1, PairExpired=2, PairApproved=3, PairCleared=4 };
+inline void encodePairingState(uint8_t*out,uint8_t state,uint16_t ttlMs){out[0]=state;out[1]=uint8_t(ttlMs);out[2]=uint8_t(ttlMs>>8);}
+inline bool decodePairingState(const uint8_t*p,size_t n,uint8_t&state,uint16_t&ttlMs){if(!p||n!=3||p[0]<PairOpen||p[0]>PairCleared)return false;ttlMs=uint16_t(p[1]|(p[2]<<8));if(p[0]==PairOpen&&(!ttlMs||ttlMs>60000u))return false;state=p[0];if(state!=PairOpen)ttlMs=0;return true;}
 enum Flag:uint8_t { Reliable=1, First=2, Last=4 };
 inline uint16_t get16(const uint8_t*p){return uint16_t(p[0])|(uint16_t(p[1])<<8);}
 inline uint32_t get32(const uint8_t*p){return uint32_t(get16(p))|(uint32_t(get16(p+2))<<16);}

@@ -67,6 +67,8 @@ struct RuntimeSettings {
   // v0.15 Sonic Character
   uint8_t masterSound;             // speaker output master switch
   uint8_t speechEnabled;           // Gemini native audio playback
+  uint8_t voiceReplyMode;          // how the robot answers a spoken turn: 0 voice, 1 text on the OLED, 2 both
+  uint8_t chatReplyMode;           // same, for a turn typed in the phone app chat
   uint8_t characterSfx;            // local procedural character sounds
   uint8_t wakeSfx;
   uint8_t touchSfx;
@@ -78,6 +80,9 @@ struct RuntimeSettings {
   uint16_t quietStartMin;          // local minute of day
   uint16_t quietEndMin;
   uint16_t quietGainX100;          // 0..100 applied to local SFX
+  uint8_t personalityPreset;       // PD-2.3: 0 Kalem, 1 Ceria, 2 Usil
+  uint8_t ownerBirthMonth;         // PD-2.6: 1..12, 0 = not set (both or neither)
+  uint8_t ownerBirthDay;           // 1..31, 0 = not set
   // Append-only: keep the original migration-backup prefix readable.
   uint8_t phonePlatform;          // 0 Android bridge, 1 iPhone ANCS
   uint8_t navigationEnabled;
@@ -126,6 +131,8 @@ struct RuntimeSettings {
     faceGazeReachX100 = 100;
     masterSound = 1;
     speechEnabled = 1;
+    voiceReplyMode = 0;
+    chatReplyMode = 1;
     characterSfx = 1;
     wakeSfx = 1;
     touchSfx = 1;
@@ -137,6 +144,9 @@ struct RuntimeSettings {
     quietStartMin = 22 * 60;
     quietEndMin = 7 * 60;
     quietGainX100 = 24;
+    personalityPreset = 1;
+    ownerBirthMonth = 0;
+    ownerBirthDay = 0;
   }
 
   static void copy(char* dst, size_t cap, const char* src) {
@@ -253,6 +263,8 @@ class RuntimeSettingsStore {
       out.faceGazeReachX100 = clampU16(p.getUShort("fgaze", out.faceGazeReachX100), 40, 125);
       out.masterSound = p.getUChar("sndmaster", out.masterSound) ? 1 : 0;
       out.speechEnabled = p.getUChar("sndspeech", out.speechEnabled) ? 1 : 0;
+      out.voiceReplyMode = p.getUChar("rpvoice", out.voiceReplyMode) > 2 ? 0 : p.getUChar("rpvoice", out.voiceReplyMode);
+      out.chatReplyMode = p.getUChar("rpchat", out.chatReplyMode) > 2 ? 1 : p.getUChar("rpchat", out.chatReplyMode);
       out.characterSfx = p.getUChar("sndsfx", out.characterSfx) ? 1 : 0;
       out.wakeSfx = p.getUChar("sndwake", out.wakeSfx) ? 1 : 0;
       out.touchSfx = p.getUChar("sndtouch", out.touchSfx) ? 1 : 0;
@@ -264,6 +276,8 @@ class RuntimeSettingsStore {
       out.quietStartMin = clampU16(p.getUShort("quietstart", out.quietStartMin), 0, 1439);
       out.quietEndMin = clampU16(p.getUShort("quietend", out.quietEndMin), 0, 1439);
       out.quietGainX100 = clampU16(p.getUShort("quietgain", out.quietGainX100), 0, 100);
+      { const uint8_t v=p.getUChar("preset",out.personalityPreset);out.personalityPreset=v<=2?v:1; }
+      { const uint8_t m=p.getUChar("bmonth",0),d=p.getUChar("bday",0);if(m>=1&&m<=12&&d>=1&&d<=31){out.ownerBirthMonth=m;out.ownerBirthDay=d;} }
       const uint8_t mode = p.getUChar("mode", out.inputMode);
       out.inputMode = mode <= uint8_t(RuntimeSettings::WakeWord) ? mode : uint8_t(RuntimeSettings::AlwaysListening);
     }
@@ -360,6 +374,8 @@ class RuntimeSettingsStore {
     p.putUShort("fgaze", s.faceGazeReachX100);
     p.putUChar("sndmaster", s.masterSound);
     p.putUChar("sndspeech", s.speechEnabled);
+    p.putUChar("rpvoice", s.voiceReplyMode);
+    p.putUChar("rpchat", s.chatReplyMode);
     p.putUChar("sndsfx", s.characterSfx);
     p.putUChar("sndwake", s.wakeSfx);
     p.putUChar("sndtouch", s.touchSfx);
@@ -371,6 +387,9 @@ class RuntimeSettingsStore {
     p.putUShort("quietstart", s.quietStartMin);
     p.putUShort("quietend", s.quietEndMin);
     p.putUShort("quietgain", s.quietGainX100);
+    p.putUChar("preset", s.personalityPreset);
+    p.putUChar("bmonth", s.ownerBirthMonth);
+    p.putUChar("bday", s.ownerBirthDay);
     p.putUChar("mode", s.inputMode);
     if(ok)ok &= p.putBool("init",true)>0;
     wifiFreeEntriesAfterSave_=p.freeEntries();

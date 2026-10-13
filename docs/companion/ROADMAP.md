@@ -43,6 +43,7 @@ Start with local activities that need no additional hardware: Curious Look (visu
 ## Task index
 
 - [Detailed next-step execution checklist](NEXT_STEPS.md)
+- [Product direction: EMO-like behavior, features, UI, sellable checklist](PRODUCT_DIRECTION.md)
 - [00 — Baseline and stability](tasks/00-baseline.md)
 - [01 — Behavior foundation](tasks/01-behavior-foundation.md)
 - [02 — Character and touch](tasks/02-character-and-touch.md)
@@ -50,6 +51,7 @@ Start with local activities that need no additional hardware: Curious Look (visu
 - [04 — Initiative and play](tasks/04-initiative-and-play.md)
 - [05 — Preferences and routine](tasks/05-preferences-and-routine.md)
 - [06 — Dashboard and qualification](tasks/06-dashboard-qualification.md)
+- [07 — Product EMO-like implementation plan](tasks/07-product-emo-plan.md)
 - [Progress log](PROGRESS.md)
 
 ## Decisions and defaults

@@ -1,3 +1,6 @@
+// PD-3.1: core + extended + game performance banks. Only this translation unit uses PerformanceGraph (the LivingEyes
+// .cpp files never include it), so raising the bank limit here keeps one consistent layout.
+#define LIVINGEYES_PERFORMANCE_MAX_BANKS 3
 #include "RoboLog.h"
 #include "RoboBoardProfile.h"
 #if ROBODESK_DUAL_GATEWAY
@@ -33,11 +36,27 @@
 #include "RobotFeatures.h"
 #include "PhoneBleTransport.h"
 #include "PhoneDisplayOverlay.h"
+#include "PhoneChat.h"
 #include "BackgroundMemoryWorker.h"
 #include "GoogleGtsRootR1.h"
 #if ROBODESK_DUAL_ROBOT
 #include "RoboIr.h"
 #include "RoboBatteryMonitor.h"
+#include "RoboBehaviorLog.h"
+#include "RoboSleepCycle.h"
+#include "RoboArbiter.h"
+#include "RoboOledProtection.h"
+#include "RoboIdleActions.h"
+#include "RoboTouchMood.h"
+#include "RoboMotionMood.h"
+#include "RoboLoudSound.h"
+#include "RoboSulkFace.h"
+#include "RoboSoundBudget.h"
+#include "RoboDailyRhythm.h"
+#include "RoboMilestones.h"
+#include "RoboSmallMoments.h"
+#include "RoboDance.h"
+#include <livingeyes/ActivitySession.h>
 #include "RoboSignedImage.h"
 RoboIr roboIr;
 RoboBatteryMonitor roboBattery;
@@ -51,6 +70,7 @@ RoboBatteryMonitor roboBattery;
 #include <LivingEyes.h>
 #include <livingeyes/CorePerformances.h>
 #include <livingeyes/ExtendedPerformances.h>
+#include <livingeyes/GamePerformances.h>
 #include <livingeyes/PerceptionBridge.h>
 #include <livingeyes/MotionSensorAdapter.h>
 #include <livingeyes/SensorAdapters.h>
@@ -179,7 +199,37 @@ constexpr float VAD_ABS_END = 360.0f;
 #define ROBODESK_OLED_DELTA 1 // Full-frame fallback remains automatic on presenter failure.
 #endif
 Adafruit_SSD1306 oled(128, 64, &Wire, -1, 400000, 400000);
-char localAlert[112]={};uint32_t localAlertUntil=0;
+char localAlert[112]={};uint32_t localAlertUntil=0;uint32_t pairApprovedUntil=0; // S3 pairing banner: shown ~4 s after the C3 reports the phone approved
+PhoneChat phoneChat;
+// Reply text on the OLED: chat turns and, per the voiceReplyMode/chatReplyMode settings, spoken turns. Raw text, RAM only, wiped when it expires.
+constexpr uint8_t REPLY_COLS=21,REPLY_ROWS=6;constexpr uint32_t REPLY_PAGE_MS=4500;
+char replyShow[PhoneSettingsProtocol::ChatReplyMax+1]={};size_t replyShowLen=0;bool replyShowOpen=false;uint32_t replyShowStartedAt=0,replyShowUntil=0,replyShowLastAt=0;
+char replyLines[48][REPLY_COLS+1];uint8_t replyLineCount=0;size_t replyLaidOutLen=size_t(-1);
+bool replyVisible(uint32_t now){return replyShowLen&&(replyShowOpen||int32_t(replyShowUntil-now)>0);}
+void replyRelayout(){
+  replyLineCount=0;char line[REPLY_COLS+1];uint8_t col=0;bool lastQ=false;
+  auto flush=[&](){if(replyLineCount<48){memcpy(replyLines[replyLineCount],line,col);replyLines[replyLineCount][col]=0;++replyLineCount;}col=0;};
+  for(size_t i=0;i<replyShowLen;++i){
+    const uint8_t c=uint8_t(replyShow[i]);char out;
+    if(c==0x0A){flush();continue;}
+    if(c>=0x80){if((c&0xC0)==0x80||lastQ)continue;out='?';lastQ=true;}else{out=char(c<0x20?' ':c);lastQ=false;}
+    if(col>=REPLY_COLS){int sp=-1;for(int k=col-1;k>0;--k)if(line[k]==' '){sp=k;break;}
+      if(sp>0&&out!=' '){char rest[REPLY_COLS+1];const uint8_t rn=uint8_t(col-sp-1);memcpy(rest,line+sp+1,rn);col=uint8_t(sp);flush();memcpy(line,rest,rn);col=rn;}else flush();}
+    if(col==0&&out==' ')continue;
+    line[col++]=out;
+  }
+  if(col)flush();
+  replyLaidOutLen=replyShowLen;
+}
+void drawReply(Adafruit_SSD1306&d,uint32_t now){
+  if(replyLaidOutLen!=replyShowLen)replyRelayout();
+  const uint8_t pages=uint8_t((replyLineCount+REPLY_ROWS-1)/REPLY_ROWS);if(!pages)return;
+  uint32_t page=replyShowOpen?uint32_t(pages-1):uint32_t((now-replyShowStartedAt)/REPLY_PAGE_MS);if(page>uint32_t(pages-1))page=uint32_t(pages-1);
+  d.clearDisplay();d.setTextColor(SSD1306_WHITE);d.setTextSize(1);d.setCursor(0,0);d.print("RoboDesk");
+  if(pages>1){char pg[8];snprintf(pg,sizeof(pg),"%u/%u",unsigned(page+1),unsigned(pages));d.setCursor(int16_t(128-6*strlen(pg)),0);d.print(pg);}
+  d.drawFastHLine(0,9,128,SSD1306_WHITE);
+  for(uint8_t r=0;r<REPLY_ROWS;++r){const uint32_t idx=page*REPLY_ROWS+r;if(idx>=replyLineCount)break;d.setCursor(0,int16_t(12+r*8));d.print(replyLines[idx]);}
+}
 PhoneNavigationBridge phoneNavigation;
 PhoneNotificationBridge::Item phoneDisplayItem;
 uint32_t phoneDisplayUntil=0,lastInitiativeVoiceAt=0;
@@ -193,6 +243,24 @@ uint32_t oledDeltaErrors=0,oledDeltaFallbacks=0;
 #if (!ROBODESK_DUAL_ROBOT && !ROBODESK_DUAL_GATEWAY) || ROBODESK_PHONE_BLE_ROBOT
 extern PhoneBleTransport phoneBle;
 #endif
+// PD-0.3 LEV,BEH: touch edge -> next present() latency, then the first LivingEyes cue as the reaction variant.
+// PD-1.3: panel contrast/power follow the sleep cycle (defined with serviceSleepCycle below).
+extern robosleep::SleepCycle sleepCycle;bool sonicQuietNow();robooled::Applier oledProtection;uint32_t dreamUntil=0; // PD-2.6 dream lifts deep-sleep blanking
+// PD-1.5: touch variety and tap-spam mood; serviceSensors flags the touches, serviceBrain reacts, serviceSonicEvents plays touchSfx.
+robosound::SoundBudget soundBudget; // PD-1.8a: <=6 unprompted sounds per rolling hour, none in quiet hours
+robosulk::SulkFace sulkFace; // PD-1.7 turned-away face + shy->happy recovery; never blocks mute/alarms
+robotouch::TouchMood touchMood;robotouch::VariantPicker touchVariants;bool touchTapPending=false,touchDoublePending=false,touchPetPending=false;robosleep::Event sleepRemoteEvent=robosleep::Event::None; // PD-2.5 app Tidurkan/Bangunkan
+const robotouch::Variant* touchSfx=nullptr;
+// PD-1.6: IMU moods (shaken 3x/30 s, fall -> sad, put down -> relief); sampled with the IMU, acted on in serviceBrain.
+robomotion::MotionMood motionMood;robomotion::Event motionMoodEvent=robomotion::Event::None;
+// PD-1.13: sudden loud transient from mic RMS (not while conversing/muted/music); reaction in serviceBrain.
+roboloud::Detector loudSound;bool loudSoundPending=false;
+robodance::BeatTracker danceTracker;robodance::Event danceEvent=robodance::Event::None; // PD-3.2 fed by processMicFrame
+// PD-1.11: what the firmware has on screen, by PRODUCT_DIRECTION section 3 tier.
+roboarb::Tracker arbTracker;
+const char* behTouchZone="head";uint32_t behTouchAt=0;bool behTouchPresentPending=false,behReactPending=false;
+void behNoteTouch(const char*zone,uint32_t edgeAt){behTouchZone=zone;behTouchAt=edgeAt;behTouchPresentPending=behReactPending=true;arbTracker.start(roboarb::Tier::Owner,millis(),1500);}
+void behOnCue(void*,uint16_t id){if(!behReactPending)return;behReactPending=false;if(uint32_t(millis()-behTouchAt)>1500u)return;char line[64];robobeh::react(line,sizeof(line),behTouchZone,id);RoboLog.printf("%s",line);}
 class RoboDeskOledSurface:public livingeyes::MonoDitherSurface<Adafruit_SSD1306>{
 public:
  RoboDeskOledSurface(Adafruit_SSD1306& d):livingeyes::MonoDitherSurface<Adafruit_SSD1306>(d,SSD1306_WHITE,SSD1306_BLACK,nullptr,::clockUs){}
@@ -221,12 +289,42 @@ public:
   else if(touchGameOverlayStep>=0){d.fillRect(0,48,128,16,SSD1306_BLACK);d.setTextSize(1);d.setTextColor(SSD1306_WHITE);d.setCursor(0,48);d.print(touchGameOverlayStep==1?"HOLD 0.6-1.05s":"TAP then release");}
   else if(activityVisualId)roboActivityOverlay(d,activityVisualId,uint32_t(overlayNow-activityVisualAt),activityVisualVariant);
   if(privacyMicMuted){d.fillRect(0,48,128,16,SSD1306_BLACK);d.setTextColor(SSD1306_WHITE);d.setTextSize(1);d.setCursor(0,48);d.print("MIC OFF - PRIVACY");}
+#if ROBODESK_DUAL_ROBOT && !ROBODESK_PHONE_BLE_ROBOT
+  else if(RoboDual.pairingOpenRemainingMs(overlayNow)){char pairLine[24];snprintf(pairLine,sizeof(pairLine),"PAIRING TERBUKA %lus",static_cast<unsigned long>((RoboDual.pairingOpenRemainingMs(overlayNow)+999u)/1000u));d.fillRect(0,48,128,16,SSD1306_BLACK);d.setTextColor(SSD1306_WHITE);d.setTextSize(1);d.setCursor(0,48);d.print(pairLine);}
+#endif
   else if(localAlert[0]&&int32_t(localAlertUntil-millis())>0){d.fillRect(0,48,128,16,SSD1306_BLACK);d.setTextColor(SSD1306_WHITE);d.setTextSize(1);d.setCursor(0,48);d.print(localAlert);}
+#if ROBODESK_DUAL_ROBOT && !ROBODESK_PHONE_BLE_ROBOT
+  { // Full-screen pairing banners override every other overlay; the passkey screen (pairingVisible) keeps priority while the code is shown.
+    if(!pairingVisible&&replyVisible(overlayNow))drawReply(d,overlayNow);
+    const uint32_t pairLeftMs=RoboDual.pairingOpenRemainingMs(overlayNow);
+    if(!pairingVisible&&pairLeftMs){char secs[8];snprintf(secs,sizeof(secs),"%lus",static_cast<unsigned long>((pairLeftMs+999u)/1000u));
+      d.clearDisplay();d.setTextColor(SSD1306_WHITE);d.setTextSize(1);d.setCursor(19,4);d.print("PAIRING TERBUKA");
+      d.setTextSize(3);d.setCursor(int16_t(64-strlen(secs)*9),22);d.print(secs);d.setTextSize(1);d.setCursor(1,54);d.print("Pilih RoboDesk di app");}
+    else if(!pairingVisible&&int32_t(pairApprovedUntil-overlayNow)>0){
+      d.clearDisplay();d.setTextColor(SSD1306_WHITE);for(int8_t o=0;o<3;++o){d.drawLine(46,22+o,56,32+o,SSD1306_WHITE);d.drawLine(56,32+o,80,8+o,SSD1306_WHITE);}
+      d.setTextSize(2);d.setCursor(4,44);d.print("PAIRING OK");}
+  }
+#endif
+  // PD-1.3 burn-in protection: contrast and panel power by sleep state; any overlay that must be read lights the panel.
+  bool overlayUp=phoneNavigation.visible(overlayNow)||(phoneDisplayItem.id&&int32_t(phoneDisplayUntil-overlayNow)>0)||(localAlert[0]&&int32_t(localAlertUntil-overlayNow)>0);
+#if ROBODESK_DUAL_ROBOT && !ROBODESK_PHONE_BLE_ROBOT
+  overlayUp=overlayUp||pairingVisible||RoboDual.pairingOpenRemainingMs(overlayNow)!=0||int32_t(pairApprovedUntil-overlayNow)>0||replyVisible(overlayNow);
+#elif !ROBODESK_DUAL_GATEWAY
+  overlayUp=overlayUp||pairingVisible;
+#endif
+  const robooled::Plan oledPlan=robooled::plan(int32_t(dreamUntil-overlayNow)>0&&sleepCycle.state()==robosleep::State::DeepSleep?robosleep::State::LightSleep:sleepCycle.state(),sonicQuietNow(),overlayNow/60000u,overlayUp);
+  const robooled::Applier::Step oledStep=oledProtection.next(oledPlan);
+  if(oledStep.sendContrast){d.ssd1306_command(SSD1306_SETCONTRAST);d.ssd1306_command(oledPlan.contrast);}
+  if(oledStep.sendPower)d.ssd1306_command(oledPlan.on?SSD1306_DISPLAYON:SSD1306_DISPLAYOFF);
+  if(oledPlan.on){ // panel off: no I2C frame transfer at all
 #if ROBODESK_OLED_DELTA
+  if(oledStep.fullFrame)oledDelta.reset(); // delta only sends differences; GDDRAM may be stale after power-on
   if(!oledDelta.present(d,Wire)){++oledDeltaErrors;++oledDeltaFallbacks;oledDelta.noteFallback();d.display();}
 #else
   d.display();
 #endif
+  if(behTouchPresentPending){behTouchPresentPending=false;char line[64];robobeh::touch(line,sizeof(line),behTouchZone,uint32_t(millis()-behTouchAt));RoboLog.printf("%s",line);}
+  }
 #if ROBODESK_DUAL_ROBOT && !ROBODESK_PHONE_BLE_ROBOT
   if(pairingVisible)RoboDual.markPairingPasskeyPresented(pairingId);
 #elif !ROBODESK_DUAL_GATEWAY
@@ -240,7 +338,7 @@ public:
 };
 RoboDeskOledSurface surface(oled);
 livingeyes::Character robot(surface);
-livingeyes::PerformanceGraph coreBank, extendedBank;
+livingeyes::PerformanceGraph coreBank, extendedBank, gameBank;
 livingeyes::ChoreographyEngine choreography;
 livingeyes::RelationshipMemory relationships;
 livingeyes::LifeDirector life;
@@ -615,6 +713,16 @@ bool dashboardCompanionAction(void*,const char*action,const char*value,char*out,
     dashboardActionResult(out,cap,accepted,accepted?(!strcmp(action,"ir_learn")?"learning IR profile for 10 seconds":"IR action accepted"):"IR unavailable, profile name/code invalid, storage full, or robot busy");return accepted;
   }
 #endif
+  if(!strcmp(action,"sleep_now")||!strcmp(action,"wake_now")){ // PD-2.5: applied by serviceSleepCycle (a running hold keeps it awake)
+    const bool sleep=!strcmp(action,"sleep_now");const bool ok=sleep?!sleepCycle.asleep():sleepCycle.state()!=robosleep::State::Awake;
+    if(ok)sleepRemoteEvent=sleep?robosleep::Event::RemoteSleep:robosleep::Event::RemoteWake;
+    dashboardActionResult(out,cap,ok,ok?(sleep?"going to sleep":"waking up"):(sleep?"already asleep":"already awake"));return ok;
+  }
+  if(!strcmp(action,"remote_pet")){ // PD-3.3: a pet from the app, same reaction path as a long head pet
+    const bool ok=sleepCycle.state()==robosleep::State::Awake&&!touchGame.active();
+    if(ok){robot.interact(livingeyes::Interaction::LongPet,.7f,2);touchPetPending=true;motionMood.pet(now);}
+    dashboardActionResult(out,cap,ok,ok?"pet received":"robot is asleep or playing");return ok;
+  }
   if(!strcmp(action,"activity_history_clear")){
     companionActivity.clearHistory();
     dashboardActionResult(out,cap,true,"activity history cleared");return true;
@@ -756,7 +864,9 @@ void applyFaceSettings(){
   fp.microMotion=float(runtimeSettings.faceMicroX100)/100.f;
   fp.silhouetteGain=float(runtimeSettings.faceSilhouetteX100)/100.f;
   fp.gazeReach=float(runtimeSettings.faceGazeReachX100)/100.f;
+  robopreset::applyFace(robopreset::clampPreset(runtimeSettings.personalityPreset),fp);
   robot.setFaceLifeProfile(fp);
+  brain.setPersonalityPreset(runtimeSettings.personalityPreset);
   if(runtimeSettings.mouthMode==1)robot.setMouthPolicy(livingeyes::MouthPolicy::Hidden);
   else if(runtimeSettings.mouthMode==2)robot.setMouthPolicy(livingeyes::MouthPolicy::Always);
   else robot.setMouthPolicy(livingeyes::MouthPolicy::Automatic);
@@ -788,7 +898,13 @@ bool performSonic(livingeyes::SonicCue cue,livingeyes::SonicPriority priority,fl
   // After a Gemini reply, keep ordinary character/ambient chirps out of the mic
   // during the most likely user follow-up window. Safety and wake cues remain allowed.
   if(int32_t(sonicConversationQuietUntil-now)>0 && (priority==livingeyes::SonicPriority::Character || priority==livingeyes::SonicPriority::Ambient)) return false;
-  return sonicDirector.request(cue,priority,strength,now,force);
+  const bool spontaneous=priority==livingeyes::SonicPriority::Ambient;
+  if((spontaneous||priority==livingeyes::SonicPriority::Character)&&roborhythm::evening(clockSynced,localMinuteOfDay,sonicQuietNow()))strength*=roborhythm::EveningSoundGain; // PD-2.1 softer evenings
+  if(spontaneous&&!soundBudget.allow(now,sonicQuietNow()))return false;
+  const bool played=sonicDirector.request(cue,priority,strength,now,force);
+  if(played&&spontaneous)soundBudget.commit(now);
+  if(played){char line[64];robobeh::sound(line,sizeof(line),livingeyes::sonicCueName(cue),priority==livingeyes::SonicPriority::Ambient);RoboLog.printf("%s",line);}
+  return played;
 #endif
 }
 
@@ -927,11 +1043,25 @@ void RoboGeminiSink::onGeminiSetupComplete(){
   uint32_t now=millis();gemini.markSetupComplete();geminiReady=true;serialAudioTestActive=false;voice.ready(now);applyVoiceState(voice.state());
   RoboLog.printf("LEV,GEMINI,READY,model=%s,voice=%s\n",runtimeSettings.geminiModel,runtimeSettings.geminiVoice);
 }
+// How the robot answers the current turn: 0 voice, 1 text on the OLED only, 2 both. A running chat turn uses chatReplyMode, anything else voiceReplyMode.
+uint8_t currentReplyMode(){return phoneChat.active()?runtimeSettings.chatReplyMode:runtimeSettings.voiceReplyMode;}
+void replyShowAppend(const char*text,uint32_t now){
+  if(phoneReadoutActive||!text||currentReplyMode()==0)return;
+  if(!replyShowOpen){replyShow[0]=0;replyShowLen=0;replyShowOpen=true;replyShowStartedAt=now;}
+  for(;*text&&replyShowLen<sizeof(replyShow)-1;++text)replyShow[replyShowLen++]=*text;
+  replyShow[replyShowLen]=0;replyShowLastAt=now;replyShowUntil=now+20000u;
+}
+void replyShowFinish(uint32_t now){
+  if(!replyShowOpen)return;replyShowOpen=false;if(!replyShowLen)return;
+  replyRelayout();const uint32_t pages=uint32_t((replyLineCount+REPLY_ROWS-1)/REPLY_ROWS);
+  replyShowStartedAt=now;replyShowUntil=now+(pages?pages:1)*REPLY_PAGE_MS+1500u;
+}
+void replyShowWipe(){memset(replyShow,0,sizeof(replyShow));replyShowLen=0;replyShowOpen=false;replyLineCount=0;replyLaidOutLen=size_t(-1);memset(replyLines,0,sizeof(replyLines));}
 void RoboGeminiSink::onGeminiAudio(const uint8_t* data,size_t len){
   uint32_t now=millis();
   if(utteranceActive)++serverVadFinals;responseStarted=true;
   utteranceActive=false;vadVoiceFrames=vadSilenceFrames=0;preRoll.clear();micTxBatchLen=0;
-  if(!runtimeSettings.masterSound||!runtimeSettings.speechEnabled){sonicMutedSpeechBytes+=uint32_t(len);voice.noteRxAudio(len);lastAudioRxAt=now;return;}
+  if(!runtimeSettings.masterSound||!runtimeSettings.speechEnabled||(currentReplyMode()==1&&!phoneReadoutActive)){sonicMutedSpeechBytes+=uint32_t(len);voice.noteRxAudio(len);lastAudioRxAt=now;return;}
   if(sonicPlaybackActive||sonicSynth.active()){sonicSynth.reset();speakerClear();if(sonicMouthActive){robot.speaking(false);sonicMouthActive=false;}sonicPlaybackActive=false;++sonicPreemptedBySpeech;}
   if(!geminiSpeechPriming&&voice.state()!=livingeyes::VoiceAiState::Speaking){geminiSpeechPriming=true;geminiSpeechPrimeAt=now;}
   size_t accepted=speakerWrite(data,len);if(accepted<len)geminiAudioOverflow+=uint32_t(len-accepted);
@@ -945,15 +1075,15 @@ void RoboGeminiSink::onGeminiInputTranscript(const char* text){
   if(text&&(companion::contains(text,"jangan ganggu")||companion::contains(text,"nanti saja")||companion::contains(text,"diam dulu")))brain.rejectedInvite(now);
   RoboLog.println("LEV,GEMINI,INPUT_TRANSCRIPT");
 }
-void RoboGeminiSink::onGeminiOutputTranscript(const char* text){responseStarted=true;lastAudioRxAt=millis();if(utteranceActive){utteranceActive=false;preRoll.clear();micTxBatchLen=0;++serverVadFinals;voice.thinking(millis());applyVoiceState(voice.state());}if(!phoneReadoutActive)brain.transcripts().append(false,text,millis(),brain.epoch());RoboLog.println("LEV,GEMINI,OUTPUT_TRANSCRIPT");}
-void RoboGeminiSink::onGeminiTurnComplete(){if(phoneReadoutActive){phoneReadoutComplete=true;setReadyWhenAudioDrained();return;}brain.transcripts().finish(millis(),false);brain.onConversationComplete(millis(),brainDayIndex,true);setReadyWhenAudioDrained();}
+void RoboGeminiSink::onGeminiOutputTranscript(const char* text){if(phoneChat.active())phoneChat.appendReply(text,millis());replyShowAppend(text,millis());responseStarted=true;lastAudioRxAt=millis();if(utteranceActive){utteranceActive=false;preRoll.clear();micTxBatchLen=0;++serverVadFinals;voice.thinking(millis());applyVoiceState(voice.state());}if(!phoneReadoutActive)brain.transcripts().append(false,text,millis(),brain.epoch());RoboLog.println("LEV,GEMINI,OUTPUT_TRANSCRIPT");}
+void RoboGeminiSink::onGeminiTurnComplete(){phoneChat.complete(millis());replyShowFinish(millis());if(phoneReadoutActive){phoneReadoutComplete=true;setReadyWhenAudioDrained();return;}brain.transcripts().finish(millis(),false);brain.onConversationComplete(millis(),brainDayIndex,true);setReadyWhenAudioDrained();}
 void RoboGeminiSink::onGeminiWaitingForInput(){
   const uint32_t now=millis();
   RoboLog.println("LEV,GEMINI,WAITING_FOR_INPUT");
   if(!utteranceActive)setReadyWhenAudioDrained();
 }
 void RoboGeminiSink::onGeminiGenerationComplete(){RoboLog.println("LEV,GEMINI,GENERATION_COMPLETE");}
-void RoboGeminiSink::onGeminiInterrupted(){uint32_t now=millis();if(phoneReadoutActive)phoneReadoutComplete=true;else{brain.transcripts().finish(now,true);brain.onInterrupted();}speakerClear();geminiSpeechPriming=false;speakerGeminiActive=false;pendingReady=false;serialAudioTestActive=false;voice.interrupted(now);applyVoiceState(voice.state());RoboLog.println("LEV,GEMINI,INTERRUPTED");}
+void RoboGeminiSink::onGeminiInterrupted(){uint32_t now=millis();phoneChat.interrupted(now);replyShowFinish(now);if(phoneReadoutActive)phoneReadoutComplete=true;else{brain.transcripts().finish(now,true);brain.onInterrupted();}speakerClear();geminiSpeechPriming=false;speakerGeminiActive=false;pendingReady=false;serialAudioTestActive=false;voice.interrupted(now);applyVoiceState(voice.state());RoboLog.println("LEV,GEMINI,INTERRUPTED");}
 void RoboGeminiSink::onGeminiGoAway(){onGeminiGoAwayTime("5s");}
 void RoboGeminiSink::onGeminiGoAwayTime(const char*left){double seconds=left?atof(left):5;if(seconds<=0||seconds>300)seconds=5;geminiGoAwayUntil=millis()+uint32_t(seconds*1000);RoboLog.println("LEV,GEMINI,GO_AWAY_PENDING");}
 void RoboGeminiSink::onGeminiUsage(uint32_t tokens){liveTokens=tokens;}
@@ -992,7 +1122,7 @@ void serviceGeminiTools(){
   t.externalIntentMask=0;t.externalRequestAt=0;
   geminiToolHead=uint8_t((geminiToolHead+1u)%GEMINI_TOOL_QUEUE_CAP);--geminiToolCount;
 }
-void RoboGeminiSink::onGeminiProtocolError(const char* text){geminiSessionHandle[0]=0;brain.transcripts().finish(millis(),true);gemini.markProtocolError();voice.fault(millis());applyVoiceState(voice.state());RoboLog.printf("LEV,GEMINI,ERROR,%s\n",text?text:"");}
+void RoboGeminiSink::onGeminiProtocolError(const char* text){phoneChat.offline(millis());replyShowFinish(millis());geminiSessionHandle[0]=0;brain.transcripts().finish(millis(),true);gemini.markProtocolError();voice.fault(millis());applyVoiceState(voice.state());RoboLog.printf("LEV,GEMINI,ERROR,%s\n",text?text:"");}
 
 bool startWiFiAttempt(uint8_t firstIndex,uint32_t now){
   const int8_t selected=runtimeSettings.findWifiNetworkIndex(firstIndex);
@@ -1013,6 +1143,7 @@ void beginWiFi(){
 }
 
 void resetGeminiOffline(uint32_t now){
+  phoneChat.offline(now);replyShowFinish(now);
   brain.transcripts().finish(now,true);geminiGoAwayUntil=0;responseStarted=false;
   if(gemini.connecting()||gemini.connected())gemini.disconnect(now);
   geminiReady=false;pendingReady=false;
@@ -1325,6 +1456,23 @@ time_t currentRobotEpoch(){
 #endif
 }
 
+// App chat: take the queued turn once the robot is idle and Gemini is ready, send it as a normal user turn, and keep the OLED reply tidy.
+void servicePhoneChat(uint32_t now){
+  phoneChat.tick(now);
+  if(phoneChat.state()==PhoneSettingsProtocol::ChatQueued&&gemini.connected()&&geminiReady&&!firmwareUpdateActive&&!phoneReadoutActive&&!utteranceActive&&!pendingReady&&!speakerGeminiActive&&!speakerSize()&&!geminiToolCount&&voice.state()!=livingeyes::VoiceAiState::Thinking){
+    char text[PhoneSettingsProtocol::ChatTextMax+1];
+    if(phoneChat.takePending(text,sizeof(text))){
+      preRoll.clear();micTxBatchLen=0;
+      brain.transcripts().append(true,text,now,brain.epoch());
+      if(gemini.sendClientTextTurn(text)){responseStarted=false;voice.thinking(now);applyVoiceState(voice.state());RoboLog.println("LEV,CHAT,SENT");}
+      else{phoneChat.sendFailed(PhoneSettingsProtocol::ChatFailSend,now);RoboLog.println("LEV,CHAT,SEND_FAIL");}
+    }
+    memset(text,0,sizeof(text));
+  }
+  if(replyShowOpen&&uint32_t(now-replyShowLastAt)>30000u)replyShowFinish(now);
+  if(!replyVisible(now)&&replyShowLen)replyShowWipe();
+}
+
 void servicePhoneCompanion(uint32_t now){
   phoneNavigation.expire(now);
   phoneNotifications.filter(runtimeSettings.notificationAllowlist);phoneNotifications.expire(now);
@@ -1348,6 +1496,59 @@ void servicePhoneCompanion(uint32_t now){
 #endif
 }
 
+// PD-1.2 energy/sleep cycle (RoboSleepCycle.h). Wake word, touch and alerts keep working while asleep.
+robosleep::SleepCycle sleepCycle;uint32_t sleepLastInteractionAt=0,sleepAlertAt=0;bool sleepAlertPending=false;
+void serviceSleepCycle(uint32_t now,bool interacting,bool hold){
+  static bool started=false,touchPrev=false,talkPrev=false,pirPrev=false;if(!started){started=true;sleepCycle.reset(now);sleepLastInteractionAt=now;}
+  {static int8_t shiftApplied=0;const int8_t shift=robooled::eyeShift(now/60000u);if(shift!=shiftApplied){shiftApplied=shift;livingeyes::FaceLayoutProfile layout=robot.eyes().faceLayout();layout.eyeYOffset=float(shift);robot.eyes().setFaceLayout(layout,900);}} // PD-1.3 pixel shift
+  const bool anyTouch=touchStable||sideTouchStable,talking=utteranceActive||wakeWord.commanding();
+  robosleep::Input in;in.now=now;in.energy=brain.mind().state().energy*(roborhythm::evening(clockSynced,localMinuteOfDay,sonicQuietNow())?roborhythm::EveningEnergyScale:1.f);in.clockSynced=clockSynced;in.quietHours=sonicQuietNow();in.presence=pirState;in.hold=hold||int32_t(sleepAlertAt+10000u-now)>0;
+  if(interacting)sleepLastInteractionAt=now;in.lastInteractionAt=sleepLastInteractionAt;
+  if(sleepAlertPending)in.event=robosleep::Event::Alarm;else if(sleepRemoteEvent!=robosleep::Event::None){in.event=sleepRemoteEvent;if(in.event==robosleep::Event::RemoteWake)in.lastInteractionAt=sleepLastInteractionAt=now;}else if(anyTouch&&!touchPrev)in.event=robosleep::Event::Touch;else if(talking&&!talkPrev)in.event=robosleep::Event::WakeWord;else if(pirState&&!pirPrev)in.event=robosleep::Event::Pir;
+  sleepAlertPending=false;sleepRemoteEvent=robosleep::Event::None;touchPrev=anyTouch;talkPrev=talking;pirPrev=pirState;
+  sleepCycle.update(in);if(!sleepCycle.changed())return;
+  const robosleep::State st=sleepCycle.state();
+  {char line[64];robobeh::sleep(line,sizeof(line),robosleep::stateName(sleepCycle.previous()),robosleep::stateName(st));RoboLog.printf("%s",line);}
+  if(st==robosleep::State::Drowsy){arbTracker.start(roboarb::Tier::Urgent,now,2500);brain.applyExpression("sleepy",.55f,false,roboarb::clipPriority(roboarb::Tier::Urgent));}
+  else if(st==robosleep::State::LightSleep&&sleepCycle.previous()!=robosleep::State::DeepSleep)robot.setActivity(livingeyes::Activity::Sleeping);
+  else if(st==robosleep::State::Waking){robot.wake(now);robot.play(livingeyes::Clip::Wake,roboarb::clipPriority(roboarb::Tier::Owner));}
+  else if(st==robosleep::State::Awake&&sleepCycle.previous()==robosleep::State::Waking)robot.play(in.clockSynced&&in.quietHours?livingeyes::Clip::Annoyed:livingeyes::Clip::Hello,2); // night wake: mildly grumpy, else greet
+}
+// PD-2.1/2.2/2.6 daily life (the companion scheduler stays the only activity scheduler, so no LifeDirector schedule): morning greeting with a weekly look, evening softness (performSonic and the
+// sleep energy), milestones (NVS <=1 write/day), "missed you" after a long power-off, dreams in deep sleep, owner birthday.
+roborhythm::DailyRhythm dailyRhythm;robomilestone::Tracker milestones;robomoments::WeeklyLooks weeklyLooks;robomoments::Birthday ownerBirthday;
+void dailyLifeMoment(livingeyes::Scene scene,const char*expression,livingeyes::SonicCue cue,uint32_t now){
+  arbTracker.start(roboarb::Tier::Emotion,now,3500);robot.transitionScene(scene,3500);brain.applyExpression(expression,.9f,false,roboarb::clipPriority(roboarb::Tier::Emotion));
+  if(soundBudget.allow(now,sonicQuietNow())&&requestSonic(cue,livingeyes::SonicPriority::Character,.55f,now))soundBudget.commit(now);
+}
+void serviceDailyLife(uint32_t now,bool awake,bool busy){
+  static bool begun=false;static uint32_t secondAt=0,dreamTickAt=0;static robomilestone::Event pending=robomilestone::Event::None;static robomoments::Dreams dreams(esp_random());
+  if(!begun){begun=true;
+    Preferences p;if(p.begin("robomile",true)){robomilestone::State s;s.firstEpoch=p.getULong("first",0);s.lastSeenEpoch=p.getULong("last",0);s.celebrated=p.getUChar("cel",0);ownerBirthday.restore(p.getUShort("bdyear",0));p.end();milestones.begin(s);}}
+  if(const uint32_t ms=dreams.update(now,sleepCycle.state()==robosleep::State::DeepSleep)){dreamUntil=now+ms;RoboLog.printf("LEV,BEH,DREAM,ms=%lu\n",(unsigned long)ms);}
+  if(int32_t(dreamUntil-now)>0&&uint32_t(now-dreamTickAt)>=180u){dreamTickAt=now;robot.lookAt(float(int32_t(esp_random()%41u)-20)/100.f,0,200);} // small eye tremor
+  const bool calm=awake&&!busy&&!arbTracker.running(now).active;
+  if(dailyRhythm.morning(clockSynced,localMinuteOfDay,brainDayIndex,sonicQuietNow(),pirState&&calm)){ // first presence after quiet hours, once a day
+    const char*look=robomoments::morningLook(weeklyLooks.pick(brainDayIndex,esp_random()));arbTracker.start(roboarb::Tier::Routine,now,2500);
+    brain.applyExpression(look,.7f,false,roboarb::clipPriority(roboarb::Tier::Routine));
+    if(soundBudget.allow(now,sonicQuietNow())&&requestSonic(livingeyes::SonicCue::Greeting,livingeyes::SonicPriority::Character,.45f,now))soundBudget.commit(now);
+    RoboLog.printf("LEV,BEH,MORNING,look=%s\n",look);
+  }
+  if(!clockSynced||uint32_t(now-secondAt)<1000u)return;secondAt=now;
+  const uint32_t epoch=uint32_t(currentRobotEpoch());const robomilestone::Event e=milestones.onClock(epoch);if(e!=robomilestone::Event::None)pending=e;
+  if(milestones.saveDue(epoch)){Preferences p;if(p.begin("robomile",false)){const auto&s=milestones.state();p.putULong("first",s.firstEpoch);p.putULong("last",s.lastSeenEpoch);p.putUChar("cel",s.celebrated);p.end();milestones.saved(epoch);}}
+  if(pending!=robomilestone::Event::None&&calm){ // asleep: celebrate after waking
+    RoboLog.printf("LEV,BEH,MILESTONE,ev=%u,age=%lu\n",unsigned(pending),(unsigned long)milestones.ageDays(epoch));
+    if(pending==robomilestone::Event::Missed)dailyLifeMoment(livingeyes::Scene::Hearts,"love",livingeyes::SonicCue::Affection,now);
+    else dailyLifeMoment(pending>=robomilestone::Event::Day100?livingeyes::Scene::Birthday:livingeyes::Scene::Hearts,"excited",livingeyes::SonicCue::Success,now);
+    pending=robomilestone::Event::None;return;
+  }
+  time_t local=time_t(epoch)+time_t(runtimeSettings.timezoneOffsetMin)*60;RoboDeskTm tmv;
+  if(calm&&pirState&&gmtime_r(&local,&tmv)&&ownerBirthday.due(true,uint16_t(tmv.tm_year+1900),uint8_t(tmv.tm_mon+1),uint8_t(tmv.tm_mday),runtimeSettings.ownerBirthMonth,runtimeSettings.ownerBirthDay)){
+    const uint16_t year=uint16_t(tmv.tm_year+1900);ownerBirthday.celebrated(year);Preferences p;if(p.begin("robomile",false)){p.putUShort("bdyear",year);p.end();}
+    RoboLog.println("LEV,BEH,BIRTHDAY");dailyLifeMoment(livingeyes::Scene::Birthday,"excited",livingeyes::SonicCue::Happy,now);
+  }
+}
 void serviceBrain(uint32_t now){
   applyInteractionMetricsSetting();
   const bool anyTouch=touchStable||sideTouchStable;
@@ -1356,6 +1557,68 @@ void serviceBrain(uint32_t now){
   const bool busy=conversationBusy||wakeWord.commanding()||anyTouch||pickedUp||touchGame.active()||
     robotFeatures.active()||settingsDashboard.githubOtaWorkerActive();
   const bool dnd=dashboardDndActive(now);
+  const uint32_t previousInteractionAt=sleepLastInteractionAt;
+  serviceSleepCycle(now,anyTouch||conversationBusy||pickedUp||touchGame.active()||wakeWord.commanding(),
+    robotFeatures.active()||phoneNavigation.visible(now)||settingsDashboard.githubOtaWorkerActive());
+  const bool sleepAwake=sleepCycle.state()==robosleep::State::Awake;
+  serviceDailyLife(now,sleepAwake,busy||dnd);
+  { // PD-1.4 idle layer B: a small beat every 15-40 s when awake, someone is around and nothing else runs.
+    static roboidle::Picker idlePicker(esp_random());static uint32_t shyAt=0;const uint8_t microPriority=roboarb::clipPriority(roboarb::Tier::Micro);
+    roboidle::Context ic;ic.now=now;ic.awake=sleepAwake&&runtimeSettings.proactiveVisual;ic.presence=pirState;ic.busy=busy||dnd||companionScheduler.active()||arbTracker.running(now).active;ic.lastInteractionAt=sleepLastInteractionAt;ic.energy=brain.mind().state().energy;
+    const roboidle::Action beat=idlePicker.update(ic);
+    if(beat!=roboidle::Action::None){arbTracker.start(roboarb::Tier::Micro,now,1500);
+      const livingeyes::Clip clip=beat==roboidle::Action::Scan?livingeyes::Clip::Scan:beat==roboidle::Action::PeekLeft?livingeyes::Clip::PeekLeft:beat==roboidle::Action::PeekRight?livingeyes::Clip::PeekRight:
+        beat==roboidle::Action::GiggleShy?livingeyes::Clip::Giggle:beat==roboidle::Action::Yawn?livingeyes::Clip::Sleepy:livingeyes::Clip::DoubleBlink;
+      if(robot.play(clip,microPriority)){if(beat==roboidle::Action::GiggleShy)shyAt=now+900u;char line[48];robobeh::idle(line,sizeof(line),100u+unsigned(beat),0);RoboLog.printf("%s",line);}}
+    if(shyAt&&int32_t(now-shyAt)>=0){shyAt=0;if(sleepAwake)robot.play(livingeyes::Clip::Shy,microPriority);}
+  }
+  { // PD-1.13 loud sound: startle, then stay alert (curious) briefly.
+    static uint32_t alertAt=0;
+    if(loudSoundPending){loudSoundPending=false;if(sleepCycle.state()==robosleep::State::Awake||sleepCycle.state()==robosleep::State::Drowsy){arbTracker.start(roboarb::Tier::Emotion,now,1500);brain.applyExpression("surprised",.85f,false,roboarb::clipPriority(roboarb::Tier::Emotion));alertAt=now+800u;RoboLog.println("LEV,BEH,LOUD");}}
+    if(alertAt&&int32_t(now-alertAt)>=0){alertAt=0;brain.applyExpression("curious",.6f,false,roboarb::clipPriority(roboarb::Tier::Emotion));}
+  }
+  { // PD-3.2 dance along: sway the gaze on each beat, a happy hop every 4th beat.
+    static livingeyes::ActivitySession danceSession;static uint8_t beats=0;
+    const robodance::Event ev=danceEvent;danceEvent=robodance::Event::None;const bool dancing=danceSession.snapshot(now).state==livingeyes::SessionState::Active;const uint32_t beatMs=danceTracker.intervalMs();
+    if(ev==robodance::Event::Start&&sleepAwake&&!busy&&!dnd){danceSession.begin(livingeyes::SessionKind::Dance,1,now,robodance::BeatTracker::MaxDanceMs);beats=0;arbTracker.start(roboarb::Tier::Activity,now,2000);
+      brain.applyExpression("excited",.7f,false,roboarb::clipPriority(roboarb::Tier::Activity));RoboLog.printf("LEV,BEH,DANCE,start,beatMs=%lu\n",(unsigned long)beatMs);}
+    else if(ev==robodance::Event::Beat&&dancing){robot.lookAt((beats&1)?.35f:-.35f,-.08f,beatMs?beatMs:500);if(++beats%4==0)robot.play(livingeyes::Clip::Happy,roboarb::clipPriority(roboarb::Tier::Activity));arbTracker.start(roboarb::Tier::Activity,now,beatMs?beatMs+200:700);}
+    else if(ev==robodance::Event::Stop&&dancing){danceSession.finish();robot.lookAt(0,0,600);brain.applyExpression("happy",.6f,false,roboarb::clipPriority(roboarb::Tier::Activity));RoboLog.println("LEV,BEH,DANCE,stop");}
+  }
+  { // PD-1.6 IMU moods; the lib itself shifts the eye pair on tilt and shows the Nervous spiral on shake.
+    if(anyTouch)motionMood.pet(now);
+    const robomotion::Event motionEvents[2]={motionMoodEvent,motionMood.update(now)};motionMoodEvent=robomotion::Event::None;
+    for(const robomotion::Event me:motionEvents){
+      if(me==robomotion::Event::Annoyed)brain.applyExpression("annoyed",.35f,false,roboarb::clipPriority(roboarb::Tier::Owner));
+      else if(me==robomotion::Event::Fall){arbTracker.start(roboarb::Tier::Safety,now,1500);brain.applyExpression("surprised",1.f,false,roboarb::clipPriority(roboarb::Tier::Safety));}
+      else if(me==robomotion::Event::FallSad)brain.applyExpression("sad",.45f,false,roboarb::clipPriority(roboarb::Tier::Emotion));
+      else if(me==robomotion::Event::PutDown||me==robomotion::Event::Recovered)brain.applyExpression("happy",.45f,true);
+    }
+  }
+  { // PD-1.5 touch variants + tap spam (>=5 in 3 s annoyed, repeat sulks <=3 min). Privacy hold and the touch game win (robotouch::route).
+    robotouch::Event te=touchMood.update(now);touchSfx=nullptr;
+    const bool privacyHold=sideTouchStable&&sideTouchStartedAt&&uint32_t(now-sideTouchStartedAt)>=1400u;
+    if(touchTapPending||touchDoublePending||touchPetPending){
+      const bool tap=touchTapPending,twice=touchDoublePending,pet=touchPetPending;touchTapPending=touchDoublePending=touchPetPending=false;
+      if(sleepAwake&&robotouch::route(privacyHold,touchGame.active())==robotouch::Route::Mood){
+        if(tap){const robotouch::Event e=touchMood.tap(now);if(e!=robotouch::Event::None)te=e;}
+        if(pet){const robotouch::Event e=touchMood.pet(now);if(e!=robotouch::Event::None)te=e;}
+        if(te==robotouch::Event::None&&touchMood.mood()==robotouch::Mood::Normal){
+          const robotouch::Kind kind=pet?robotouch::Kind::Pet:twice?robotouch::Kind::DoubleTap:robotouch::reunion(previousInteractionAt,now)?robotouch::Kind::Reunion:robotouch::Kind::Tap;
+          const robotouch::Variant&v=robotouch::variant(kind,touchVariants.next(kind,esp_random()));
+          // The lib keeps its own reaction clip; the variant sets the eye expression (a reunion gets the full clip).
+          brain.applyExpression(v.emotion,v.intensity,kind!=robotouch::Kind::Reunion,roboarb::clipPriority(roboarb::Tier::Owner));
+          if(kind==robotouch::Kind::Tap)touchSfx=&v; // played on the touch edge in serviceSonicEvents
+          else{bool known=false;const livingeyes::SonicCue cue=sonicCueFromName(v.cue,&known);if(known)requestSonic(cue,livingeyes::SonicPriority::Character,v.strength,now);}
+        }
+      }
+    }
+    if(te==robotouch::Event::Annoyed)brain.applyExpression("annoyed",.35f,false,roboarb::clipPriority(roboarb::Tier::Owner));
+    else if(te==robotouch::Event::SulkStart){sulkFace.start(now,esp_random());brain.applyExpression("sulking",.4f,false,roboarb::clipPriority(roboarb::Tier::Emotion));}
+    else if(te==robotouch::Event::SulkEnd)sulkFace.stop(now);
+    {const robosulk::Gaze g=sulkFace.gaze(now);if(g.update){robot.lookAt(g.x,g.y,g.holdMs);if(g.x!=0)brain.applyExpression("sulking",.4f,true);}
+     const char*recover=sulkFace.recovery(now);if(recover)brain.applyExpression(recover,.5f,false,roboarb::clipPriority(roboarb::Tier::Emotion));}
+  }
   touchGame.update(now,touchGameEligible(now,touchGame.active()));
   touchGameOverlayStep=touchGame.active()?int8_t(touchGame.step()):-1;
   static companion::TouchGameState previousGameState=companion::TouchGameState::Idle;
@@ -1378,11 +1641,11 @@ void serviceBrain(uint32_t now){
   behaviorContext.localMinute=localMinuteOfDay;
   // DND and companion-session pause suppress macro scheduling while leaving
   // LivingEyes' baseline idle micro-behavior available.
-  robot.enableAutonomousBehavior(runtimeSettings.proactiveVisual&&!busy&&!behaviorContext.safetyRecovery);
+  robot.enableAutonomousBehavior(runtimeSettings.proactiveVisual&&!busy&&!behaviorContext.safetyRecovery&&sleepAwake);
   companion::SchedulerContext schedulerContext;
   schedulerContext.enabled=runtimeSettings.proactiveVisual!=0;
   schedulerContext.busy=busy;
-  schedulerContext.ownerPaused=dnd||companionActivityPaused||phoneNavigation.visible(now)||(phoneDisplayItem.id&&int32_t(phoneDisplayUntil-now)>0);
+  schedulerContext.ownerPaused=!sleepAwake||dnd||companionActivityPaused||phoneNavigation.visible(now)||(phoneDisplayItem.id&&int32_t(phoneDisplayUntil-now)>0);
   schedulerContext.intensity=runtimeSettings.characterIntensity;
   schedulerContext.safetyRecovery=behaviorContext.safetyRecovery;
   schedulerContext.microphonePrivate=behaviorContext.microphonePrivate;
@@ -1449,16 +1712,21 @@ void serviceBrain(uint32_t now){
   if(busy||dnd||!runtimeSettings.autoMemory||!runtimeSettings.memoryEnabled)memoryWorker.cancel();
   if(!busy){if(!dnd&&memoryWorker.collect(brain))rebuildSystemPrompt();brain.serviceReminders(now);}
   companion::Action action;
-  const bool acted=brain.actions().pop(now,busy,action);
+  uint8_t admit=roboarb::admitMask(arbTracker.running(now));
+  if(!sleepAwake)admit&=uint8_t((1u<<uint8_t(companion::Priority::Recovery))|(1u<<uint8_t(companion::Priority::User))|(1u<<uint8_t(companion::Priority::Reminder))); // asleep: safety, owner and alarms only
+  const bool acted=brain.actions().pop(now,busy,action,admit);
+  roboarb::Tier actedTier=roboarb::Tier::Micro;
   if(acted){
+    actedTier=roboarb::tierOf(action.priority);if(action.kind==companion::ActionKind::Expression&&action.intensity>=.8f&&actedTier>roboarb::Tier::Emotion)actedTier=roboarb::Tier::Emotion;
+    if(action.kind!=companion::ActionKind::Sound)arbTracker.start(actedTier,now,1500);
     if(action.kind==companion::ActionKind::Sound){bool ok=false;auto cue=sonicCueFromName(action.label,&ok);if(ok)performSonic(cue,action.priority==companion::Priority::Recovery?livingeyes::SonicPriority::Safety:action.priority==companion::Priority::User?livingeyes::SonicPriority::Wake:action.priority==companion::Priority::Ambient?livingeyes::SonicPriority::Ambient:livingeyes::SonicPriority::Character,action.intensity,now,true);}
-    else if(action.kind==companion::ActionKind::Expression)brain.applyExpression(action.label,action.intensity,voice.state()==livingeyes::VoiceAiState::Speaking);
-    else if(action.kind==companion::ActionKind::Alert){snprintf(localAlert,sizeof(localAlert),"%s",action.label);localAlertUntil=now+10000;performSonic(livingeyes::SonicCue::Notification,livingeyes::SonicPriority::Wake,1,now,true);brain.applyExpression("happy",.8f);}
+    else if(action.kind==companion::ActionKind::Expression)brain.applyExpression(action.label,action.intensity,voice.state()==livingeyes::VoiceAiState::Speaking,roboarb::clipPriority(actedTier));
+    else if(action.kind==companion::ActionKind::Alert){sleepAlertAt=now;sleepAlertPending=true;snprintf(localAlert,sizeof(localAlert),"%s",action.label);localAlertUntil=now+10000;performSonic(livingeyes::SonicCue::Notification,livingeyes::SonicPriority::Wake,1,now,true);brain.applyExpression("happy",.8f);}
   }
   if(!acted&&!dnd&&runtimeSettings.proactiveVoice&&(!lastInitiativeVoiceAt||uint32_t(now-lastInitiativeVoiceAt)>=1800000u)&&brain.inviteDue(now,pirState,sonicQuietNow()||!clockSynced,busy||phoneNavigation.visible(now))){
     if(brain.commitInvite(now)){
       const bool queued=brain.actions().push(companion::ActionKind::Expression,companion::Priority::Proactive,"curious",.58f,now,2500u);
-      if(queued){if(runtimeSettings.masterSound&&runtimeSettings.characterSfx)requestSonic(livingeyes::SonicCue::Curious,livingeyes::SonicPriority::Character,.42f,now);brain.confirmInvite(now);lastInitiativeVoiceAt=now;}
+      if(queued){if(runtimeSettings.masterSound&&runtimeSettings.characterSfx&&soundBudget.allow(now,sonicQuietNow())&&requestSonic(livingeyes::SonicCue::Curious,livingeyes::SonicPriority::Character,.42f,now))soundBudget.commit(now);brain.confirmInvite(now);lastInitiativeVoiceAt=now;}
       else brain.rollbackInvite(now);
     }
   }
@@ -1716,13 +1984,13 @@ void serviceSensors(uint32_t now){
 #if !ROBODESK_WIFI_ONLY_TEST && ROBODESK_C3_HARDWARE_READY
   bool raw=digitalRead(PIN_TOUCH_HEAD)==HIGH;
   if(raw!=touchRaw){touchRaw=raw;touchRawChangedAt=now;}
-  if(raw!=touchStable && now-touchRawChangedAt>=TOUCH_DEBOUNCE_MS){touchStable=raw;if(touchStable){const bool acceptedGame=activityVisualId==uint8_t(companion::CompanionActivityId::TouchPlay)&&touchGame.start(now,touchGameContextEligible(now));headTouchStartedAt=acceptedGame?0:now;if(interactionMetricsApplied){++interactionDiagnostics.headTouch;touchLatencyStartedAt=now;touchLatencyPending=true;}}else if(touchGame.active()&&headTouchStartedAt){touchGame.press(uint32_t(now-headTouchStartedAt),now,touchGameEligible(now,touchGame.active()));headTouchStartedAt=0;}}
+  if(raw!=touchStable && now-touchRawChangedAt>=TOUCH_DEBOUNCE_MS){touchStable=raw;if(touchStable){const bool acceptedGame=activityVisualId==uint8_t(companion::CompanionActivityId::TouchPlay)&&touchGame.start(now,touchGameContextEligible(now));headTouchStartedAt=acceptedGame?0:now;behNoteTouch("head",touchRawChangedAt);if(!acceptedGame&&!touchGame.active())touchTapPending=true;if(interactionMetricsApplied){++interactionDiagnostics.headTouch;touchLatencyStartedAt=now;touchLatencyPending=true;}}else if(touchGame.active()&&headTouchStartedAt){touchGame.press(uint32_t(now-headTouchStartedAt),now,touchGameEligible(now,touchGame.active()));headTouchStartedAt=0;}}
   const companion::HeadTouchGesture headGesture=headTouchGestures.update(touchStable,now);
-  if(headGesture==companion::HeadTouchGesture::DoubleTap&&!touchGame.active())robot.interact(livingeyes::Interaction::RepeatedPet,.9f,2);
+  if(headGesture==companion::HeadTouchGesture::DoubleTap&&!touchGame.active()){robot.interact(livingeyes::Interaction::RepeatedPet,.9f,2);behNoteTouch("double",touchRawChangedAt);touchDoublePending=true;}
   bool sideRaw=digitalRead(PIN_TOUCH_SIDE)==HIGH;
   if(sideRaw!=sideTouchRaw){sideTouchRaw=sideRaw;sideTouchRawChangedAt=now;}
-  if(sideRaw!=sideTouchStable && now-sideTouchRawChangedAt>=TOUCH_DEBOUNCE_MS){sideTouchStable=sideRaw;if(sideTouchStable){sideTouchStartedAt=now;sidePrivacyHandled=false;if(interactionMetricsApplied)++interactionDiagnostics.sideTouch;}else{sideTouchStartedAt=0;sidePrivacyHandled=false;}}
-  if(sideTouchStable&&!sidePrivacyHandled&&sideTouchStartedAt&&uint32_t(now-sideTouchStartedAt)>=1400u){
+  if(sideRaw!=sideTouchStable && now-sideTouchRawChangedAt>=TOUCH_DEBOUNCE_MS){sideTouchStable=sideRaw;if(sideTouchStable){sideTouchStartedAt=now;sidePrivacyHandled=false;behNoteTouch("side",sideTouchRawChangedAt);if(interactionMetricsApplied)++interactionDiagnostics.sideTouch;}else{sideTouchStartedAt=0;sidePrivacyHandled=false;}}
+  if(sideTouchStable&&!touchStable&&!sidePrivacyHandled&&sideTouchStartedAt&&uint32_t(now-sideTouchStartedAt)>=1400u){
     RuntimeSettings next=runtimeSettings;next.privacyMicMuted=runtimeSettings.privacyMicMuted?0:1;
     if(next.privacyMicMuted&&wakeWord.running()&&!wakeWord.disarmToManual(MicI2S)){sidePrivacyHandled=true;snprintf(localAlert,sizeof(localAlert),"Mic mute failed - retry");localAlertUntil=now+5000u;}
     else if(settingsStore.save(next)){runtimeSettings=next;privacyMicMuted=next.privacyMicMuted!=0;sidePrivacyHandled=true;touchWindowPrevious=true;
@@ -1731,8 +1999,21 @@ void serviceSensors(uint32_t now){
       snprintf(localAlert,sizeof(localAlert),"%s",privacyMicMuted?"Microphone muted":"Microphone enabled");localAlertUntil=now+5000u;
     }else{if(!runtimeSettings.privacyMicMuted)restoreWakeWordAfterPrivacy(now);sidePrivacyHandled=true;snprintf(localAlert,sizeof(localAlert),"Mic setting not saved");localAlertUntil=now+5000u;}
   }
+  {static bool petNoted=false;if(!touchStable)petNoted=false;else if(!petNoted&&headTouchStartedAt&&!touchGame.active()&&uint32_t(now-headTouchStartedAt)>=1200u){petNoted=true;touchPetPending=true;}} // PD-1.5 long pet
   touchAdapter.update(touchStable,1.0f,now,livingeyes::TouchZone::Head);
   sideTouchAdapter.update(sideTouchStable,1.0f,now,livingeyes::TouchZone::Side);
+#if ROBODESK_DUAL_ROBOT && !ROBODESK_PHONE_BLE_ROBOT
+  // Head sensor (GPIO7) held 5 s (single-sensor hardware): ask the C3 to open a BLE pairing window (dashboard-free pairing trigger).
+  static uint32_t pairHoldAt=0;static bool pairHoldSent=false;
+  if(!touchStable){pairHoldAt=0;pairHoldSent=false;}
+  else if(!pairHoldAt)pairHoldAt=now;
+  else if(!pairHoldSent&&uint32_t(now-pairHoldAt)>=5000u){pairHoldSent=true;const bool sent=RoboDual.link.send(robolink::PairingRequest,nullptr,0,robolink::Reliable,10);
+    snprintf(localAlert,sizeof(localAlert),"%s",sent?"Phone pairing requested":"Pairing failed - gateway offline");localAlertUntil=now+5000u;RoboLog.printf("LEV,PAIR,REQUEST,sent=%u\n",unsigned(sent));}
+#endif
+  {uint8_t ps=0;if(RoboDual.takePairingStateEvent(ps)){ // C3 confirmed the BLE window state; open is drawn live in present().
+    RoboLog.printf("LEV,PAIR,STATE,state=%s,ttl=%lu\n",ps==1?"open":ps==2?"expired":ps==3?"approved":"cleared",static_cast<unsigned long>(RoboDual.pairingOpenRemainingMs(now)/1000u));
+    if(ps!=1)RoboDual.clearPairingPasskey(); // window ended (approved/expired/cleared): drop the passkey screen at once instead of waiting out its 60 s TTL
+    if(ps==2||ps==4){snprintf(localAlert,sizeof(localAlert),"%s","Pairing ditutup");localAlertUntil=now+5000u;}}}  // approved (3) goes straight back to the eyes
   const bool pirRaw=digitalRead(PIN_PIR)==HIGH;
   const companion::PresenceEvent presenceEvent=presenceRitual.update(pirRaw,now,true);
   pirState=presenceRitual.present();
@@ -1753,6 +2034,7 @@ void serviceSensors(uint32_t now){
       float gx=be16(r[8],r[9])/131.f*D2R,gy=be16(r[10],r[11])/131.f*D2R,gz=be16(r[12],r[13])/131.f*D2R;
       lastG=sqrtf(ax*ax+ay*ay+az*az);lastGyro=sqrtf(gx*gx+gy*gy+gz*gz);
       livingeyes::ImuSample s;s.ax=ax;s.ay=ay;s.az=az;s.gx=gx;s.gy=gy;s.gz=gz;s.nowMs=now;motionAdapter.update(s);
+      {const robomotion::Event me=motionMood.sample(now,lastG,lastGyro,motionAdapter.pickedUp(),motionCfg.fallG,motionCfg.shakeGyro);if(me!=robomotion::Event::None&&me!=robomotion::Event::Shake)motionMoodEvent=me;}
       const bool picked=motionAdapter.pickedUp();if(interactionMetricsApplied&&(picked!=metricPickedUp||(lastGyro>motionCfg.shakeGyro&&uint32_t(now-metricMotionAt)>=900u))){++interactionDiagnostics.motionEvents;metricMotionAt=now;}metricPickedUp=picked;
     }else if(interactionMetricsApplied)++interactionDiagnostics.staleSamples;
   }
@@ -1882,6 +2164,10 @@ void processMicFrame(const MicCapturedFrame& frame){
     preRoll.clear();vadVoiceFrames=vadSilenceFrames=0;noiseWindowFrames=0;micTxBatchLen=0;return;
   }
   if(!utteranceActive&&speakerSize()==0&&!speakerGeminiActive)updateNoiseEstimator(rms);
+  {const auto vs=voice.state();const bool conversing=utteranceActive||pendingReady||speakerGeminiActive||vs==livingeyes::VoiceAiState::Listening||vs==livingeyes::VoiceAiState::Thinking||vs==livingeyes::VoiceAiState::Speaking;
+   if(loudSound.frame(now,rms,conversing,privacyMicMuted))loudSoundPending=true; // PD-1.13
+   const robodance::Event dance=danceTracker.frame(now,rms,conversing||privacyMicMuted||sleepCycle.state()!=robosleep::State::Awake); // PD-3.2
+   if(dance!=robodance::Event::None&&(dance!=robodance::Event::Beat||danceEvent==robodance::Event::None))danceEvent=dance;}
 
   const bool alwaysStreaming=runtimeSettings.inputMode==RuntimeSettings::AlwaysListening;
   const auto state=voice.state();
@@ -1927,13 +2213,14 @@ void serviceSonicEvents(uint32_t now){
 #if !ROBODESK_ENABLE_AUDIO
   (void)now;
 #else
-  if(touchStable&&!sonicTouchPrev&&uint32_t(now-sonicTouchAt)>=500){sonicTouchAt=now;requestSonic(livingeyes::SonicCue::Affection,livingeyes::SonicPriority::Character,.9f,now);}
+  if(touchStable&&!sonicTouchPrev&&uint32_t(now-sonicTouchAt)>=500){sonicTouchAt=now;bool known=false;const livingeyes::SonicCue cue=touchSfx?sonicCueFromName(touchSfx->cue,&known):livingeyes::SonicCue::Affection;
+    if(touchMood.mood()==robotouch::Mood::Normal)requestSonic(known?cue:livingeyes::SonicCue::Affection,livingeyes::SonicPriority::Character,touchSfx?touchSfx->strength:.9f,now);} // PD-1.5: no cheerful chirp while annoyed/sulking
   else if(sideTouchStable&&!sonicSideTouchPrev&&uint32_t(now-sonicSideTouchAt)>=500){sonicSideTouchAt=now;requestSonic(livingeyes::SonicCue::WakeAck,livingeyes::SonicPriority::Wake,.65f,now);}
   sonicTouchPrev=touchStable;sonicSideTouchPrev=sideTouchStable;
   const bool imuFresh=companion::sampleFresh(imuValidAt,now,150u);
   if(imuFresh){
     const bool picked=motionAdapter.pickedUp();if(picked!=sonicPickedPrev&&uint32_t(now-sonicMotionAt)>=450){sonicMotionAt=now;requestSonic(picked?livingeyes::SonicCue::Pickup:livingeyes::SonicCue::PutDown,livingeyes::SonicPriority::Character,.85f,now,true);}sonicPickedPrev=picked;
-    if(lastG<motionCfg.fallG&&uint32_t(now-sonicFallAt)>=2200){sonicFallAt=now;requestSonic(livingeyes::SonicCue::Surprise,livingeyes::SonicPriority::Safety,1.f,now,true);}
+    if(lastG<motionCfg.fallG&&uint32_t(now-sonicFallAt)>=2200){sonicFallAt=now;arbTracker.start(roboarb::Tier::Safety,now,2200);requestSonic(livingeyes::SonicCue::Surprise,livingeyes::SonicPriority::Safety,1.f,now,true);}
     else if(lastGyro>motionCfg.shakeGyro&&uint32_t(now-sonicMotionAt)>=1100){sonicMotionAt=now;requestSonic(livingeyes::SonicCue::Shake,livingeyes::SonicPriority::Character,.9f,now);}
   }
   if(pendingPresenceEvent!=companion::PresenceEvent::None){
@@ -1941,9 +2228,10 @@ void serviceSonicEvents(uint32_t now){
       !sonicQuietNow()&&int32_t(sonicConversationQuietUntil-now)<=0&&touchGameEligible(now);
     const auto offer=presenceRitual.pending(presenceEligible,now);
     if(offer==companion::PresenceEvent::None)pendingPresenceEvent=companion::PresenceEvent::None;
-    else if(sonicCueAllowed(offer==companion::PresenceEvent::Returned?livingeyes::SonicCue::Greeting:livingeyes::SonicCue::Curious)&&
+    else if(soundBudget.allow(now,sonicQuietNow())&&sonicCueAllowed(offer==companion::PresenceEvent::Returned?livingeyes::SonicCue::Greeting:livingeyes::SonicCue::Curious)&&
       sonicDirector.request(offer==companion::PresenceEvent::Returned?livingeyes::SonicCue::Greeting:livingeyes::SonicCue::Curious,livingeyes::SonicPriority::Character,.62f,now)){
-      presenceRitual.acknowledge(now);pendingPresenceEvent=companion::PresenceEvent::None;lastInitiativeVoiceAt=now;
+      presenceRitual.acknowledge(now);pendingPresenceEvent=companion::PresenceEvent::None;lastInitiativeVoiceAt=now;soundBudget.commit(now);
+      {char line[64];robobeh::sound(line,sizeof(line),livingeyes::sonicCueName(offer==companion::PresenceEvent::Returned?livingeyes::SonicCue::Greeting:livingeyes::SonicCue::Curious),true);RoboLog.printf("%s",line);}
     }
   }
   if(uint32_t(now-sonicIdleAt)>=300000u){sonicIdleAt=now;const auto&m=brain.mind().state();if(runtimeSettings.characterIntensity==2&&!sonicQuietNow()&&!pirState&&!touchStable&&!sideTouchStable){if(m.energy<.30f)requestSonic(livingeyes::SonicCue::Sleepy,livingeyes::SonicPriority::Ambient,.42f,now);else if(m.boredom>.62f)requestSonic(livingeyes::SonicCue::Thinking,livingeyes::SonicPriority::Ambient,.38f,now);else if(m.curiosity>.74f)requestSonic(livingeyes::SonicCue::Curious,livingeyes::SonicPriority::Ambient,.34f,now);}}
@@ -2101,8 +2389,11 @@ void setup(){
 #endif
   bool c=livingeyes::core_performances::installCorePerformances(coreBank),e=livingeyes::extended_performances::installExtendedPerformances(extendedBank);
   if(!c||!e)fatalStartup("PERFORMANCE_BANK");
-  robot.attach(&coreBank);robot.addPerformanceBank(&extendedBank);robot.attach(&choreography);robot.attach(&relationships);robot.attach(&life);
-  robot.useCoreBehaviorPerformanceTags();robot.useCoreInteractionPerformanceTags();robot.useExtendedInteractionPerformanceTags();robot.begin(millis());
+  robot.attach(&coreBank);robot.addPerformanceBank(&extendedBank);
+  if(!livingeyes::game_performances::installGamePerformances(gameBank)||!robot.addPerformanceBank(&gameBank))RoboLog.println("LEV,PERF,GAME_BANK_SKIPPED"); // PD-3.1, optional
+  brain.setGameSeed(esp_random());
+ robot.attach(&choreography);robot.attach(&relationships);robot.attach(&life);
+  robot.useCoreBehaviorPerformanceTags();robot.useCoreInteractionPerformanceTags();robot.useExtendedInteractionPerformanceTags();robot.setSeed(esp_random());robot.setPerformanceVariation(.4f);robot.begin(millis());robot.onCue(behOnCue);
   // Use LivingEyes' pre-merger legacy contour renderer. The Character
   // director, arbitration, and behavior layers remain unchanged.
   RoboLog.println("LEV,FACE,eyeStyle=LEGACY,dither=0,delta=0,busHz=400000");
@@ -2197,6 +2488,7 @@ void loop(){
   serviceSerialAudioTest(millis());
   serviceGeminiTools();
   servicePhoneCompanion(now);
+  servicePhoneChat(now);
   serviceSensors(now);
   serviceClock(now);
   serviceBrain(now);
@@ -2213,6 +2505,8 @@ void loop(){
   if(uint32_t(now-lastCharacterUpdateAt)>=100u){robot.update(now);lastCharacterUpdateAt=now;}
 #else
   robot.update(now);
+  {static uint32_t behIdleAt=0,behClips=0;if(uint32_t(now-behIdleAt)>=250u){behIdleAt=now;const auto bd=robot.diagnostics();
+    if(bd.character.clips!=behClips){if(behClips&&bd.stimulusIdleMs>=2000u&&bd.lastAutonomous!=livingeyes::BehaviorKind::None){char line[48];robobeh::idle(line,sizeof(line),unsigned(bd.lastAutonomous),unsigned(bd.lifeActivity));RoboLog.printf("%s",line);}behClips=bd.character.clips;}}}
 #endif
 #if defined(CONFIG_IDF_TARGET_ESP32C3) && !ROBODESK_C3_HARDWARE_READY
   // There is no OLED to render in this profile; avoid a 30 FPS renderer loop.

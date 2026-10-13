@@ -34,6 +34,7 @@ struct BLESecurityCallbacks {
 namespace PhoneBleBackend {
 inline BLESecurityCallbacks* security = nullptr;
 inline uint32_t passkey = 0;
+inline int lastDisconnectReason = 0; // NimBLE reason of the latest disconnect (trace only)
 inline ble_gap_conn_desc descriptor(const NimBLEConnInfo& info) {
   ble_gap_conn_desc d{};
   d.conn_handle = info.getConnHandle();
@@ -53,7 +54,8 @@ class BLEServerCallbacks : public NimBLEServerCallbacks {
   void onConnect(NimBLEServer* s, NimBLEConnInfo& info) final {
     auto d = PhoneBleBackend::descriptor(info); onConnect(s, &d);
   }
-  void onDisconnect(NimBLEServer* s, NimBLEConnInfo& info, int) final {
+  void onDisconnect(NimBLEServer* s, NimBLEConnInfo& info, int reason) final {
+    PhoneBleBackend::lastDisconnectReason = reason;
     auto d = PhoneBleBackend::descriptor(info); onDisconnect(s, &d);
   }
   uint32_t onPassKeyDisplay() final {

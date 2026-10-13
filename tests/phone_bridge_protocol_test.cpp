@@ -54,9 +54,18 @@ int main(){
   PhoneBridgeProtocol::CandidateLease staleCandidate{},approvedCandidate{};
   candidates.connected(7,"AA:BB:CC:DD:EE:01");
   assert(!candidates.capture(staleCandidate));
-  assert(!candidates.authenticated(7,"AA:BB:CC:DD:EE:02"));
+  assert(!candidates.authenticated(9,"AA:BB:CC:DD:EE:01"));
+  assert(!candidates.authenticated(7,""));
   assert(candidates.authenticated(7,"AA:BB:CC:DD:EE:01"));
   assert(candidates.capture(staleCandidate)&&candidates.matches(staleCandidate));
+  {
+    PhoneBridgeProtocol::CandidateLeaseState rpa;PhoneBridgeProtocol::CandidateLease identity{};
+    rpa.connected(11,"5A:11:22:33:44:55");
+    assert(!rpa.authenticated(12,"C0:FF:EE:00:00:01")&&!rpa.capture(identity));
+    assert(rpa.authenticated(11,"C0:FF:EE:00:00:01"));
+    assert(rpa.capture(identity)&&rpa.matches(identity)&&std::strcmp(identity.address,"C0:FF:EE:00:00:01")==0);
+    rpa.disconnected(11);assert(!rpa.matches(identity)&&!rpa.authenticated(11,"C0:FF:EE:00:00:01"));
+  }
   candidates.disconnected(7);
   candidates.connected(8,"AA:BB:CC:DD:EE:02");
   assert(candidates.authenticated(8,"AA:BB:CC:DD:EE:02"));

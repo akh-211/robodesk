@@ -17,7 +17,7 @@ object TrustedRobotStore {
             val manager = context.getSystemService(Context.COMPANION_DEVICE_SERVICE) as? CompanionDeviceManager ?: return stored
             val id = prefs.getInt(ASSOCIATION_ID, -1)
             val current = if (Build.VERSION.SDK_INT >= 33 && id >= 0) currentAddressApi33(manager, id)
-                else currentAddressLegacy(manager, stored)
+                else if (id >= 0) currentAddressLegacy(manager, stored) else stored // no association made by this app: never swap in an old app's one
             if (!current.isNullOrBlank() && current != stored) prefs.edit().putString(ADDRESS, current.uppercase()).commit()
             current?.takeIf { it.isNotBlank() } ?: stored
         } catch (_: Exception) {
@@ -45,6 +45,7 @@ object TrustedRobotStore {
         val address = address(context)
         val associationId = associationId(context)
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        MemoryCacheStore.clear(context)
         val credentialCleared = BridgeCredentialStore(context).clear()
         val selectionCleared = prefs.edit().clear().commit() && prefs.all.isEmpty()
         val manager = context.getSystemService(Context.COMPANION_DEVICE_SERVICE) as? CompanionDeviceManager
@@ -61,6 +62,21 @@ object TrustedRobotStore {
         }
         return credentialCleared && selectionCleared && associationCleared
     }
+
+    /**
+     * Best-effort removal of the Android LE bond (no public API; `removeBond` by reflection). Only called once the robot is
+     * known to have dropped its side (revoke acknowledged or factory reset), so a stale bond cannot block the next pairing.
+     * A failure is harmless: the user can still remove the device in Android Bluetooth settings. Not verified on a device.
+     */
+    @android.annotation.SuppressLint("MissingPermission")
+    fun removeBond(context: Context, address: String): Boolean = try {
+        val device = context.getSystemService(android.bluetooth.BluetoothManager::class.java)?.adapter?.getRemoteDevice(address)
+        val before = device?.bondState
+        val ok = device != null && before != android.bluetooth.BluetoothDevice.BOND_NONE &&
+            (device.javaClass.getMethod("removeBond").invoke(device) as? Boolean) == true
+        if (before != null && before != android.bluetooth.BluetoothDevice.BOND_NONE) LinkDiag.log("removeBond=$ok (bond=$before)")
+        ok
+    } catch (t: Throwable) { LinkDiag.log("removeBond gagal: ${t.javaClass.simpleName}"); false }
 
     @android.annotation.TargetApi(33)
     private fun currentAddressApi33(manager: CompanionDeviceManager, id: Int): String? =

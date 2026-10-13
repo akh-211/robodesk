@@ -57,12 +57,33 @@ int main(){
   assert(brain.commitInvite(63006));brain.confirmInvite(63006);brain.update(123007,false,false,false,20833,false);assert(brain.invitesExpired()==1);
   mockWriteBudget=0;assert(!brain.reserveBackground(64000,12));assert(brain.companionState().backgroundRequests==0);mockWriteBudget=-1;assert(brain.save(64001));assert(brain.reserveBackground(64002,12));assert(brain.companionState().backgroundRequests==1);assert(brain.releaseBackgroundReservation(64003));assert(brain.companionState().backgroundRequests==0);
   assert(strstr(call("express_character",R"({"emotion":"happy","intensity":0.2})"),"accepted"));assert(brain.actions().pop(200,true,action)&&action.intensity==.2f);assert(strstr(call("express_character",R"({"emotion":"unknown"})"),"rejected"));
+  {// PD-1.12 single emotion map: every tool enum value resolves, level 1..3 sets intensity, mood names alias in.
+    size_t count=0;const auto*emotions=roboemotion::table(count);const char*schema=strstr(brain.toolsJson(),"\"express_character\"");assert(schema&&count==16);
+    const char*intensityAt=strstr(schema,"\"intensity\"");for(size_t i=0;i<count;++i){char quoted[24];snprintf(quoted,sizeof(quoted),"\"%s\"",emotions[i].name);const char*at=strstr(schema,quoted);assert(at&&at<intensityAt);}
+    const char*moods[]={"sleepy","subdued","affectionate","curious","restless","cheerful","calm","happy","surprised","sulking"};for(auto*m:moods)assert(roboemotion::find(m));
+    assert(!strcmp(roboemotion::canonical("sulking"),"annoyed")&&roboemotion::find("sulking")->expression==livingeyes::Expression::Suspicious&&roboemotion::clampFor(*roboemotion::find("sulking"),1.f)<=.45f);
+    assert(!roboemotion::find("unknown")&&!roboemotion::find("")&&!roboemotion::find(nullptr));
+    assert(strstr(call("express_character",R"({"emotion":"dizzy","level":3})"),"accepted"));assert(brain.actions().pop(200,true,action)&&action.intensity==1.f&&!strcmp(action.label,"dizzy"));
+    assert(strstr(call("express_character",R"({"emotion":"annoyed","level":1})"),"accepted"));assert(brain.actions().pop(200,true,action)&&action.intensity==.35f);
+    assert(strstr(call("express_character",R"({"emotion":"excited","level":9})"),"accepted"));assert(brain.actions().pop(200,true,action)&&action.intensity==.65f);
+    assert(strstr(call("express_character",R"({"emotion":"calm"})"),"accepted"));assert(brain.actions().pop(200,true,action)&&!strcmp(action.label,"calm"));}
   assert(brain.forget("owner.name",63000));assert(!*brain.ownerName());static RoboBrain restarted;static livingeyes::RelationshipMemory restoredRelationships;restarted.begin(nullptr,&restoredRelationships,64000);assert(restarted.restored());assert(!*restarted.ownerName());assert(restarted.memory().findKey("drink")>=0);
   Preferences meta;meta.begin("brainmeta");meta.clear();meta.end();mockFiles.clear();
   livingeyes::SemanticMemory legacy;legacy.reset();assert(legacy.remember(livingeyes::SemanticMemoryKind::Profile,"owner.name","Lama",255,0,true));uint8_t bytes[livingeyes::SemanticMemory::WireSize];size_t written=0;assert(legacy.serialize(bytes,sizeof(bytes),written));Preferences old;old.begin("robobrain");old.putBytes("mem",bytes,written);old.end();
   mockWriteBudget=8;static RoboBrain migrating;static livingeyes::RelationshipMemory migratingRelationships;assert(migrating.begin(nullptr,&migratingRelationships,100));assert(!strcmp(migrating.ownerName(),"Lama"));mockWriteBudget=-1;
   static RoboBrain migrationRestart;static livingeyes::RelationshipMemory migrationRelationships;assert(migrationRestart.begin(nullptr,&migrationRelationships,100));assert(!strcmp(migrationRestart.ownerName(),"Lama"));assert(migrationRestart.storageGeneration()==1);old.begin("robobrain");assert(old.getBytesLength("mem")==written);old.end();
-  JsonDocument tools;assert(!deserializeJson(tools,brain.toolsJson()));assert(tools[0]["functionDeclarations"].size()==10);auto externalTool=tools[0]["functionDeclarations"][6];assert(externalTool["parameters"]["required"][0]=="category");assert(externalTool["parameters"]["properties"]["category"]["enum"].size()==3);
+  JsonDocument tools;assert(!deserializeJson(tools,brain.toolsJson()));assert(tools[0]["functionDeclarations"].size()==11);auto externalTool=tools[0]["functionDeclarations"][6];assert(externalTool["parameters"]["required"][0]=="category");assert(externalTool["parameters"]["properties"]["category"]["enum"].size()==3);
+  { // PD-3.1 play_game: locally drawn, fair, outcome consistent with the hands
+    brain.setGameSeed(12345);unsigned faces[7]={},heads=0;JsonDocument r;companion::Action drain;
+    for(unsigned i=0;i<6000;++i){assert(!deserializeJson(r,call("play_game",R"({"game":"dice"})")));const unsigned v=r["result"].as<unsigned>();assert(r["status"]=="completed"&&v>=1&&v<=6);++faces[v];while(brain.actions().pop(200,true,drain)){}}
+    for(unsigned v=1;v<=6;++v)assert(faces[v]>850&&faces[v]<1150);
+    for(unsigned i=0;i<2000;++i){assert(!deserializeJson(r,call("play_game",R"({"game":"coin"})")));heads+=r["result"]=="heads";while(brain.actions().pop(200,true,drain)){}}
+    assert(heads>900&&heads<1100);
+    for(unsigned i=0;i<30;++i){assert(!deserializeJson(r,call("play_game",R"({"game":"suit","choice":"rock"})")));const char*robot=r["robot"]|"";const char*outcome=r["outcome"]|"";
+      assert(!strcmp(outcome,!strcmp(robot,"rock")?"draw":!strcmp(robot,"paper")?"robot_wins":"user_wins"));while(brain.actions().pop(200,true,drain)){}}
+    assert(!deserializeJson(r,call("play_game",R"({"game":"suit"})"))&&r["status"]=="completed"&&r["robot"].is<const char*>()&&!r["outcome"].is<const char*>());while(brain.actions().pop(200,true,drain)){}
+    assert(strstr(call("play_game",R"({"game":"lottery"})"),"rejected"));
+  }
   brain.setExternalContext("Weather cache: sunny. ","Home Assistant light.living_room=on. ","Calendar cache: private meeting. ");
   brain.transcripts().append(true,"Can you show me the weather forecast?",65010,1800000000u);const char*weatherResult=call("get_external_context",R"({"category":"weather"})");assert(strstr(weatherResult,"completed")&&strstr(weatherResult,"Weather cache: sunny")&&!strstr(weatherResult,"Home Assistant")&&!strstr(weatherResult,"private meeting"));assert(strstr(call("get_external_context",R"({"category":"calendar"})"),"privacy_gate"));brain.transcripts().finish(65011,false);
   brain.transcripts().append(true,"Is the living room light on?",65012,1800000000u);const char*homeResult=call("get_external_context",R"({"category":"home_assistant"})");assert(strstr(homeResult,"completed")&&strstr(homeResult,"light.living_room=on")&&!strstr(homeResult,"private meeting")&&!strstr(homeResult,"Weather cache"));brain.transcripts().finish(65013,false);

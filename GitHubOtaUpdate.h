@@ -80,6 +80,8 @@ class GitHubOtaUpdate {
     return out;
   }
   State state() const { portENTER_CRITICAL(&mux_);const State value=state_;portEXIT_CRITICAL(&mux_);return value; }
+  // Image bytes received / manifest size, 0..100 (read-only progress for BLE status).
+  uint8_t percent() const { const size_t e=image_.expected,b=image_.bytes;return e?uint8_t(b>=e?100:uint64_t(b)*100u/e):0; }
   uint32_t availableVersion() const { portENTER_CRITICAL(&mux_);const uint32_t value=availableVersion_;portEXIT_CRITICAL(&mux_);return value; }
   bool active() const { portENTER_CRITICAL(&mux_);const bool value=taskActive_;portEXIT_CRITICAL(&mux_);return value; }
   bool trackedVersion(uint32_t* value) { return value && currentVersion(value); }

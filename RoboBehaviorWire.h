@@ -52,6 +52,8 @@ inline void roboBehaviorExport(const RuntimeSettings&s,JsonObject out){
   out["faceGazeReachX100"]=s.faceGazeReachX100;
   out["masterSound"]=s.masterSound;
   out["speechEnabled"]=s.speechEnabled;
+  out["voiceReplyMode"]=s.voiceReplyMode;
+  out["chatReplyMode"]=s.chatReplyMode;
   out["characterSfx"]=s.characterSfx;
   out["wakeSfx"]=s.wakeSfx;
   out["touchSfx"]=s.touchSfx;
@@ -63,6 +65,9 @@ inline void roboBehaviorExport(const RuntimeSettings&s,JsonObject out){
   out["quietStartMin"]=s.quietStartMin;
   out["quietEndMin"]=s.quietEndMin;
   out["quietGainX100"]=s.quietGainX100;
+  out["personalityPreset"]=s.personalityPreset;
+  out["ownerBirthMonth"]=s.ownerBirthMonth;
+  out["ownerBirthDay"]=s.ownerBirthDay;
 }
 inline bool roboBehaviorSettingsEqual(const RuntimeSettings&a,const RuntimeSettings&b){
   JsonDocument leftDoc,rightDoc;roboBehaviorExport(a,leftDoc.to<JsonObject>());roboBehaviorExport(b,rightDoc.to<JsonObject>());
@@ -169,6 +174,9 @@ inline bool roboBehaviorImport(JsonObjectConst in,RuntimeSettings&out){
   next.masterSound=in["masterSound"].as<uint8_t>();
   if(!in["speechEnabled"].is<uint8_t>())return false;
   next.speechEnabled=in["speechEnabled"].as<uint8_t>();
+  // Reply modes (0 voice, 1 text on the OLED, 2 both) are optional on import so an older document still applies.
+  if(!in["voiceReplyMode"].isUnbound()){if(!in["voiceReplyMode"].is<uint8_t>()||in["voiceReplyMode"].as<uint8_t>()>2)return false;next.voiceReplyMode=in["voiceReplyMode"];}
+  if(!in["chatReplyMode"].isUnbound()){if(!in["chatReplyMode"].is<uint8_t>()||in["chatReplyMode"].as<uint8_t>()>2)return false;next.chatReplyMode=in["chatReplyMode"];}
   if(!in["characterSfx"].is<uint8_t>())return false;
   next.characterSfx=in["characterSfx"].as<uint8_t>();
   if(!in["wakeSfx"].is<uint8_t>())return false;
@@ -191,6 +199,23 @@ inline bool roboBehaviorImport(JsonObjectConst in,RuntimeSettings&out){
   next.quietEndMin=in["quietEndMin"].as<uint16_t>();
   if(!in["quietGainX100"].is<uint16_t>())return false;
   next.quietGainX100=in["quietGainX100"].as<uint16_t>();
+  // PD-2.3/2.6 keys are optional so an older app keeps working; present means in range.
+  if(!in["personalityPreset"].isNull()){if(!in["personalityPreset"].is<uint8_t>())return false;next.personalityPreset=in["personalityPreset"].as<uint8_t>();}
+  if(!in["ownerBirthMonth"].isNull()||!in["ownerBirthDay"].isNull()){if(!in["ownerBirthMonth"].is<uint8_t>()||!in["ownerBirthDay"].is<uint8_t>())return false;
+    next.ownerBirthMonth=in["ownerBirthMonth"].as<uint8_t>();next.ownerBirthDay=in["ownerBirthDay"].as<uint8_t>();}
+  if(next.personalityPreset>2||next.ownerBirthMonth>12||next.ownerBirthDay>31||(next.ownerBirthMonth==0)!=(next.ownerBirthDay==0))return false;
   if(next.inputMode>2||next.timezoneOffsetMin< -720||next.timezoneOffsetMin>840||next.speakerGainMilli<50||next.speakerGainMilli>1000||next.comfortMinTempX10>=next.comfortMaxTempX10||next.comfortMinHumidityX10>=next.comfortMaxHumidityX10)return false;
   out=next;return true;
+}
+// BLE SettingsSet: a CRC-verified staged document is applied all-or-nothing.
+// 0 = ok (out holds the new settings), 1 = invalid JSON/schema/bounds, 2 = forbidden
+// (phonePlatform changes revoke phone trust and stay a dashboard-only action).
+inline uint8_t roboBehaviorImportStaged(const uint8_t*doc,size_t size,const RuntimeSettings&current,RuntimeSettings&out){
+  if(!doc||!size)return 1;
+  JsonDocument json;if(deserializeJson(json,reinterpret_cast<const char*>(doc),size)||!json.is<JsonObject>())return 1;
+  RuntimeSettings next=current;if(!roboBehaviorImport(json.as<JsonObjectConst>(),next))return 1;
+  if(next.phonePlatform!=current.phonePlatform)return 2;
+  next.pomodoroWasActive=current.pomodoroWasActive;next.pomodoroInterrupted=current.pomodoroInterrupted;
+  RuntimeSettings::copy(next.phoneBlePeer,sizeof(next.phoneBlePeer),current.phoneBlePeer);
+  out=next;return 0;
 }

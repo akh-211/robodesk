@@ -21,5 +21,14 @@ int main(){
   assert(nextSequence(65535)==1&&nextSequence(1)==2);assert(crc32(reinterpret_cast<const uint8_t*>("123456789"),9)==0xcbf43926u);
   RequestCache cache;assert(cache.shouldExecute(7,2));assert(!cache.shouldExecute(7,2));assert(cache.shouldExecute(8,2));assert(!cache.shouldExecute(8,2));assert(cache.shouldExecute(8,3));
   f.length=1025;uint8_t b[WireMax];assert(encode(f,b,sizeof(b))==0);f.length=2;assert(encode(f,b,5)==0);
+  static_assert(GeminiKey==20&&Settings==21&&SettingsReply==22,"BLE settings UART frame types are part of the C3/S3 contract");
+  static_assert(PairingRequest==23,"S3 physical pairing request frame type is part of the C3/S3 contract");
+  {Frame request;request.type=PairingRequest;request.flags=Reliable;request.length=0;auto encoded=wire(request);Parser p;assert(deliver(p,encoded,out));assert(out.type==PairingRequest&&out.length==0);}
+  {Frame settings;settings.type=Settings;settings.flags=Reliable;settings.length=512;for(size_t i=0;i<settings.length;++i)settings.payload[i]=uint8_t(i*13u);auto encoded=wire(settings);Parser sp;assert(deliver(sp,encoded,out));assert(out.type==Settings&&out.length==512&&!memcmp(out.payload,settings.payload,512));}
+  static_assert(PairingState==24,"C3->S3 pairing window state frame type is part of the contract");
+  {uint8_t b[3];uint8_t st=0;uint16_t ttl=0;encodePairingState(b,PairOpen,60000);assert(decodePairingState(b,3,st,ttl)&&st==PairOpen&&ttl==60000);encodePairingState(b,PairApproved,0);assert(decodePairingState(b,3,st,ttl)&&st==PairApproved&&ttl==0);
+   encodePairingState(b,PairOpen,0);assert(!decodePairingState(b,3,st,ttl));encodePairingState(b,PairOpen,60001);assert(!decodePairingState(b,3,st,ttl));b[0]=9;assert(!decodePairingState(b,3,st,ttl));b[0]=PairExpired;assert(!decodePairingState(b,2,st,ttl));
+   Frame pf;pf.type=PairingState;pf.flags=Reliable;pf.length=3;encodePairingState(pf.payload,PairOpen,1234);auto enc=wire(pf);Parser pp;assert(deliver(pp,enc,out)&&out.type==PairingState&&out.length==3);}
   std::puts("PASS: UART framing, boundary lengths, CRC rejection, noise recovery, sequence wrap");
+  std::puts("PASS: BLE settings UART frame types are stable and a full 512-byte settings frame round-trips");
 }

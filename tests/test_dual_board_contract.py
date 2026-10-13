@@ -9,6 +9,12 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _android_link_sources():
+    import re
+    base = ROOT / "mobile/android/app/src/main/java/com/robodesk/phonebridge"
+    text = "".join((base / n).read_text(encoding="utf-8") for n in ("RoboNotificationListener.kt", "RobotLinkService.kt"))
+    return re.sub(r"[ \t]*([=;{}(),])[ \t]*", r"\1", text)
+
 class DualBoardContractTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which('g++'), 'g++ required for AP recovery lifetime check')
     def test_gateway_releases_only_idle_ap_after_stable_station_and_uart(self):
@@ -181,23 +187,44 @@ int main(){
 
     def test_phone_forget_persists_before_unpairing(self):
         gateway = (ROOT / "RoboC3Gateway.h").read_text(encoding="utf-8")
-        forget = gateway.split('if(ok&&action=="ble_pair")', 1)[1].split('else if', 1)[0]
+        self.assertIn('if(ok&&action=="ble_pair")ok=gatewayOpenPairing();', gateway)
+        forget = gateway.split('inline bool gatewayOpenPairing(){', 1)[1].split('inline bool gatewayApproveCandidate', 1)[0]
         self.assertLess(forget.index('next.phoneBlePeer[0]=0'), forget.index('gatewayStore.save(next)'))
         self.assertLess(forget.index('gatewayStore.save(next)'), forget.index('gatewayBle.clearPeer()'))
-        self.assertIn('if(ok){gatewaySettings=next;', forget)
+        self.assertIn('if(!gatewayStore.save(next))return false;gatewaySettings=next;', forget)
 
     def test_android_removal_is_queued_while_disconnected(self):
-        listener = (ROOT / "mobile/android/app/src/main/java/com/robodesk/phonebridge/RoboNotificationListener.kt").read_text(encoding="utf-8")
-        removal = listener.split('override fun onNotificationRemoved', 1)[1].split('private fun keyFor', 1)[0]
-        remove_sender = listener.split('private fun sendRemove', 1)[1].split('private fun clearPending', 1)[0]
+        listener = _android_link_sources()  # RoboNotificationListener + RobotLinkService (A1 moved the GATT code into the service)
+        removal = listener.split('override fun onNotificationRemoved', 1)[1].split('private fun onPosted', 1)[0]
+        remove_sender = listener.split('private fun sendRemove', 1)[1].split('private fun clearPrivacyRefresh', 1)[0]
         self.assertIn('sendRemove(sbn)', removal)
-        self.assertIn('enqueue(Packet(2,', remove_sender)
+        self.assertIn('enqueue(RobotPacket(2,', remove_sender)
         self.assertNotIn('if(ready', removal + remove_sender)
         self.assertIn('pending.remove(packet)', listener)
         self.assertIn('awaitingAck=true', listener)
 
+    def test_android_single_gatt_and_legacy_path_survive_service_move(self):
+        base = ROOT / "mobile/android/app/src/main/java/com/robodesk/phonebridge"
+        sources = {p.name: p.read_text(encoding="utf-8") for p in base.rglob("*.kt")}
+        owners = [n for n, t in sources.items() if "connectGatt(" in t]
+        self.assertEqual(owners, ["RobotLinkService.kt"])  # one GATT for everything (I6)
+        self.assertEqual(sources["RobotLinkService.kt"].count("connectGatt("), 1)
+        listener = sources["RoboNotificationListener.kt"]
+        self.assertNotIn("BluetoothGatt", listener)
+        self.assertIn("RobotPacket(1,", listener)  # notifications kind 1, remove kind 2, nav kind 3, pause kind 5
+        self.assertIn("RobotPacket(2,", listener)
+        self.assertIn("RobotPacket(3,MAPS", listener)
+        self.assertIn("RobotPacket(5,", listener)
+        link = sources["RobotLinkService.kt"]
+        self.assertIn("RobotPacket(6,", link)  # BridgeCompanionCommand
+        self.assertIn("RobotPacket(4,", link)  # authenticated forget
+        # effective allowlist = robot list AND phone choice
+        self.assertIn("!allowed.contains(it.pkg)", link)
+        self.assertIn("c.allowed.contains(sbn.packageName)", listener)
+        self.assertIn("mode==AppContentMode.OFF", listener)
+
     def test_android_never_downgrades_to_legacy_ble_writes(self):
-        listener = (ROOT / "mobile/android/app/src/main/java/com/robodesk/phonebridge/RoboNotificationListener.kt").read_text(encoding="utf-8")
+        listener = _android_link_sources()  # RoboNotificationListener + RobotLinkService (A1 moved the GATT code into the service)
         transport = (ROOT / "PhoneBleTransport.h").read_text(encoding="utf-8")
         self.assertIn('firmware lacks authenticated bridge support', listener)
         self.assertIn('UUID.fromString("93de0009-', listener)
@@ -206,13 +233,14 @@ int main(){
         self.assertIn('EnvelopeCallbacks', transport)
 
     def test_mobile_global_pause_clears_queued_and_robot_transient_data(self):
-        listener = (ROOT / "mobile/android/app/src/main/java/com/robodesk/phonebridge/RoboNotificationListener.kt").read_text(encoding="utf-8")
-        activity = (ROOT / "mobile/android/app/src/main/java/com/robodesk/phonebridge/MainActivity.kt").read_text(encoding="utf-8")
+        listener = _android_link_sources()  # RoboNotificationListener + RobotLinkService (A1 moved the GATT code into the service)
+        activity = "".join(f.read_text(encoding="utf-8") for f in sorted((ROOT / "mobile/android/app/src/main/java/com/robodesk/phonebridge/ui").glob("*.kt")))  # Compose UI replaced the old MainActivity views
         transport = (ROOT / "PhoneBleTransport.h").read_text(encoding="utf-8")
         self.assertIn('putBoolean("paused",paused).commit()', listener)
-        self.assertIn('pending.addFirst(Packet(5,', listener)
+        self.assertIn('pending.addFirst(RobotPacket(5,', listener)
         self.assertIn('if(sharingPaused())return@post', listener)
-        self.assertIn('text = "Pause all sharing"', activity)
+        self.assertIn('"Jeda semua berbagi"', activity)
+        self.assertIn('PhoneBridgeStatus.pauseSharing?.invoke(checked)', activity)
         self.assertIn('message.kind==5&&message.payloadSize==0', transport)
         self.assertIn('if(bridge_)bridge_->clear();if(navigation_)navigation_->clear();makeAck_', transport)
 
@@ -224,18 +252,29 @@ int main(){
         self.assertIn('candidateBondAddr_=d->peer_id_addr', transport)
         self.assertIn('bool candidateBondAddrValid_=false;\n#if defined(CONFIG_NIMBLE_ENABLED)\n  ble_addr_t candidateBondAddr_{};', transport)
 
+    def test_ble_serial_trace_is_ring_buffered_and_printed_only_from_service(self):
+        transport = (ROOT / "PhoneBleTransport.h").read_text(encoding="utf-8")
+        for event in ("LEV,BLE,CONN", "LEV,BLE,DISC", "LEV,BLE,AUTH", "LEV,BLE,PAIR_WINDOW", "LEV,BLE,DROP", "LEV,BLE,HS", "LEV,BLE,RX", "LEV,BLE,IDENT"):
+            self.assertIn(event, transport)
+        flush = transport.split("void traceFlush_(", 1)[1].split("  const char*startupStage_", 1)[0]
+        self.assertIn("traceBudget_", flush)
+        rest = transport.replace(flush, "")
+        self.assertNotIn("RoboLog.printf", rest)  # callbacks and BLE-host context only push into the ring
+        self.assertIn("traceFlush_(now);}", transport)
+        self.assertNotRegex(transport, r"RoboLog\.printf\([^)]*(sessionKey_|phoneNonce_|robotNonce_|authRecord_)")
+
     def test_privacy_mode_changes_purge_old_app_payloads_and_show_diagnostics(self):
-        listener = (ROOT / "mobile/android/app/src/main/java/com/robodesk/phonebridge/RoboNotificationListener.kt").read_text(encoding="utf-8")
-        activity = (ROOT / "mobile/android/app/src/main/java/com/robodesk/phonebridge/MainActivity.kt").read_text(encoding="utf-8")
-        self.assertIn('PhoneBridgeStatus.appModeChanged?.invoke(app.packageName, selectedMode)', activity)
+        listener = _android_link_sources()  # RoboNotificationListener + RobotLinkService (A1 moved the GATT code into the service)
+        activity = "".join(f.read_text(encoding="utf-8") for f in sorted((ROOT / "mobile/android/app/src/main/java/com/robodesk/phonebridge/ui").glob("*.kt")))  # Compose UI replaced the old MainActivity views
+        self.assertIn('PhoneBridgeStatus.appModeChanged?.invoke(pkg, mode)', activity)
         self.assertIn('private fun applyAppModeChange(app:String,mode:AppContentMode)', listener)
-        self.assertIn('pending.filter{it.kind==1&&it.pkg==app}', listener)
+        self.assertIn('pending?.filter{it.kind==1&&it.pkg==app}', listener)
         self.assertIn('privacyRemovalPending[app]=revokeKeys', listener)
         self.assertIn('schedulePrivacyRemovals()', listener)
         self.assertIn('finishPrivacyRefresh(packet.pkg)', listener)
         self.assertIn('override fun onReadRemoteRssi', listener)
-        self.assertIn('Oldest queued:', activity)
-        self.assertIn('Reconnect now', activity)
+        self.assertIn('tertua ${local.queueOldestAgeMs / 1000}s', activity)
+        self.assertIn('"Hubungkan ulang sekarang"', activity)
 
     def test_authenticated_companion_commands_are_bounded_async_and_session_bound(self):
         command = (ROOT / "PhoneCompanionCommand.h").read_text(encoding="utf-8")
@@ -257,7 +296,8 @@ int main(){
 
     def test_phone_credential_is_prepared_before_trust_persistence(self):
         gateway = (ROOT / "RoboC3Gateway.h").read_text(encoding="utf-8")
-        approval = gateway.split('action=="ble_approve"', 1)[1].split("else ok=false", 1)[0]
+        self.assertIn('action=="ble_approve")ok=gatewayApproveCandidate();', gateway)
+        approval = gateway.split('inline bool gatewayApproveCandidate(){', 1)[1].split("// Write-only secrets", 1)[0]
         self.assertLess(approval.index("snapshotCandidateApproval(candidate)"), approval.index("prepareCandidateApproval(candidate)"))
         self.assertLess(approval.index("prepareCandidateApproval(candidate)"), approval.index("gatewayStore.save(next)"))
         self.assertLess(approval.index("gatewayStore.save(next)"), approval.index("approveCandidate(candidate)"))

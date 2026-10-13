@@ -11,6 +11,12 @@ int main(){RuntimeSettings source;RuntimeSettings::copy(source.geminiApiKey,size
   doc["phonePlatform"]=2;assert(!roboBehaviorImport(doc.as<JsonObjectConst>(),receiver));assert(receiver.phonePlatform==1);doc["phonePlatform"]=1;
   doc["characterIntensity"]=3;assert(!roboBehaviorImport(doc.as<JsonObjectConst>(),receiver));doc["characterIntensity"]=2;
   doc["navigationEnabled"]=2;assert(!roboBehaviorImport(doc.as<JsonObjectConst>(),receiver));doc["navigationEnabled"]=0;
+  // PD-2.3/2.6: preset 0..2, birthday both-or-neither; keys optional for older apps.
+  assert(doc["personalityPreset"]==1&&doc["ownerBirthMonth"]==0&&doc["ownerBirthDay"]==0);
+  doc["personalityPreset"]=3;assert(!roboBehaviorImport(doc.as<JsonObjectConst>(),receiver));doc["personalityPreset"]=2;
+  doc["ownerBirthMonth"]=5;assert(!roboBehaviorImport(doc.as<JsonObjectConst>(),receiver));doc["ownerBirthDay"]=32;assert(!roboBehaviorImport(doc.as<JsonObjectConst>(),receiver));
+  doc["ownerBirthDay"]=17;assert(roboBehaviorImport(doc.as<JsonObjectConst>(),receiver)&&receiver.personalityPreset==2&&receiver.ownerBirthMonth==5&&receiver.ownerBirthDay==17);
+  doc.remove("personalityPreset");doc.remove("ownerBirthMonth");doc.remove("ownerBirthDay");assert(roboBehaviorImport(doc.as<JsonObjectConst>(),receiver)&&receiver.personalityPreset==2&&receiver.ownerBirthDay==17);
   doc["notificationSpeechAllowlist"]=std::string(192,'a');assert(!roboBehaviorImport(doc.as<JsonObjectConst>(),receiver));
   doc.remove("phonePlatform");doc.remove("navigationEnabled");doc.remove("characterIntensity");doc.remove("notificationSpeechAllowlist");
   assert(roboBehaviorImport(doc.as<JsonObjectConst>(),receiver));assert(receiver.phonePlatform==1&&receiver.characterIntensity==2); // Old schema-1 peers retain current optional settings.

@@ -1,6 +1,6 @@
 # RoboDesk ESP32-C3 SuperMini wiring
 
-For the S3 + C3 pair, use [dual-board wiring](dual-board-wiring.md). In that profile the C3 has no robot peripherals, UART uses GPIO4/5, and IR is on S3 GPIO1/2. The diagram below applies only to the standalone C3 proposal.
+For the S3 + C3 pair, use [dual-board wiring](dual-board-wiring.md). In that profile the C3 has no robot peripherals, UART uses GPIO3/5, and IR is on S3 GPIO1/2. The diagram below applies only to the standalone C3 proposal.
 
 This is the selected pin map for the ESP32-C3 SuperMini 4 MB target. GPIO8 and GPIO9 are proposed IR pins only: both are strapping pins, GPIO9 is commonly the BOOT button, and GPIO8 may affect ROM boot output. Validate boot/recovery with the exact board before connecting IR hardware, and keep these peripherals disabled until a hardware-enabled firmware profile is prepared. GPIO18/19 stay reserved for native USB Serial/JTAG. GPIO2 is an I2S clock output and needs a 10 kOhm pull-up to 3.3 V so it is not left floating during reset.
 
