@@ -1,5 +1,23 @@
 package com.robodesk.phonebridge.ui
 
+import com.robodesk.phonebridge.PrivacyState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Send
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ColumnScope
+import com.robodesk.phonebridge.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,16 +54,18 @@ import com.robodesk.phonebridge.PhoneBridgeStatus
 import com.robodesk.phonebridge.Res
 import kotlinx.coroutines.delay
 
+/** PD-4.2: every sub-screen, reachable from any tab (back returns to the tab or the parent hub). */
 @Composable
-fun MoreScreen() {
-    val app = RoboApp
-    when (app.sub) {
-        null -> MoreMenu()
-        "chat" -> ChatScreen()
+fun SubScreen(sub: String) {
+    when (sub) {
         "act" -> ActivityScreen()
         "int" -> IntegrationsScreen()
         "ir" -> IrScreen()
         "snd" -> SoundScreen()
+        "rem" -> ReminderScreen()
+        "net" -> NetScreen()
+        "help" -> MenuScreen(helpMenu())
+        "priv" -> PrivacyScreen()
         "diag" -> DiagnosticsScreen()
         "upd" -> UpdateScreen()
         "dng" -> DangerScreen()
@@ -53,32 +73,70 @@ fun MoreScreen() {
     }
 }
 
-private class MenuItem(val key: String, val icon: String, val title: String, val subtitle: String)
+class MenuItem(val key: String, val icon: ImageVector, val title: String, val subtitle: String)
+
+/** Tab "Main & Alat". */
+@Composable
+fun PlayScreen() = MenuScreen(listOf(
+    MenuItem("act", Icons.Outlined.Star, stringResource(R.string.sub_activities), stringResource(R.string.play_activities_sub)),
+    MenuItem("rem", Icons.Outlined.DateRange, stringResource(R.string.sub_reminders), stringResource(R.string.play_reminders_sub)),
+    MenuItem("ir", Icons.Outlined.Send, stringResource(R.string.sub_ir), stringResource(R.string.play_ir_sub)),
+    MenuItem("int", Icons.Outlined.Share, stringResource(R.string.sub_integrations), stringResource(R.string.play_integrations_sub)),
+    MenuItem("snd", Icons.Outlined.Notifications, stringResource(R.string.sub_sound), stringResource(R.string.play_sound_sub))))
 
 @Composable
-private fun MoreMenu() {
+private fun helpMenu() = listOf(
+    MenuItem("diag", Icons.Outlined.Build, stringResource(R.string.sub_diagnostics), stringResource(R.string.help_diag_sub)),
+    MenuItem("abt", Icons.Outlined.Info, stringResource(R.string.sub_about), ""))
+
+/** Settings hub rows above the editable groups. */
+@Composable
+fun settingsMenu(installed: String, latest: String?) = listOf(
+    MenuItem("net", Icons.Outlined.Lock, stringResource(R.string.sub_network), stringResource(R.string.settings_network_sub)),
+    MenuItem("upd", Icons.Outlined.Refresh, stringResource(R.string.sub_update), stringResource(R.string.settings_update_sub, installed) + (latest?.let { " · " + stringResource(R.string.settings_update_available, it) } ?: "")),
+    MenuItem("priv", Icons.Outlined.Lock, stringResource(R.string.sub_privacy), stringResource(R.string.settings_privacy_sub)),
+    MenuItem("help", Icons.Outlined.Info, stringResource(R.string.sub_help), stringResource(R.string.settings_help_sub)),
+    MenuItem("dng", Icons.Outlined.Warning, stringResource(R.string.sub_danger), stringResource(R.string.settings_danger_sub)))
+
+@Composable
+private fun MenuScreen(items: List<MenuItem>) = ScreenColumn { MenuCard(items) }
+
+/** PD-4.14 Setelan > Privasi: the same mic/cloud wording as the Robot tab, consent and full data wipe. */
+@Composable
+private fun PrivacyScreen() {
     val app = RoboApp
-    val installed = app.status?.c3Version ?: "?"
-    val items = listOf(
-        MenuItem("chat", "💬", "Chat dengan robot", "Kirim pesan, robot menjawab dengan AI"),
-        MenuItem("act", "🎭", "Aktivitas & permainan", "Aktivitas robot, game sentuh, pembelajaran"),
-        MenuItem("int", "🔗", "Integrasi", "Home Assistant, cuaca, kalender"),
-        MenuItem("ir", "📺", "Remote inframerah", "Kirim NEC, pelajari & putar profil"),
-        MenuItem("snd", "🔊", "Tes suara", "Putar 12 suara karakter"),
-        MenuItem("diag", "📊", "Diagnostik", "Link, heap, BLE"),
-        MenuItem("upd", "⬆", "Pembaruan firmware", "Terpasang $installed" + (app.latestVersion?.let { " · tersedia $it" } ?: "")),
-        MenuItem("dng", "⚠", "Zona bahaya", "Reboot, reset pabrik"),
-        MenuItem("abt", "ℹ", "Tentang", "")
-    )
+    val d = app.draft
+    val w = app.canWrite
+    LaunchedEffect(app.ready) { if (app.ready && d == null) app.loadSettings(); app.refreshStatus() }
+    val consent = d?.let { it.int("cloudConsent") == 1 }
     ScreenColumn {
+        RoboCard(stringResource(R.string.privacy_now)) {
+            InfoRow(stringResource(R.string.privacy_mic), PrivacyState.mic(d?.bool("privacyMicMuted") == true))
+            InfoRow(stringResource(R.string.privacy_cloud), PrivacyState.cloud(app.status?.geminiKey, consent), last = true)
+        }
+        RoboCard {
+            SwitchRow(stringResource(R.string.privacy_mute), d?.bool("privacyMicMuted") == true, { v -> app.toggle("privacyMicMuted", v) }, enabled = w && d != null)
+            SwitchRow(stringResource(R.string.privacy_metrics), d?.bool("interactionMetrics") == true, { v -> app.toggle("interactionMetrics", v) }, enabled = w && d != null)
+            SwitchRow(stringResource(R.string.privacy_consent), consent == true, { v -> if (v) app.sheet = SheetKind.CLOUD_CONSENT else app.setNow("cloudConsent", 0) }, enabled = w && d != null, last = true)
+        }
+        Note(PrivacyState.CONSENT_TEXT)
+        Gap(12)
+        RoboButton(stringResource(R.string.privacy_wipe), { app.sheet = SheetKind.WIPE_DATA }, Modifier.fillMaxWidth(), ButtonKind.DANGER, w)
+    }
+}
+
+@Composable
+fun ColumnScope.MenuCard(items: List<MenuItem>) {
+    val app = RoboApp
+    run {
         val shape = RoundedCornerShape(16.dp)
         Column(Modifier.fillMaxWidth().clip(shape).background(RoboColors.Card).border(1.dp, RoboColors.Line, shape)) {
             items.forEachIndexed { i, item ->
-                Row(Modifier.fillMaxWidth().clickable { app.openSub(item.key) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(item.icon, fontSize = 20.sp, modifier = Modifier.width(28.dp))
+                Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable { app.openSub(item.key) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(item.icon, contentDescription = null, tint = RoboColors.Mute, modifier = Modifier.width(28.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(item.title, color = RoboColors.Text, fontSize = 14.sp)
-                        if (item.subtitle.isNotEmpty()) Text(item.subtitle, color = RoboColors.Mute, fontSize = 11.5.sp)
+                        Text(item.title, color = RoboColors.Text, fontSize = 15.sp)
+                        if (item.subtitle.isNotEmpty()) Text(item.subtitle, color = RoboColors.Mute, fontSize = 12.5.sp)
                     }
                     Text("›", color = RoboColors.Mute, fontSize = 18.sp)
                 }

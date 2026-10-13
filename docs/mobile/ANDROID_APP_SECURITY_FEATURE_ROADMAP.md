@@ -18,7 +18,7 @@ The repository's current implementation notes and Android source describe these 
 - Keystore-protected pairing credentials and backup exclusions for trust data.
 - Per-app notification modes, conservative defaults, lock-screen downgrade, text redaction, local queue controls, and notification/navigation pause behavior.
 - Google Maps notification-derived directions and a bounded set of authenticated companion controls.
-- A functional five-destination native UI: Home, Apps, Navigation, Robot, and More.
+- A five-tab native UI (PD-4.2, 2026-10-14): Robot, Ngobrol (chat), Main & Alat, Kenangan, Setelan, matching `docs/mobile/mockup/android_app_mockup.html`.
 
 The clearest product gap is that the native UI remains much smaller than the proposed 22-screen mockup. Physical behavior and the release signing path are also not confirmed. Treat the security protocol and privacy state machine as **implemented but awaiting device/release validation**, not as greenfield features.
 

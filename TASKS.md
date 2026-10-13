@@ -2,25 +2,22 @@
 <!-- Dibaca statusline. Dikelola Claude; jaga format: bagian NOW / NEXT / DONE, item `- [ ]` / `- [x]`. -->
 
 ## NOW
-- [x] PD-4.13 Kebijakan keamanan publik + SBOM: SECURITY.md (kontak pelaporan + masa dukungan diisi pemilik) + tools/sbom.py CycloneDX otomatis di akhir build_dual_board.ps1 + test_sbom; SBOM di .verification/sbom
+- [x] PD-4.14 Privasi: cloudConsent di robot (tanpa persetujuan tidak ada sesi Gemini; terbukti di perangkat 01:48 wss=0 sebelum setuju), persetujuan lewat sheet/onboarding, indikator mic/cloud seragam (Robot + Setelan > Privasi), Hapus semua data (memori + ringkasan + diary + cache HP); test C++/Kotlin + APK + build; uji alur di HP belum
 ## NEXT
-- [ ] Pilih gaya mata default: Klasik vs Kontur (EmoOled). TERHALANG 2026-10-13: perbandingan piksel 128x64 di docs/companion/eye_style_compare.html, menunggu pilihan pemilik
+- [ ] Setujui AI cloud di app setelah pasang APK baru (firmware 01:48 memblokir Gemini sampai cloudConsent=1). TERHALANG 2026-10-14: tindakan pemilik
+- [ ] Pindahkan teks inline layar lama app ke strings.xml (ID/EN), lanjutan PD-4.2
+- [ ] Pilih gaya mata default: Klasik vs Kontur (EmoOled). TERHALANG 2026-10-14: bisa dicoba langsung di robot lewat app Setelan > Wajah & ekspresi > Gaya mata (atau docs/companion/eye_style_compare.html); menunggu pilihan pemilik
 - [ ] PD-0.2 S3 crash heap corruption 2026-10-13 (hp_s3.log 388 s: "Bad tail" blok PSRAM, assert multi_heap_free, bt: rdConnect->RoboLinkTlsClient::startTls->mbedtls ecdsa; bersamaan app SettingsSet kind=9): penyebab penulisan di luar batas belum ditemukan; audit heap (roboHeapAudit tiap 2 s + setelah op setelan, log LEV,HEAP,CORRUPT) di-flash ke S3; perlu ulang simpan setelan dari app saat Gemini connect. Juga: OLED langsung ke mata setelah pairing approved (passkey dihapus, banner OK dibuang) belum diverifikasi visual. TERHALANG 2026-10-13: firmware audit heap di-flash 23:08, log soak berjalan di .verification/soak-20261013; menunggu pemilik menyimpan setelan dari app 5-10x saat Gemini connect, lalu 24 jam menyala
 - [ ] PD-1.9 Baterai rendah/kritis + histeresis. TERHALANG 2026-10-13: RoboBatteryPolicy.h + host test lulus; pending pemilik (belum ada baterai) untuk kalibrasi ADC vs multimeter
 - [ ] PD-1.10 Uji penerimaan Fase 1 di perangkat. TERHALANG 2026-10-13: pending atas permintaan pemilik (uji 2 jam tanpa Wi-Fi + 1 malam)
-- [ ] PD-4.1 Mockup IA 5 tab (persetujuan pemilik). TERHALANG 2026-10-13: revisi 2 (lebih modern, ikon garis, cakupan fitur lengkap) di docs/mobile/mockup/android_app_mockup_5tab.html; menunggu persetujuan pemilik
-- [ ] PD-4.2 Implementasi 5 tab + strings ID/EN. TERHALANG 2026-10-13: butuh PD-4.1 disetujui
-- [ ] PD-4.3 Onboarding kelahiran + beri nama. TERHALANG 2026-10-13: butuh PD-4.2 + uji onboarding <=3 mnt di HP nyata
-- [ ] PD-4.14 Privasi: indikator, persetujuan Gemini, hapus semua data. TERHALANG 2026-10-13: butuh PD-4.2
 - [ ] PD-4.17 Kanal OTA stable/beta + catatan rilis. TERHALANG 2026-10-13: PD-4.12 selesai, tetapi kanal beta butuh perubahan alur OTA C3 (flash 95 %, sisa 81 KB), tag rilis beta (publikasi per rilis, izin pemilik) dan uji OTA perangkat; kerjakan bersama persiapan rilis
 - [ ] PD-4.5 Kredensial unik per unit + build retail. TERHALANG 2026-10-13: butuh PD-0.2 + izin provisioning
 - [ ] PD-4.6 Secure Boot v2 + flash encryption (izin eksplisit). TERHALANG 2026-10-13: pemilik minta jangan dijalankan sampai uji keseluruhan OK
 - [ ] PD-4.7 Firmware uji pabrik + factory_test.py. TERHALANG 2026-10-13: ditunda pemilik (3 unit)
-- [ ] PD-4.8 Release APK. TERHALANG 2026-10-13: butuh PD-4.2 + kunci signing rilis milik pemilik
+- [ ] PD-4.8 Release APK. TERHALANG 2026-10-14: pengungkapan akses notifikasi (sheet + onboarding) dan catatan Data Safety (docs/product/play-data-safety.md) selesai, APK debug lulus; butuh keystore rilis milik pemilik (env ROBODESK_ANDROID_*), lint, ganti label app ke AILI, dan uji perangkat
 - [ ] PD-4.4 Wake word kustom. TERHALANG 2026-10-13: nama AILI dipilih; butuh pesanan model wake word kustom ke Espressif (biaya/akun pemilik) + flash USB partisi model
 - [ ] PD-4.9 Pin TX C3 kembali ke GPIO4. TERHALANG 2026-10-13: menunggu kabel TX C3 diperbaiki (pemilik akan memberi kabar)
 - [ ] PD-4.18 Uji bangku kelistrikan & termal. TERHALANG 2026-10-13: ditunda pemilik (alat uji bangku)
-- [ ] PD-4.10 Paket dokumen & rencana sertifikasi. TERHALANG 2026-10-13: draf siap di docs/product/quick-start.md (ID/EN) + docs/product/safety-privacy-certification.md (keselamatan, kebijakan privasi, rencana uji Komdigi); menunggu tinjauan pemilik
 - [ ] PD-4.20 Sertifikasi & produksi eksternal (pemilik/lab). TERHALANG 2026-10-13: pemilik/lab, butuh PD-4.10
 - [ ] PD-4.11 Gerbang rilis. TERHALANG 2026-10-13: butuh semua task + bukti perangkat
 - [ ] Butuh HP+robot: I9 uji perangkat, I10 bagian perangkat, A11 (screenshot vs mockup, tak ada emulator), A12/A13 penutupan, lepas dashboard
@@ -30,8 +27,8 @@
 - [ ] Toggle app langsung berlaku (tanpa Simpan) + fitur chat app->robot (jawaban suara/teks OLED/keduanya, setelan terpisah untuk jawaban suara) via BLE->C3->UART->S3->Gemini Live; riwayat chat hanya sesi. Kode+host test (C++ & Kotlin) lulus, APK dibangun, S3+C3 di-flash 2026-10-12 (backup .verification/fw-backup-20261012/*_before_chat.bin; S3 READY wss=1); tinggal uji perangkat (chat, mode teks/suara, toggle, ukuran dokumen setelan <= 4096)
 
 ## DONE
-- [x] PD-4.0 Memo 5 keputusan pemilik (pasar, akses AI, nama, layar, servo): jawaban pemilik dicatat di PRODUCT_DIRECTION bagian 0: pasar 14+, kunci Gemini milik pengguna, nama AILI, OLED 0,96", servo v2
-- [x] PD-4.12 Kunci OTA produksi + rotasi: kunci produksi P-256 di C:/Users/imipi/RoboDesk-OTA-PRODUCTION-OFFLINE (PKCS8 terenkripsi + frasa sandi terpisah, di luar repo/OneDrive); tools/ota_signing.py init-production-key, sign --key-file, verify --public-header + test; prosedur & rotasi docs/companion/OTA_PRODUCTION_KEY.md; uji 1 image .verification/pd-4.12 lulus; firmware masih kunci dev; TUGAS PEMILIK: salin ke 2 media offline lalu hapus dari PC
-- [x] PD-4.15 Pagar konten persona + mode anak: pagar konten umum 14+ di prompt persona + host test; 20 prompt uji di docs/companion/CONTENT_GUARD_TEST_PROMPTS.md; belum diuji dengan Gemini di perangkat
-- [x] PD-4.16 Akses AI produksi sesuai 4.0: UX kunci milik pengguna: GeminiKeyHelp (bersihkan tempel, cek AIza/39 karakter), langkah singkat + tombol buka AI Studio di Koneksi dan onboarding; test Kotlin + APK lulus; belum uji perangkat
-- [x] PD-4.19 Audit lisensi + cek nama PDKI: docs/companion/LICENSE_AUDIT.md: lisensi firmware/app (risiko: LivingEyes tanpa lisensi, LGPL core perlu paket relink); PDKI AILI: kelas 35/2/7 dipakai pihak lain, kelas 9/28 kosong; sarankan konsultan KI
+- [x] PD-4.13 Kebijakan keamanan publik + SBOM: SECURITY.md (kontak pelaporan + masa dukungan diisi pemilik) + tools/sbom.py CycloneDX otomatis di akhir build_dual_board.ps1 + test_sbom; SBOM di .verification/sbom
+- [x] PD-4.1 Mockup IA 5 tab (persetujuan pemilik): revisi 2 disetujui pemilik 2026-10-14 (docs/mobile/mockup/android_app_mockup_5tab.html); belum menggantikan android_app_mockup.html sampai PD-4.2 terpasang
+- [x] PD-4.10 Paket dokumen & rencana sertifikasi: draf disetujui pemilik 2026-10-14: docs/product/quick-start.md (ID/EN) + safety-privacy-certification.md; nama badan usaha/kontak pengendali data masih diisi pemilik
+- [x] PD-4.2 Implementasi 5 tab + strings ID/EN: 5 tab Robot/Ngobrol/Main & Alat/Kenangan/Setelan, sub-layar dari tab mana pun, hub Setelan, kartu milestone (kunci baca-saja dari robot), pilihan gaya mata (setelan robot faceEyeStyle), ikon Material, strings.xml ID/EN untuk navigasi + layar baru, mockup 5 tab jadi acuan + roadmap disinkronkan; test Kotlin/C++ + APK + build both lulus, di-flash 01:48; SISA: teks inline layar lama (task lanjutan) dan screenshot vs mockup di HP
+- [x] PD-4.3 Onboarding kelahiran + beri nama: langkah Kelahiran di onboarding: robot bangun (ekspresi kaget), beri nama robot, nama panggilan pemilik (memori owner.name), preset kepribadian; RobotNaming + test Kotlin + APK; belum diukur <=3 mnt di HP

@@ -81,7 +81,7 @@ fun ColumnScope.NotifyControls(d: RobotSettings) {
         app.say(if (checked) "Berbagi dijeda. Antrean dihapus." else "Berbagi dilanjutkan; pengaturan tiap aplikasi berlaku.")
     }, "Antrean dihapus, robot tidak menerima apa pun", enabled = true)
     RoboRow("Akses notifikasi HP", if (listenerOn) "Aktif" else "Mati: tanpa ini tidak ada notifikasi yang bisa dikirim") {
-        if (!listenerOn) RoboButton("Aktifkan", { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }, kind = ButtonKind.SECONDARY)
+        if (!listenerOn) RoboButton("Aktifkan", { RoboApp.sheet = SheetKind.NOTIF_ACCESS }, kind = ButtonKind.SECONDARY) // PD-4.8 disclosure first
         else Tag("aktif", TagKind.OK)
     }
     RoboRow("Kapasitas daftar robot", "notificationAllowlist / SpeechAllowlist, maks 192 B per daftar") {

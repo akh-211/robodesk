@@ -3,506 +3,565 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>RoboDesk Bridge – Mockup Aplikasi</title>
+<title>AILI – Usulan IA 5 Tab</title>
+<!-- Acuan tampilan app (PD-4.1 rev 2, disetujui pemilik 2026-10-14). Mockup 6 tab lama ada di riwayat git. -->
 <style>
 :root{
-  --bg:#0e1116;--panel:#171b22;--card:#1e232c;--line:#2a313c;--text:#e8ecf2;--mute:#8d97a7;
-  --accent:#4fd1c5;--accent2:#7c9cff;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;
+  --bg:#101214;--surface:#17191c;--raised:#1d2024;--line:#2a2e33;--line2:#353a40;
+  --text:#eceae6;--sub:#a3a19b;--mute:#76746f;
+  --accent:#f2b45a;--accent-ink:#2a1c06;--accent-soft:#2d2417;
+  --ok:#7cc79a;--warn:#e7b15c;--bad:#ef8a7a;--bad-soft:#2f1c19;
+  --r:14px;--r-sm:10px;
 }
-*{box-sizing:border-box;margin:0}
-body{background:#07090c;color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif;min-height:100vh;display:flex;gap:40px;justify-content:center;align-items:flex-start;padding:28px 16px;flex-wrap:wrap}
-.phone{width:390px;height:800px;background:var(--bg);border-radius:38px;border:10px solid #000;box-shadow:0 0 0 2px #262c36,0 30px 80px #000a;display:flex;flex-direction:column;overflow:hidden;position:relative}
-.sb{height:26px;display:flex;justify-content:space-between;align-items:center;padding:0 20px;font-size:12px;color:var(--mute);flex:none}
-.appbar{padding:6px 18px 10px;flex:none;display:flex;align-items:center;justify-content:space-between}
-.appbar h1{font-size:20px}
-.chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:4px 10px;border-radius:99px;background:#12301f;color:var(--ok);border:1px solid #1d5a35}
-.chip.off{background:#3a1717;color:var(--bad);border-color:#6a2626}
-.dot{width:7px;height:7px;border-radius:50%;background:currentColor}
-.view{flex:1;overflow-y:auto;padding:4px 16px 20px;display:none}
-.view.on{display:block}
-.view::-webkit-scrollbar{width:0}
-nav{flex:none;display:flex;border-top:1px solid var(--line);background:var(--panel);padding:6px 4px 10px}
-nav button{flex:1;background:none;border:0;color:var(--mute);font:inherit;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border-radius:14px;cursor:pointer}
-nav button .ic{font-size:19px;line-height:1}
-nav button.on{color:var(--accent)}
-nav button.on .ic{background:#173532;border-radius:14px;padding:2px 16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
-.card h3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-bottom:10px;font-weight:600}
-.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
-.row:last-child{border-bottom:0;padding-bottom:0}.row:first-of-type{padding-top:0}
-.row .l small{display:block;color:var(--mute);font-size:11.5px}
-.v{color:var(--mute);font-variant-numeric:tabular-nums;text-align:right}
-.hero{display:flex;gap:14px;align-items:center}
-.face{width:72px;height:72px;border-radius:20px;background:#0a0d12;border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;gap:12px;flex:none}
-.face i{width:12px;height:20px;border-radius:6px;background:var(--accent);animation:b 4s infinite}
-@keyframes b{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
-.btn{border:0;border-radius:12px;padding:11px 14px;font:inherit;font-weight:600;cursor:pointer;background:var(--accent);color:#04201d}
-.btn.sec{background:#262d39;color:var(--text)}
-.btn.bad{background:#4a1c1c;color:#ffb4b4}
-.btn:disabled{opacity:.4;cursor:default}
-.btns{display:flex;gap:8px;flex-wrap:wrap}
-.btns .btn{flex:1;min-width:110px}
-.sw{position:relative;width:44px;height:26px;flex:none}
-.sw input{display:none}
-.sw span{position:absolute;inset:0;background:#363e4b;border-radius:99px;transition:.15s;cursor:pointer}
-.sw span::after{content:"";position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.15s}
-.sw input:checked+span{background:var(--accent)}
-.sw input:checked+span::after{transform:translateX(18px)}
-input[type=range]{width:130px;accent-color:var(--accent)}
-input[type=text],input[type=password],input[type=number],input[type=time],select,textarea{width:100%;background:#12161c;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit}
-.field{margin-bottom:10px}.field label{display:block;font-size:11.5px;color:var(--mute);margin-bottom:4px}
-.acc>summary{list-style:none;cursor:pointer;padding:2px 0;display:flex;justify-content:space-between;font-weight:600}
-.acc>summary::after{content:"▾";color:var(--mute)}.acc[open]>summary::after{content:"▴"}
-.acc>div{margin-top:10px}
-.savebar{position:sticky;bottom:0;background:#231d0a;border:1px solid #6a5413;border-radius:14px;padding:10px 12px;display:none;align-items:center;justify-content:space-between;gap:8px;color:var(--warn);margin-top:6px}
-.savebar.on{display:flex}.savebar .btn{padding:8px 14px}
-.note{font-size:11.5px;color:var(--mute);margin-top:8px}
-.tag{font-size:10.5px;padding:2px 8px;border-radius:99px;background:#262d39;color:var(--mute)}
-.tag.ok{background:#12301f;color:var(--ok)}.tag.wr{background:#2e260c;color:var(--warn)}
-.item{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
-.item:last-child{border:0}.item .t{flex:1}.item .t small{color:var(--mute);display:block;font-size:11.5px}
-.x{background:none;border:0;color:var(--bad);cursor:pointer;font-size:16px;padding:2px 6px}
-.err{color:var(--bad);font-size:12px;margin-top:6px;display:none}
-.bar{height:8px;background:#12161c;border-radius:9px;overflow:hidden}.bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
-.toast{position:absolute;left:16px;right:16px;bottom:84px;background:#2b3340;border:1px solid #3a4454;border-radius:12px;padding:10px 14px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;font-size:13px}
-.toast.on{opacity:1;transform:none}
-.sheet{position:absolute;inset:0;background:#000a;display:none;align-items:flex-end;z-index:5}
-.sheet.on{display:flex}.sheet>div{background:var(--panel);width:100%;border-radius:22px 22px 0 0;padding:18px 16px 24px}
-.sheet h2{font-size:17px;margin-bottom:6px}
-.side{width:380px;max-width:100%}
-.side h2{font-size:18px;margin-bottom:6px}
-.side p,.side li{color:var(--mute);font-size:13px;margin-bottom:6px}
-.side ul{padding-left:18px}
-.map{width:100%;border-collapse:collapse;margin:12px 0;font-size:12.5px}
-.map td,.map th{padding:7px 6px;border-bottom:1px solid #222a35;text-align:left;vertical-align:top}
-.map th{color:var(--text)}.map td:first-child{color:var(--accent);white-space:nowrap}
-code{background:#1a2029;padding:1px 5px;border-radius:5px;font-size:12px;color:#c3d0e6}
-.seg{display:flex;background:#12161c;border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
-.seg button{flex:1;background:none;border:0;color:var(--mute);font:inherit;font-size:12px;padding:8px 4px;border-radius:9px;cursor:pointer}
-.seg button.on{background:var(--accent);color:#04201d;font-weight:600}
-.cb{display:flex;gap:12px}.cb label{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--mute)}.cb input{accent-color:var(--accent);width:18px;height:18px}
-.onb{position:absolute;inset:0;background:var(--bg);z-index:8;display:none;flex-direction:column;padding:34px 20px 20px}
-.onb.on{display:flex}.onb h2{font-size:22px;margin:14px 0 6px}.onb p{color:var(--mute)}
-.onb .body{flex:1;overflow-y:auto;margin-top:14px}
-.robot{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:8px;cursor:pointer}
-.robot.sel{border-color:var(--accent)}.robot b{display:block}
-.ring{width:84px;height:84px;border-radius:50%;border:3px solid var(--accent);margin:20px auto;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;animation:pu 1.6s infinite}
-@keyframes pu{50%{box-shadow:0 0 0 12px #4fd1c522}}
-.menu{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:12px}
-.menu button{width:100%;display:flex;align-items:center;gap:12px;background:none;border:0;border-bottom:1px solid var(--line);color:var(--text);font:inherit;padding:14px;text-align:left;cursor:pointer}
-.menu button:last-child{border:0}.menu .mi{font-size:20px;width:28px;text-align:center}.menu small{display:block;color:var(--mute);font-size:11.5px}.menu .ch{margin-left:auto;color:var(--mute);font-size:18px}
-.cues{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.cues .btn{padding:10px 4px;font-size:12.5px;min-width:0}
-.banner{background:#231d0a;border:1px solid #6a5413;border-radius:14px;padding:12px;margin-bottom:12px;color:var(--warn);display:flex;gap:10px;align-items:center;justify-content:space-between}
-.banner .btn{padding:8px 12px;flex:none}
-.spin{width:44px;height:44px;border-radius:50%;border:4px solid #2a313c;border-top-color:var(--accent);animation:sp 1s linear infinite;margin:16px auto}
-@keyframes sp{to{transform:rotate(360deg)}}
-.steps{display:flex;gap:6px;margin:6px 0 12px}.steps i{flex:1;height:5px;border-radius:5px;background:#2a313c}.steps i.on{background:var(--accent)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0b0c;color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh;display:flex;gap:40px;justify-content:center;align-items:flex-start;padding:28px 16px;flex-wrap:wrap}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* phone */
+.phone{width:390px;max-width:100%;height:820px;background:var(--bg);border-radius:40px;border:10px solid #000;box-shadow:0 0 0 1px #24272b,0 24px 70px #0009;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.sb{height:28px;display:flex;justify-content:space-between;align-items:center;padding:0 22px;font-size:12px;color:var(--sub);flex:none}
+.bar{height:56px;display:flex;align-items:center;gap:6px;padding:0 10px 0 16px;flex:none}
+.bar h1{font-size:20px;font-weight:650;letter-spacing:-.01em;flex:1}
+.bar .back{width:44px;height:44px;border-radius:12px;display:none;align-items:center;justify-content:center;margin-left:-8px}
+.bar.sub .back{display:flex}
+.bar.sub h1{font-size:18px}
+.link{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--sub);padding:6px 10px;border-radius:99px;border:1px solid var(--line)}
+.link i{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.scroll{flex:1;overflow-y:auto;padding:4px 16px 24px}
+.scroll::-webkit-scrollbar{width:0}
+.screen{display:none}.screen.on{display:block}
+
+/* nav */
+nav{flex:none;display:flex;background:var(--surface);border-top:1px solid var(--line);padding:6px 4px 12px}
+nav button{flex:1;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11.5px;color:var(--mute)}
+nav button .pill{width:56px;height:30px;border-radius:15px;display:flex;align-items:center;justify-content:center}
+nav button.on{color:var(--text)}
+nav button.on .pill{background:var(--accent-soft);color:var(--accent)}
+
+/* building blocks */
+.sec{font-size:12.5px;color:var(--mute);font-weight:600;margin:20px 4px 8px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.pad{padding:14px}
+.row{display:flex;align-items:center;gap:12px;min-height:56px;padding:10px 14px;border-top:1px solid var(--line);width:100%;text-align:left}
+.row:first-child{border-top:0}
+.row .ic{width:36px;height:36px;border-radius:10px;background:var(--raised);display:flex;align-items:center;justify-content:center;color:var(--sub);flex:none}
+.row .t{flex:1;min-width:0}
+.row .t b{display:block;font-weight:550}
+.row .t small{display:block;color:var(--sub);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .v{color:var(--sub);font-size:13.5px}
+.chev{color:var(--mute)}
+.btn{min-height:48px;border-radius:12px;padding:0 16px;font-weight:600;background:var(--accent);color:var(--accent-ink);display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.ghost{background:var(--raised);color:var(--text)}
+.btn.danger{background:var(--bad-soft);color:var(--bad)}
+.btn.full{width:100%}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.act{min-height:76px;border-radius:var(--r);background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;padding:12px 14px;text-align:left}
+.act span{font-weight:550;font-size:14.5px}
+.act svg{color:var(--accent)}
+.sw{width:46px;height:28px;border-radius:14px;background:var(--line2);position:relative;flex:none}
+.sw::after{content:"";position:absolute;width:22px;height:22px;border-radius:50%;background:#d9d6cf;top:3px;left:3px;transition:.15s}
+.sw.on{background:var(--accent)}.sw.on::after{left:21px;background:var(--accent-ink)}
+.seg{display:flex;background:var(--raised);border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;min-height:40px;border-radius:9px;color:var(--sub);font-weight:550;font-size:14px}
+.seg button.on{background:var(--bg);color:var(--text);box-shadow:0 0 0 1px var(--line2)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.chips::-webkit-scrollbar{height:0}
+.chip{min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line2);color:var(--sub);white-space:nowrap;font-size:14px}
+.chip.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.note{color:var(--mute);font-size:12.5px;padding:10px 4px 0}
+.field{display:block;margin-bottom:12px}
+.field span{display:block;font-size:12.5px;color:var(--sub);margin-bottom:6px}
+.input{width:100%;min-height:48px;background:var(--raised);border:1px solid var(--line);border-radius:12px;color:var(--text);padding:0 14px;font:inherit}
+.range{display:flex;align-items:center;gap:12px}
+.range i{flex:1;height:4px;border-radius:2px;background:var(--line2);position:relative}
+.range i b{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--accent)}
+.range i b::after{content:"";position:absolute;right:-9px;top:-7px;width:18px;height:18px;border-radius:50%;background:var(--text)}
+.tag{font-size:11.5px;color:var(--sub);border:1px solid var(--line2);border-radius:99px;padding:2px 8px}
+
+/* robot face */
+.hero{padding:18px 14px 16px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.oled{width:236px;height:118px;border-radius:18px;background:#000;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:40px}
+.oled i{width:46px;height:56px;border-radius:16px;background:#e9f4ff;transition:height .35s,border-radius .35s;animation:blink 5s infinite}
+.oled.sleep i{height:6px;border-radius:3px;animation:none}
+@keyframes blink{0%,95%,100%{transform:scaleY(1)}97%{transform:scaleY(.08)}}
+.mood{text-align:center}
+.mood b{font-size:20px;font-weight:650;display:block}
+.mood small{color:var(--sub);font-size:13.5px}
+.stat{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.stat span{font-size:12px;color:var(--sub);background:var(--raised);border-radius:99px;padding:5px 10px;display:inline-flex;align-items:center;gap:6px}
+.stat svg{width:14px;height:14px}
+
+/* chat */
+.msgs{display:flex;flex-direction:column;gap:8px;padding:6px 0 12px}
+.msg{max-width:78%;padding:10px 13px;border-radius:16px;font-size:14.5px}
+.msg.me{align-self:flex-end;background:var(--accent-soft);color:#f5dcb3;border-bottom-right-radius:6px}
+.msg.bot{align-self:flex-start;background:var(--raised);border-bottom-left-radius:6px}
+.composer{display:flex;gap:8px;padding:10px 16px 12px;border-top:1px solid var(--line);background:var(--bg)}
+
+/* timeline & diary */
+.tl{display:flex;flex-direction:column}
+.tl .it{display:flex;gap:12px;padding:10px 14px;border-top:1px solid var(--line)}
+.tl .it:first-child{border-top:0}
+.dot{width:10px;height:10px;border-radius:50%;margin-top:6px;background:var(--line2);flex:none}
+.dot.done{background:var(--accent)}
+.bars{display:flex;align-items:flex-end;gap:6px;height:84px;padding:0 14px 6px}
+.bars div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
+.bars span{display:block;border-radius:3px}
+.days{display:flex;gap:6px;padding:0 14px 12px;font-size:11px;color:var(--mute)}
+.days span{flex:1;text-align:center}
+.legend{display:flex;gap:12px;flex-wrap:wrap;padding:0 14px 14px;font-size:12px;color:var(--sub)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}
+
+/* side panel */
+.side{width:560px;max-width:100%;color:var(--sub);font-size:13.5px}
+.side h2{color:var(--text);font-size:18px;margin-bottom:6px}
+.side p{margin-bottom:10px}
+.side table{width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:12.5px}
+.side th,.side td{text-align:left;padding:6px 8px;border-bottom:1px solid #22252a;vertical-align:top}
+.side th{color:var(--text);font-weight:600;background:#121417;position:sticky;top:0}
+.side td:first-child{color:var(--text)}
+.side .grp td{color:var(--accent);font-weight:600;padding-top:12px}
+.principles li{margin:4px 0 4px 18px}
 </style>
 </head>
 <body>
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-face" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="4"/><path d="M9 11v2M15 11v2"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4V6z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="10" rx="5"/><path d="M8 11v4M6 13h4M15.5 12.5h.01M17.5 14.5h.01"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/></symbol>
+  <symbol id="i-micoff" viewBox="0 0 24 24"><path d="M15 9V6a3 3 0 0 0-5.7-1.3M9 9v2a3 3 0 0 0 4.6 2.5M6 11a6 6 0 0 0 9.3 5M18 11a6 6 0 0 1-.4 2M12 17v4M4 4l16 16"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V6a1.5 1.5 0 0 1 3 0v5M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V6a1.5 1.5 0 0 1 3 0v7a7 7 0 0 1-7 7h-.5A5.5 5.5 0 0 1 5 15.5L4 12a1.4 1.4 0 0 1 2.5-1.2L8 13"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M4 9a12 12 0 0 1 16 0M7 12.5a7.5 7.5 0 0 1 10 0M10 16a3 3 0 0 1 4 0M12 19.5h.01"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.5-8 6 6 0 0 1 11.5 1.5A3.5 3.5 0 0 1 17.5 18z"/></symbol>
+  <symbol id="i-bat" viewBox="0 0 24 24"><rect x="3" y="8" width="16" height="9" rx="2"/><path d="M21 11v3"/></symbol>
+  <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></symbol>
+  <symbol id="i-remote" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="3"/><path d="M12 7h.01M10 12h4M10 15h4"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+  <symbol id="i-dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 8.5h.01M15.5 15.5h.01M12 12h.01M15.5 8.5h.01M8.5 15.5h.01"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></symbol>
+  <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10zM17 9a4 4 0 0 1 0 6M19.5 6.5a8 8 0 0 1 0 11"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z"/><path d="M5 16a4 4 0 0 1 4-4h10"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.5"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="14" r="4"/><path d="M11 11l9-9M17 5l2 2M15 7l2 2"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6z"/></symbol>
+  <symbol id="i-update" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-3-7z"/></symbol>
+  <symbol id="i-focus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></symbol>
+</svg>
 
-<div class="phone" id="phone">
-  <div class="sb"><span>09:41</span><span>BLE ⬤ 5G ▮▮▮</span></div>
-  <div class="appbar"><div style="display:flex;align-items:center;gap:4px"><button id="back" class="x" style="display:none;color:var(--text);font-size:26px;padding:0 6px" onclick="go('more')">‹</button><h1 id="ttl">Beranda</h1></div><span class="chip" id="conn"><i class="dot"></i><span id="connTxt">Terhubung · aman</span></span></div>
-
-  <!-- BERANDA -->
-  <section class="view on" id="v-home">
-    <div class="banner" id="noWifi" style="display:none"><span>Wi-Fi robot belum diatur. Robot butuh Wi-Fi untuk Gemini, jam, dan update.</span><button class="btn" onclick="go('net')">Atur</button></div>
-    <div class="card"><div class="hero">
-      <div class="face"><i></i><i></i></div>
-      <div style="flex:1"><div style="font-size:17px;font-weight:700">Sonic</div>
-        <div class="v" style="text-align:left">RoboDesk · C3 v1.4.2 / S3 v1.4.2</div>
-        <div style="margin-top:6px"><span class="tag ok">Sesi HMAC aktif</span> <span class="tag ok">Bond LESC</span></div></div>
-    </div></div>
-    <div class="card"><h3>Status robot</h3>
-      <div class="row"><span>Link C3 ↔ S3</span><span class="v" style="color:var(--ok)">Tersambung · 12 ms</span></div>
-      <div class="row"><span>Wi-Fi</span><span class="v">Slot 1 · −58 dBm</span></div>
-      <div class="row"><span>Kunci Gemini</span><span class="v" style="color:var(--ok)">Terpasang</span></div>
-      <div class="row"><span>Waktu aktif</span><span class="v">3 j 12 m</span></div>
-      <div class="row"><span>Heap bebas C3 / S3</span><span class="v">104 / 212 KiB</span></div>
-    </div>
-    <div class="card"><h3>Aksi cepat</h3>
-      <div class="row"><div class="l">Matikan mikrofon<small>privacyMicMuted</small></div><label class="sw"><input type="checkbox" data-dirty><span></span></label></div>
-      <div class="row"><div class="l">Suara utama<small>masterSound</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div>
-      <div class="btns" style="margin-top:12px"><button class="btn sec" onclick="openSheet('reboot')">Reboot…</button><button class="btn sec" onclick="openSub('upd')">Cek update</button></div>
-    </div>
-    <div class="card"><h3>Kontrol langsung</h3>
-      <div class="field"><label>Ekspresi (expression)</label><div class="btns"><select id="expr" style="flex:2"><option>happy · senang</option><option>curious · penasaran</option><option>shy · malu</option><option>love · sayang</option><option>sad · sedih</option><option>surprised · kaget</option><option>thinking · berpikir</option><option>agree · setuju</option><option>disagree · tidak setuju</option><option>wink · kedip</option><option>laugh · tertawa</option><option>sleepy · ngantuk</option></select><button class="btn" style="flex:1;min-width:0" onclick="toast('Ekspresi ditampilkan di robot')">Tampilkan</button></div></div>
-      <div class="btns"><button class="btn sec" onclick="toast('Robot mulai mendengarkan (talk)')">Ajak bicara</button><button class="btn sec" onclick="toast('Robot dijeda')">Jeda robot</button><button class="btn sec" onclick="toast('Robot dilanjutkan')">Lanjutkan</button></div>
-      <div class="field" style="margin-top:12px"><label>Pomodoro · <span id="pomst">berhenti</span></label><div class="btns"><button class="btn" onclick="pom('fokus 25:00')">Mulai</button><button class="btn sec" onclick="pom('dijeda')">Jeda</button><button class="btn sec" onclick="pom('fokus')">Lanjut</button><button class="btn bad" onclick="pom('berhenti')">Henti</button></div></div>
-    </div>
-    <div class="savebar"><span>Ada perubahan belum disimpan</span><button class="btn" onclick="save()">Simpan</button></div>
-  </section>
-
-  <!-- SETELAN -->
-  <section class="view" id="v-set">
-    <div class="card"><details class="acc" open><summary>Suara &amp; bicara</summary><div>
-      <div class="row"><div class="l">Bicara aktif<small>speechEnabled</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div>
-      <div class="row"><div class="l">Volume speaker<small>speakerGainMilli · 50–1000</small></div><span class="v" id="volv">0,45</span></div>
-      <input type="range" min="50" max="1000" value="450" data-dirty oninput="$('#volv').textContent=(this.value/1000).toFixed(2).replace('.',',')" style="width:100%;margin:2px 0 10px">
-      <div class="field"><label>Mode input (inputMode)</label><select data-dirty><option value="2" selected>Kata bangun</option><option value="1">Sentuh: ketuk untuk bicara</option><option value="0">Selalu mendengarkan (lama)</option></select></div>
-      <div class="field"><label>Suara Gemini (geminiVoice · maks 31)</label><input type="text" value="Iapetus" maxlength="31" data-dirty></div>
-      <div class="field"><label>Gaya bicara (speechStyle · maks 240) <span class="v" id="stc">177/240</span></label><textarea rows="3" maxlength="240" data-dirty oninput="$('#stc').textContent=this.value.length+'/240'">Speak natural conversational Indonesian at a normal speaking pace. Use concise sentences and short natural pauses. Do not deliberately slow down unless the user explicitly asks.</textarea></div>
-    </div></details></div>
-
-    <div class="card"><details class="acc"><summary>Karakter &amp; suara karakter</summary><div><div class="field"><label>Intensitas karakter (characterIntensity)</label><div class="seg"><button type="button">Halus</button><button type="button" class=on>Aktif tapi tenang</button><button type="button">Ekspresif</button></div></div><div class="row"><div class="l">SFX karakter lokal<small>characterSfx</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div><div class="row"><div class="l">Intensitas SFX<small>sfxIntensityX100</small></div><span class="v" id="sl_sfxIntensityX100">100%</span></div><input type="range" min="0" max="200" value="100" data-dirty oninput="document.getElementById('sl_sfxIntensityX100').textContent=this.value+'%'" style="width:100%;margin:2px 0 10px"><div class="field"><label>Frekuensi SFX (sonicFrequency)</label><div class="seg"><button type="button">Rendah</button><button type="button" class=on>Normal</button><button type="button">Ekspresif</button></div></div><div class="row"><div class="l">Suara konfirmasi kata bangun<small>wakeSfx</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div><div class="row"><div class="l">Suara sentuh &amp; sayang<small>touchSfx</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div><div class="row"><div class="l">Suara gerak, angkat, goyang<small>motionSfx</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div><div class="row"><div class="l">Suara notifikasi &amp; status<small>notificationSfx</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div><div class="row"><div class="l">Volume saat jam tenang<small>quietGainX100</small></div><span class="v" id="sl_quietGainX100">40%</span></div><input type="range" min="0" max="200" value="40" data-dirty oninput="document.getElementById('sl_quietGainX100').textContent=this.value+'%'" style="width:100%;margin:2px 0 10px"></div></details></div><div class="card"><details class="acc"><summary>Wajah (LivingEyes)</summary><div><div class="row"><div class="l">Wajah hidup (perhatian, gerak mikro)<small>faceLifeEnabled</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div><div class="row"><div class="l">Pupil<small>facePupils</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div><div class="row"><div class="l">Alis tersedia<small>faceBrows</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div><div class="row"><div class="l">Alis hanya saat ekspresif<small>faceAutoBrows</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div><div class="row"><div class="l">Bulu mata tersedia<small>faceLashes</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div><div class="row"><div class="l">Bulu mata hanya saat lembut/sosial<small>faceAutoLashes</small></div><label class="sw"><input type="checkbox" data-dirty><span></span></label></div><div class="row"><div class="l">Akting bentuk mata kuat saat tanpa pupil<small>facePupilLessActing</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div><div class="row"><div class="l">Jangkauan pandangan<small>faceGazeReachX100</small></div><span class="v" id="sl_faceGazeReachX100">100%</span></div><input type="range" min="0" max="200" value="100" data-dirty oninput="document.getElementById('sl_faceGazeReachX100').textContent=this.value+'%'" style="width:100%;margin:2px 0 10px"><div class="row"><div class="l">Gerak mikro<small>faceMicroX100</small></div><span class="v" id="sl_faceMicroX100">100%</span></div><input type="range" min="0" max="200" value="100" data-dirty oninput="document.getElementById('sl_faceMicroX100').textContent=this.value+'%'" style="width:100%;margin:2px 0 10px"><div class="row"><div class="l">Siluet wajah<small>faceSilhouetteX100</small></div><span class="v" id="sl_faceSilhouetteX100">100%</span></div><input type="range" min="0" max="200" value="100" data-dirty oninput="document.getElementById('sl_faceSilhouetteX100').textContent=this.value+'%'" style="width:100%;margin:2px 0 10px"><div class="field"><label>Mulut (mouthMode)</label><div class="seg"><button type="button" class=on>Otomatis</button><button type="button">Sembunyi</button><button type="button">Selalu</button></div></div></div></details></div>
-
-    <div class="card"><details class="acc"><summary>AI &amp; memori</summary><div><div class="field"><label>Nama robot (robotName · maks 31)</label><input type="text" value="Sonic" maxlength="31" data-dirty></div><div class="field"><label>Nama panggilan pemilik <span class="tag">disimpan sebagai memori owner.name</span></label><input type="text" value="Faisal" maxlength="159" data-dirty></div><div class="field"><label>Model Gemini (geminiModel · maks 47)</label><input type="text" value="gemini-3.8-live" maxlength="47" data-dirty></div><div class="field"><label>Model ringkasan (summaryModel · maks 47)</label><input type="text" value="gemini-3.5-flash-lite" maxlength="47" data-dirty></div><div class="row"><div class="l">Memori aktif<small>memoryEnabled</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div><div class="row"><div class="l">Simpan memori otomatis<small>autoMemory</small></div><label class="sw"><input type="checkbox" data-dirty><span></span></label></div><div class="row"><div class="l">Reaksi visual proaktif<small>proactiveVisual</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div><div class="row"><div class="l">Isyarat suara proaktif (tidak membuka mikrofon)<small>proactiveVoice</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div><div class="row"><div class="l">Diagnostik interaksi lokal (tanpa transkrip)<small>interactionMetrics</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div><div class="field" style="margin-top:8px"><label>Batas tugas latar harian (backgroundDailyLimit 0–12)</label><input type="number" min="0" max="12" value="6" data-dirty></div></div></details></div>
-
-    <div class="card"><details class="acc"><summary>Jam tenang &amp; briefing</summary><div>
-      <div class="row"><div class="l">Jam tenang<small>quietHoursEnabled</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div>
-      <div class="btns"><div class="field" style="flex:1"><label>Mulai</label><input type="time" value="22:00" data-dirty></div><div class="field" style="flex:1"><label>Selesai</label><input type="time" value="06:30" data-dirty></div></div>
-      <div class="row"><div class="l">Briefing harian<small>dailyBriefingEnabled</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div>
-      <div class="field"><label>Waktu briefing</label><input type="time" value="07:00" data-dirty></div>
-      <div class="field"><label>Zona waktu (timezoneOffsetMin)</label><select data-dirty><option>WIB (UTC+7)</option><option>WITA (UTC+8)</option><option>WIT (UTC+9)</option><option>Kustom (−12:00…+14:00)</option></select></div>
-    </div></details></div>
-
-    <div class="card"><details class="acc"><summary>Pomodoro &amp; kenyamanan</summary><div><div class="btns"><div class="field" style="flex:1"><label>Fokus mnt (pomodoroFocusMinutes)</label><input type="number" value="25"  data-dirty></div><div class="field" style="flex:1"><label>Istirahat (pomodoroBreakMinutes)</label><input type="number" value="5"  data-dirty></div><div class="field" style="flex:1"><label>Panjang (pomodoroLongBreakMinutes)</label><input type="number" value="15"  data-dirty></div></div><div class="row"><div class="l">Peringatan kenyamanan ruangan<small>comfortAlertsEnabled</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div><div class="btns"><div class="field" style="flex:1"><label>Suhu min °C (comfortMinTempX10)</label><input type="number" value="20"  data-dirty></div><div class="field" style="flex:1"><label>Suhu maks °C (comfortMaxTempX10)</label><input type="number" value="30"  data-dirty></div></div><div class="btns"><div class="field" style="flex:1"><label>Lembap min % (comfortMinHumidityX10)</label><input type="number" value="30"  data-dirty></div><div class="field" style="flex:1"><label>Lembap maks % (comfortMaxHumidityX10)</label><input type="number" value="70"  data-dirty></div></div><p class="note">Min harus lebih kecil dari maks. Nilai dikirim ×10.</p></div></details></div>
-
-    <div class="card"><details class="acc"><summary>Notifikasi HP</summary><div>
-      <div class="row"><div class="l">Navigasi Maps di layar robot<small>navigationEnabled</small></div><label class="sw"><input type="checkbox" checked data-dirty><span></span></label></div>
-      <div class="row"><div class="l">Kapasitas daftar robot<small>notificationAllowlist / SpeechAllowlist, maks 192 B per daftar</small></div><span class="tag wr">4 app · 148/192 B</span></div>
-      <p class="note" style="margin:8px 0">Per aplikasi: <b>Tampil</b> di layar robot (notificationAllowlist) dan <b>Baca</b> lewat suara (notificationSpeechAllowlist). Daftar dari aplikasi terpasang di HP; isi disaring privasi di HP. Bila daftar penuh, penambahan ditolak ("Daftar robot penuh · hapus satu aplikasi").</p>
-      <div class="row"><span style="flex:1">WhatsApp</span><span class="cb"><label>Tampil<input type="checkbox" checked data-dirty></label><label>Baca<input type="checkbox" checked data-dirty></label></span></div>
-      <div class="row"><span style="flex:1">Telegram</span><span class="cb"><label>Tampil<input type="checkbox" checked data-dirty></label><label>Baca<input type="checkbox" data-dirty></label></span></div>
-      <div class="row"><span style="flex:1">Gmail</span><span class="cb"><label>Tampil<input type="checkbox" data-dirty></label><label>Baca<input type="checkbox" data-dirty></label></span></div>
-      <div class="row"><span style="flex:1">Bank / dompet digital</span><span class="tag wr">diblokir privasi</span></div>
-    </div></details></div>
-
-    <div class="card"><details class="acc"><summary>Mikrofon &amp; VAD (lanjutan)</summary><div><div class="btns"><div class="field" style="flex:1"><label>Ambang mulai ×noise (vadStartX100)</label><input type="number" step="0.05" value="3.50" data-dirty></div><div class="field" style="flex:1"><label>Ambang akhir ×noise (vadEndX100)</label><input type="number" step="0.05" value="1.90" data-dirty></div></div><div class="btns"><div class="field" style="flex:1"><label>Hening akhir giliran ms (vadEndMs)</label><input type="number" value="700"  data-dirty></div><div class="field" style="flex:1"><label>Jeda setelah bicara ms (postSpeakGuardMs)</label><input type="number" value="400"  data-dirty></div></div><div class="field"><label>Tunggu lanjutan setelah kata bangun ms (wakeFollowupMs)</label><input type="number" value="4000" data-dirty></div></div></details></div>
-    <div class="savebar"><span>Ada perubahan belum disimpan</span><button class="btn" onclick="save()">Simpan</button></div>
-  </section>
-
-  <!-- KONEKSI -->
-  <section class="view" id="v-net">
-    <div class="card"><h3>Wi-Fi robot (tulis-saja)</h3>
-      <p class="note" style="margin:0 0 10px">SSID &amp; sandi tidak pernah dibaca balik dari robot. Tersimpan di NVS C3. Berlaku pada koneksi ulang berikutnya.</p>
-      <div class="item"><div class="t">Slot 1 · utama<small>Terpasang</small></div><span class="tag ok">terhubung</span><button class="btn sec" style="padding:6px 12px" onclick="openSheet('wifi')">Ubah</button></div>
-      <div class="item"><div class="t">Slot 2 · cadangan<small>Terpasang</small></div><button class="btn sec" style="padding:6px 12px" onclick="openSheet('wifi')">Ubah</button></div>
-      <div class="item"><div class="t">Slot 3 · cadangan<small>Kosong</small></div><button class="btn sec" style="padding:6px 12px" onclick="openSheet('wifi')">Atur</button></div>
-      <p class="note">Isi SSID dan sandi manual di lembar "Ubah". Android tidak mengizinkan aplikasi membaca sandi Wi-Fi tersimpan.</p>
-    </div>
-    <div class="card"><h3>Kunci API Gemini</h3>
-      <div class="row"><span>Status</span><span class="tag ok">terpasang</span></div>
-      <div class="field" style="margin-top:10px"><label>Kunci baru (A-Z a-z 0-9 - _ . · maks 96)</label><input type="password" placeholder="AIza…"></div>
-      <div class="btns"><button class="btn" onclick="toast('Kunci dikirim lewat BLE terenkripsi')">Kirim kunci</button><button class="btn bad" onclick="toast('Kunci dihapus dari robot')">Hapus kunci</button></div>
-      <p class="note">Kunci diteruskan C3 → S3 hanya di RAM.</p>
-    </div>
-    <div class="card"><h3>Pairing &amp; keamanan</h3>
-      <div class="row"><div class="l">HP tepercaya<small>Pixel 8 · bond LESC aktif</small></div><span class="tag ok">ini</span></div>
-      <div class="row"><div class="l">Jendela pairing<small>Tahan sensor kepala 5 dtk di robot</small></div><span class="tag">tertutup</span></div>
-      <div class="btns" style="margin-top:12px"><button class="btn sec" onclick="openSheet('forget')">Lupakan robot</button></div>
-      <p class="note">PIN admin tidak dikirim lewat BLE; bond + sesi HMAC menggantikannya.</p>
-    </div>
-  </section>
-
-  <!-- MEMORI -->
-  <section class="view" id="v-mem">
-    <div class="card"><h3>Fakta yang diingat robot <span id="memc"></span></h3><div id="memList"></div>
-      <div class="field" style="margin-top:12px"><label>Kunci (maks 39)</label><input type="text" id="memK" maxlength="39" placeholder="mis. minuman_favorit"></div>
-      <div class="field"><label>Nilai (maks 159)</label><input type="text" id="memIn" maxlength="159" placeholder="mis. Kopi tanpa gula"></div>
-      <div class="field"><label>Kategori</label><select id="memC"><option>note · catatan</option><option>profile · profil</option><option>preference · preferensi</option><option>routine · rutinitas</option><option>place · tempat</option><option>event · kejadian</option></select></div>
-      <div class="err" id="memErr">Ditolak filter privasi robot (kredensial / kesehatan / deret angka panjang). Filter bersifat konservatif, bukan jaminan.</div>
-      <div class="btns" style="margin-top:8px"><button class="btn" onclick="addMem()">Tambah</button><button class="btn bad" onclick="openSheet('clearmem')">Hapus semua</button></div>
-      <button class="btn sec" style="width:100%;margin-top:8px" onclick="openSheet('clearexp')">Hapus pengalaman (ringkasan percakapan)</button>
-    </div>
-    <p class="note">Robot adalah sumber utama; daftar ditarik ulang bila revisi berubah. Teks memori = data, bukan instruksi.</p>
-  </section>
-
-  <!-- PENGINGAT -->
-  <section class="view" id="v-rem">
-    <div class="card"><h3>Pengingat <span id="remc"></span></h3><div id="remList"></div></div>
-    <div class="card"><h3>Tambah pengingat</h3>
-      <div class="field"><label>Jenis</label><select id="remType"><option value="Sekali">Sekali</option><option value="Harian">Harian</option><option value="Timer">Timer</option></select></div>
-      <div class="field"><label>Waktu / durasi</label><input type="text" id="remWhen" value="07:30"></div>
-      <div class="field"><label>Teks (1–111 byte)</label><input type="text" id="remTxt" placeholder="mis. Minum obat"></div>
-      <button class="btn" style="width:100%" onclick="addRem()">Tambah</button>
-      <p class="note">Maksimal 8 pengingat.</p>
-    </div>
-  </section>
-
-  <!-- LAINNYA (menu) -->
-  <section class="view" id="v-more">
-    <div class="menu">
-      <button onclick="openSub('act')"><span class="mi">🎭</span><span>Aktivitas &amp; permainan<small>Aktivitas robot, game sentuh, pembelajaran</small></span><span class="ch">›</span></button>
-      <button onclick="openSub('int')"><span class="mi">🔗</span><span>Integrasi<small>Home Assistant, cuaca, kalender</small></span><span class="ch">›</span></button>
-      <button onclick="openSub('ir')"><span class="mi">📺</span><span>Remote inframerah<small>Kirim NEC, pelajari &amp; putar profil</small></span><span class="ch">›</span></button>
-      <button onclick="openSub('snd')"><span class="mi">🔊</span><span>Tes suara<small>Putar 12 suara karakter</small></span><span class="ch">›</span></button>
-      <button onclick="openSub('diag')"><span class="mi">📊</span><span>Diagnostik<small>Link, heap, BLE</small></span><span class="ch">›</span></button>
-      <button onclick="openSub('upd')"><span class="mi">⬆</span><span>Pembaruan firmware<small>Terpasang 1.4.2 · tersedia 1.5.0</small></span><span class="ch">›</span></button>
-      <button onclick="openSub('dng')"><span class="mi">⚠</span><span>Zona bahaya<small>Reboot, reset pabrik</small></span><span class="ch">›</span></button>
-      <button onclick="openSub('abt')"><span class="mi">ℹ</span><span>Tentang</span><span class="ch">›</span></button>
-    </div>
-  </section>
-
-  <section class="view" id="v-s-act">
-    <div class="card"><h3>Aktivitas robot</h3>
-      <div class="field"><select id="act"><option>Curious look · lirik penasaran</option><option>Expression practice · latihan ekspresi</option><option>Rhythm play · main ritme</option><option>Daydream · melamun</option><option>Stretch reset · peregangan</option><option>Rest · istirahat</option><option>Quiet company · menemani tenang</option><option>Pixel doodle · coret piksel</option><option>Watch room · mengamati ruangan</option><option>Touch play · main sentuh</option><option>Rhythm improv · improvisasi ritme</option><option>Focus company · menemani fokus</option><option>Calm breathing · napas tenang</option></select></div>
-      <div class="btns"><button class="btn" onclick="toast('Aktivitas dimulai')">Mulai</button><button class="btn sec" onclick="toast('Aktivitas dijeda')">Jeda</button><button class="btn sec" onclick="toast('Aktivitas dilanjutkan')">Lanjut</button></div>
-      <div class="btns" style="margin-top:8px"><button class="btn sec" onclick="toast('Aktivitas dilewati')">Lewati</button><button class="btn sec" onclick="toast('Ditandai favorit')">★ Favorit</button><button class="btn bad" onclick="toast('Aktivitas dibatalkan')">Batalkan</button></div>
-      <button class="btn sec" style="width:100%;margin-top:8px" onclick="toast('Riwayat aktivitas dihapus')">Hapus riwayat aktivitas</button></div>
-    <div class="card"><h3>Permainan sentuh</h3><p class="note" style="margin:0 0 8px">Saat robot mengajak bermain, tombol aktif.</p>
-      <div class="btns"><button class="btn" onclick="toast('Permainan diterima')">Terima</button><button class="btn sec" onclick="toast('Permainan dibatalkan')">Batalkan</button></div></div>
-    <div class="card"><h3>Pembelajaran preferensi</h3>
-      <div class="row"><div class="l">Robot belajar dari kebiasaan<small>learning_enable</small></div><label class="sw"><input type="checkbox" checked onchange="toast('Pembelajaran '+(this.checked?'aktif':'nonaktif'))"><span></span></label></div>
-      <button class="btn bad" style="width:100%;margin-top:10px" onclick="toast('Pembelajaran diatur ulang')">Atur ulang pembelajaran</button></div>
-  </section>
-
-  <section class="view" id="v-s-int">
-    <div class="card"><h3>Home Assistant</h3>
-      <div class="field"><label>Alamat dasar (maks 127)</label><input type="text" placeholder="https://ha.local:8123" value="https://ha.local:8123"></div>
-      <div class="field"><label>Token akses <span class="tag ok">terpasang</span></label><input type="password" placeholder="Kosong = pertahankan · tulis-saja (maks 191)"></div>
-      <div class="field"><label>Entitas (maks 3 · 47 karakter)</label><input type="text" value="sensor.suhu_ruang"><input type="text" value="light.meja" style="margin-top:6px"><input type="text" placeholder="entity_id" style="margin-top:6px"></div></div>
-    <div class="card"><h3>Cuaca</h3>
-      <div class="row"><span>Cuaca aktif</span><label class="sw"><input type="checkbox" checked><span></span></label></div>
-      <div class="btns" style="margin-top:10px"><div class="field" style="flex:1"><label>Lintang</label><input type="number" step="0.0001" value="-6.2000"></div><div class="field" style="flex:1"><label>Bujur</label><input type="number" step="0.0001" value="106.8167"></div></div></div>
-    <div class="card"><h3>Kalender</h3>
-      <div class="field"><label>URL ICS https (maks 255)</label><input type="text" placeholder="https://…/basic.ics"></div>
-      <button class="btn bad" style="width:100%" onclick="toast('Kalender dihapus saat Simpan')">Hapus kalender</button></div>
-    <div class="card"><h3>Status penyedia</h3>
-      <div class="row"><span>Cuaca</span><span class="v">26°C · cerah</span></div>
-      <div class="row"><span>sensor.suhu_ruang</span><span class="v">27,4</span></div>
-      <div class="row"><span>Terakhir diperbarui</span><span class="v">2 mnt lalu</span></div>
-      <div class="btns" style="margin-top:12px"><button class="btn" onclick="toast('Tersimpan di C3 · menyegarkan…')">Simpan</button><button class="btn sec" onclick="toast('Segarkan diantrekan')">Segarkan</button><button class="btn bad" onclick="toast('Semua integrasi dihapus')">Hapus semua</button></div>
-      <p class="note">Permintaan penyedia berjalan satu per satu; jika sibuk, coba lagi sebentar.</p></div>
-  </section>
-
-  <section class="view" id="v-s-ir">
-    <div class="card"><h3>Kirim kode NEC</h3>
-      <div class="field"><label>Kode hex (8 digit)</label><input type="text" maxlength="8" placeholder="20DF10EF"></div>
-      <button class="btn" style="width:100%" onclick="toast('NEC dikirim')">Kirim NEC</button></div>
-    <div class="card"><h3>Profil terpelajar (maks 4)</h3>
-      <div class="field"><label>Profil tersimpan</label><select><option>tv_power</option><option>ac_on</option><option>last</option></select></div>
-      <div class="field"><label>Nama profil (maks 15 · huruf, angka, spasi, - _)</label><input type="text" maxlength="15" value="last"></div>
-      <div class="btns"><button class="btn" id="irL" onclick="irLearn()">Pelajari 10 detik</button><button class="btn sec" onclick="toast('Profil diputar')">Putar profil</button></div>
-      <p class="note" id="irN">Arahkan remote ke sensor robot lalu tekan tombol saat hitung mundur berjalan.</p></div>
-  </section>
-
-  <section class="view" id="v-s-snd">
-    <div class="card"><h3>Tes suara karakter</h3><div class="cues" id="cues"></div><p class="note">Memutar suara di speaker robot dengan volume setelan saat ini.</p></div>
-  </section>
-
-  <section class="view" id="v-s-diag">
-    <div class="card"><h3>Diagnostik</h3>
-      <div class="row"><span>Link retry / CRC / putus</span><span class="v">0 / 0 / 1</span></div>
-      <div class="row"><span>Umur frame terakhir</span><span class="v">48 ms</span></div>
-      <div class="row"><span>Heap C3 min / blok terbesar</span><span class="v">81 / 62 KiB</span></div>
-      <div class="row"><span>Heap S3 min</span><span class="v">190 KiB</span></div>
-      <div class="row"><span>BLE</span><span class="v">siap · terhubung · terpasang</span></div>
-      <button class="btn sec" style="width:100%;margin-top:10px" onclick="toast('Status diperbarui')">Segarkan</button></div>
-  </section>
-
-  <section class="view" id="v-s-upd">
-    <div class="card" id="updMain"><h3>Pembaruan firmware (OTA bertanda tangan)</h3>
-      <div class="row"><span>Terpasang</span><span class="v">1.4.2</span></div>
-      <div class="row"><div class="l">Tersedia<small>dicek HP dari GitHub Releases</small></div><span class="v" style="color:var(--accent)">1.5.0</span></div>
-      <button class="btn sec" style="width:100%;margin-top:8px" onclick="toast('1.5.0 tersedia · robot memverifikasi ulang saat update')">Cek versi terbaru</button>
-      <button class="btn" style="width:100%;margin-top:8px" onclick="openSheet('ota')">Mulai update</button>
-      <p class="note">Robot mengunduh lewat Wi-Fi-nya sendiri dan memverifikasi tanda tangan. Selama update koneksi BLE putus (normal); hasil dibaca setelah robot menyala ulang. Info versi di HP hanya informasi.</p></div>
-    <div class="card" id="updRun" style="display:none;text-align:center"><h3>Robot sedang memperbarui</h3><div class="spin"></div>
-      <div id="otaTxt" style="font-weight:600">Mengunduh &amp; memasang…</div><div class="v" id="otaEl">0 dtk</div>
-      <p class="note">Koneksi BLE terputus selama update — ini normal. Jangan matikan robot. Aplikasi menyambung ulang otomatis lalu menampilkan hasil.</p></div>
-    <div class="card" id="updDone" style="display:none"><h3>Hasil update</h3>
-      <div class="row"><span>Status</span><span class="tag ok">Selesai</span></div>
-      <div class="row"><span>Terpasang sekarang</span><span class="v">1.5.0</span></div>
-      <p class="note">Hasil lain yang bisa muncul: "Sudah terbaru" atau "Gagal" disertai sebab (Wi-Fi, jam, jaringan, tanda tangan, ukuran/hash, S3 menolak, versi tidak cocok, S3/C3 tidak boot).</p></div>
-  </section>
-
-  <section class="view" id="v-s-dng">
-    <div class="card"><h3>Zona bahaya</h3><div class="btns"><button class="btn sec" onclick="openSheet('reboot')">Reboot</button><button class="btn bad" onclick="openSheet('wipe')">Reset pabrik</button></div>
-      <p class="note">Reset pabrik menghapus setelan, bond, dan rahasia; setelahnya aplikasi kembali ke onboarding.</p></div>
-  </section>
-
-  <section class="view" id="v-s-abt">
-    <div class="card"><h3>Tentang</h3>
-      <div class="row"><span>Aplikasi</span><span class="v">Bridge 0.9 (mock)</span></div>
-      <div class="row"><span>Protokol BLE</span><span class="v">Settings v1 · schema 3</span></div>
-      <div class="row"><span>Dashboard web</span><span class="v">tidak dipakai</span></div></div>
-  </section>
-
-  <nav>
-    <button class="on" data-t="home"><span class="ic">⌂</span>Beranda</button>
-    <button data-t="set"><span class="ic">⚙</span>Setelan</button>
-    <button data-t="net"><span class="ic">⌁</span>Koneksi</button>
-    <button data-t="mem"><span class="ic">✎</span>Memori</button>
-    <button data-t="rem"><span class="ic">⏰</span>Ingat</button>
-    <button data-t="more"><span class="ic">≡</span>Lainnya</button>
-  </nav>
-
-  <div class="onb" id="onb">
-    <div class="steps" id="onbSteps"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-    <div class="body" id="onbBody"></div>
-    <div class="btns" id="onbBtns" style="margin-top:12px"></div>
+<div class="phone">
+  <div class="sb"><span>21:40</span><span>BLE terhubung</span></div>
+  <div class="bar" id="bar">
+    <button class="back" onclick="back()" aria-label="Kembali"><svg><use href="#i-back"/></svg></button>
+    <h1 id="title">AILI</h1>
+    <span class="link" id="linkpill"><i></i>Terhubung</span>
   </div>
-  <div class="toast" id="toast"></div>
-  <div class="sheet" id="sheet"><div id="sheetBody"></div></div>
+  <div class="scroll" id="scroll">
+
+  <!-- ===================== ROBOT ===================== -->
+  <section class="screen on" data-s="robot" data-t="AILI">
+    <div class="card hero">
+      <div class="oled" id="oled"><i></i><i></i></div>
+      <div class="mood"><b id="moodTxt">Ngantuk</b><small id="moodWhy">sudah malam · energi rendah</small></div>
+      <div class="stat">
+        <span><svg><use href="#i-mic"/></svg>Mic aktif</span>
+        <span><svg><use href="#i-wifi"/></svg>Wi-Fi rumah</span>
+        <span><svg><use href="#i-cloud"/></svg>Gemini siap</span>
+        <span><svg><use href="#i-bat"/></svg>USB</span>
+      </div>
+    </div>
+    <div class="grid2">
+      <button class="act"><svg><use href="#i-chat"/></svg><span>Ajak bicara</span></button>
+      <button class="act" onclick="sleepToggle()"><svg><use href="#i-moon"/></svg><span id="sleepLbl">Tidurkan</span></button>
+      <button class="act"><svg><use href="#i-hand"/></svg><span>Elus</span></button>
+      <button class="act" onclick="go('pause')"><svg><use href="#i-pause"/></svg><span>Jangan ganggu</span></button>
+    </div>
+    <div class="sec">Tunjukkan ekspresi</div>
+    <div class="card pad">
+      <div class="chips" id="exprs"></div>
+      <button class="btn full" style="margin-top:12px">Tampilkan di robot</button>
+    </div>
+    <div class="sec">Sedang berjalan</div>
+    <div class="card">
+      <button class="row" onclick="tab('play');go('pomodoro')"><span class="ic"><svg><use href="#i-timer"/></svg></span><span class="t"><b>Fokus Pomodoro</b><small>Sisa 18:42 · sesi 2 dari 4</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row"><span class="ic"><svg><use href="#i-mic"/></svg></span><span class="t"><b>Mikrofon</b><small>Matikan untuk privasi penuh</small></span><span class="sw"></span></button>
+    </div>
+    <div class="card">
+      <button class="row" onclick="tab('settings');go('update')"><span class="ic"><svg><use href="#i-update"/></svg></span><span class="t"><b>Pembaruan tersedia</b><small>Versi 2026.10.13 · lihat catatan rilis</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+    </div>
+  </section>
+
+  <section class="screen" data-s="pause" data-t="Jangan ganggu" data-sub>
+    <div class="card">
+      <button class="row"><span class="t"><b>15 menit</b></span></button>
+      <button class="row"><span class="t"><b>1 jam</b></span></button>
+      <button class="row"><span class="t"><b>Sampai saya lanjutkan</b><small>Robot tetap hidup, tanpa ajakan dan bunyi spontan</small></span></button>
+    </div>
+    <button class="btn ghost full">Lanjutkan sekarang</button>
+  </section>
+
+  <!-- ===================== NGOBROL ===================== -->
+  <section class="screen" data-s="chat" data-t="Ngobrol">
+    <div class="seg" style="margin:4px 0 6px"><button>Suara</button><button class="on">Teks di layar</button><button>Keduanya</button></div>
+    <div class="note" style="padding-top:2px">Mode jawaban untuk pesan dari app. Mode untuk bicara langsung ada di Setelan › Suara & bicara.</div>
+    <div class="msgs">
+      <div class="msg me">Lempar koin dong</div>
+      <div class="msg bot">Hasilnya gambar. Mau lempar lagi?</div>
+      <div class="msg me">Ingatkan minum air 30 menit lagi</div>
+      <div class="msg bot">Siap, pengingat jam 22.12 sudah dibuat.</div>
+    </div>
+    <div class="note">Riwayat chat hanya selama sesi ini dan tidak disimpan.</div>
+  </section>
+
+  <!-- ===================== MAIN & ALAT ===================== -->
+  <section class="screen" data-s="play" data-t="Main & Alat">
+    <div class="sec">Main</div>
+    <div class="grid2">
+      <button class="act" onclick="go('touchgame')"><svg><use href="#i-hand"/></svg><span>Tebak sentuh</span></button>
+      <button class="act" onclick="go('games')"><svg><use href="#i-dice"/></svg><span>Koin, dadu, suit</span></button>
+      <button class="act" onclick="go('activities')"><svg><use href="#i-activity"/></svg><span>Aktivitas</span></button>
+      <button class="act" onclick="go('pomodoro')"><svg><use href="#i-timer"/></svg><span>Pomodoro</span></button>
+    </div>
+    <div class="sec">Alat</div>
+    <div class="card">
+      <button class="row" onclick="go('reminders')"><span class="ic"><svg><use href="#i-bell"/></svg></span><span class="t"><b>Pengingat</b><small>3 aktif · berikutnya 22.12</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('ir')"><span class="ic"><svg><use href="#i-remote"/></svg></span><span class="t"><b>Remote IR</b><small>2 profil tersimpan</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('integrations')"><span class="ic"><svg><use href="#i-link"/></svg></span><span class="t"><b>Integrasi</b><small>Cuaca, kalender, Home Assistant</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('soundtest')"><span class="ic"><svg><use href="#i-sound"/></svg></span><span class="t"><b>Tes suara karakter</b><small>12 suara</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+    </div>
+  </section>
+
+  <section class="screen" data-s="touchgame" data-t="Tebak sentuh" data-sub>
+    <div class="card pad"><b>Robot menawarkan permainan</b><div class="note" style="padding:4px 0 12px">Sentuh kepala robot sesuai arah matanya. Tawaran muncul saat robot santai.</div>
+      <div class="grid2"><button class="btn">Main</button><button class="btn ghost">Batalkan</button></div></div>
+  </section>
+  <section class="screen" data-s="games" data-t="Koin, dadu, suit" data-sub>
+    <div class="card pad"><div class="note" style="padding:0 0 12px">Hasil diacak di robot (adil) lalu ditampilkan di layarnya. Butuh Gemini aktif.</div>
+      <div class="grid2"><button class="btn ghost">Lempar koin</button><button class="btn ghost">Lempar dadu</button></div>
+      <div class="seg" style="margin-top:10px"><button>Batu</button><button>Kertas</button><button>Gunting</button></div></div>
+  </section>
+  <section class="screen" data-s="activities" data-t="Aktivitas" data-sub>
+    <div class="card">
+      <button class="row"><span class="t"><b>Peregangan 2 menit</b><small>Terakhir kemarin · favorit</small></span><span class="tag">Mulai</span></button>
+      <button class="row"><span class="t"><b>Napas tenang</b><small>3 menit</small></span><span class="tag">Mulai</span></button>
+      <button class="row"><span class="t"><b>Cerita pendek</b><small>Butuh Gemini</small></span><span class="tag">Mulai</span></button>
+      <button class="row"><span class="t"><b>Semua aktivitas (13)</b></span><svg class="chev"><use href="#i-chev"/></svg></button>
+    </div>
+    <div class="sec">Saat berjalan</div>
+    <div class="card pad"><div class="grid2"><button class="btn ghost">Jeda / lanjut</button><button class="btn ghost">Lewati</button></div><div class="grid2" style="margin-top:8px"><button class="btn ghost">Favorit</button><button class="btn ghost">Batalkan</button></div></div>
+    <button class="btn danger full">Hapus riwayat aktivitas</button>
+  </section>
+  <section class="screen" data-s="pomodoro" data-t="Pomodoro" data-sub>
+    <div class="card hero"><b style="font-size:40px;font-weight:650;font-variant-numeric:tabular-nums">18:42</b><small style="color:var(--sub)">Fokus · sesi 2 dari 4</small></div>
+    <div class="grid2"><button class="btn ghost">Jeda</button><button class="btn danger">Berhenti</button></div>
+    <div class="sec">Atur</div>
+    <div class="card">
+      <div class="row"><span class="t"><b>Durasi fokus</b></span><span class="v">25 mnt</span></div>
+      <div class="row"><span class="t"><b>Istirahat pendek / panjang</b></span><span class="v">5 / 15 mnt</span></div>
+      <div class="row"><span class="t"><b>Lanjutkan setelah robot restart</b></span><span class="sw on"></span></div>
+    </div>
+  </section>
+  <section class="screen" data-s="reminders" data-t="Pengingat" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>Minum air</b><small>Timer · 22.12</small></span><span class="tag">Hapus</span></div>
+      <div class="row"><span class="t"><b>Sarapan</b><small>Harian · 08.00</small></span><span class="tag">Hapus</span></div>
+      <div class="row"><span class="t"><b>Rapat tim</b><small>Sekali · Rab 15 Okt 10.00</small></span><span class="tag">Hapus</span></div>
+    </div>
+    <div class="sec">Tambah (3/8)</div>
+    <div class="card pad">
+      <div class="seg" style="margin-bottom:12px"><button class="on">Sekali</button><button>Harian</button><button>Timer</button></div>
+      <label class="field"><span>Teks</span><input class="input" value="Telepon ibu"></label>
+      <label class="field"><span>Waktu</span><input class="input" value="Kam 16 Okt · 19.00"></label>
+      <button class="btn full"><svg><use href="#i-plus"/></svg>Tambah pengingat</button>
+    </div>
+  </section>
+  <section class="screen" data-s="ir" data-t="Remote IR" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>TV power</b></span><span class="tag">Kirim</span></div>
+      <div class="row"><span class="t"><b>Kipas</b></span><span class="tag">Kirim</span></div>
+    </div>
+    <div class="card pad"><label class="field"><span>Pelajari tombol baru (maks 4 profil)</span><input class="input" placeholder="Nama, mis. AC dingin"></label><button class="btn full">Mulai belajar 10 detik</button></div>
+    <div class="card pad"><label class="field"><span>Kirim kode NEC (lanjutan)</span><input class="input" placeholder="20DF10EF"></label><button class="btn ghost full">Kirim kode</button></div>
+  </section>
+  <section class="screen" data-s="integrations" data-t="Integrasi" data-sub>
+    <div class="card">
+      <div class="row"><span class="ic"><svg><use href="#i-cloud"/></svg></span><span class="t"><b>Cuaca</b><small>Lokasi -6,2 · 106,8 · diperbarui 10 mnt lalu</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="ic"><svg><use href="#i-book"/></svg></span><span class="t"><b>Kalender (ICS)</b><small>Disimpan, tidak ditampilkan</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="ic"><svg><use href="#i-link"/></svg></span><span class="t"><b>Home Assistant</b><small>2 entitas · token tersimpan</small></span><span class="sw"></span></div>
+    </div>
+    <div class="grid2"><button class="btn ghost">Segarkan</button><button class="btn danger">Hapus semua</button></div>
+  </section>
+  <section class="screen" data-s="soundtest" data-t="Tes suara karakter" data-sub>
+    <div class="card pad"><div class="chips" style="flex-wrap:wrap"><button class="chip">bangun</button><button class="chip">senang</button><button class="chip">penasaran</button><button class="chip">sayang</button><button class="chip">berpikir</button><button class="chip">kaget</button><button class="chip">sedih</button><button class="chip">ngantuk</button><button class="chip">galat</button><button class="chip">berhasil</button><button class="chip">diangkat</button><button class="chip">digoyang</button></div></div>
+  </section>
+
+  <!-- ===================== KENANGAN ===================== -->
+  <section class="screen" data-s="memories" data-t="Kenangan">
+    <div class="card pad" style="display:flex;gap:14px;align-items:center">
+      <div style="font-size:34px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums">32</div>
+      <div><b>hari bersama AILI</b><div style="color:var(--sub);font-size:13px">Berikutnya: hari ke-100 · 68 hari lagi</div></div>
+    </div>
+    <div class="sec">Milestone</div>
+    <div class="card tl">
+      <div class="it"><span class="dot done"></span><div><b>Hari ke-30</b><div style="color:var(--sub);font-size:13px">12 Okt · robot merayakan dengan hati</div></div></div>
+      <div class="it"><span class="dot done"></span><div><b>Hari ke-7</b><div style="color:var(--sub);font-size:13px">19 Sep</div></div></div>
+      <div class="it"><span class="dot"></span><div><b>Ulang tahun Anda</b><div style="color:var(--sub);font-size:13px">17 Mei · ubah di Setelan › Profil</div></div></div>
+    </div>
+    <div class="sec">Diary mood <span class="tag" style="margin-left:6px">hanya di HP ini</span></div>
+    <div class="card">
+      <div class="row"><span class="t"><b>Catat mood per jam</b><small>Tanpa percakapan · terenkripsi · 7 hari</small></span><span class="sw on"></span></div>
+      <div class="bars" id="bars"></div>
+      <div class="days"><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span><span>Min</span><span>Sen</span><span>Sel</span></div>
+      <div class="legend"><span><i style="background:#f2b45a"></i>Ceria</span><span><i style="background:#8fb8d8"></i>Tenang</span><span><i style="background:#a99be0"></i>Ngantuk/tidur</span><span><i style="background:#e58f7e"></i>Ngambek</span></div>
+      <div class="pad" style="padding-top:0"><button class="btn danger full">Hapus diary</button></div>
+    </div>
+    <div class="sec">Yang diingat AILI</div>
+    <div class="card">
+      <button class="row" onclick="go('facts')"><span class="ic"><svg><use href="#i-book"/></svg></span><span class="t"><b>Fakta tentang Anda</b><small>12 dari 24 · nama, minuman favorit, ...</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('learning')"><span class="ic"><svg><use href="#i-spark"/></svg></span><span class="t"><b>Kebiasaan yang dipelajari</b><small>Aktivitas favorit per waktu</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+    </div>
+  </section>
+  <section class="screen" data-s="facts" data-t="Fakta tentang Anda" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>Nama panggilan</b><small>Faisal</small></span><span class="tag">Hapus</span></div>
+      <div class="row"><span class="t"><b>Minuman favorit</b><small>kopi</small></span><span class="tag">Hapus</span></div>
+      <div class="row"><span class="t"><b>Hobi</b><small>bersepeda</small></span><span class="tag">Hapus</span></div>
+    </div>
+    <div class="card pad"><label class="field"><span>Tambah fakta</span><input class="input" placeholder="mis. warna favorit"></label><input class="input" placeholder="nilai" style="margin-bottom:12px"><button class="btn full">Simpan</button></div>
+    <div class="grid2"><button class="btn danger">Hapus semua fakta</button><button class="btn danger">Hapus ringkasan obrolan</button></div>
+    <div class="note">Teks memori diperlakukan sebagai data, bukan perintah.</div>
+  </section>
+  <section class="screen" data-s="learning" data-t="Kebiasaan" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>Belajar kebiasaan</b><small>Robot menyesuaikan tawaran aktivitas</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Pagi</b><small>Peregangan · sering diterima</small></span></div>
+      <div class="row"><span class="t"><b>Malam</b><small>Napas tenang</small></span></div>
+    </div>
+    <button class="btn danger full">Reset yang dipelajari</button>
+  </section>
+
+  <!-- ===================== SETELAN ===================== -->
+  <section class="screen" data-s="settings" data-t="Setelan">
+    <div class="card">
+      <button class="row" onclick="go('profile')"><span class="ic"><svg><use href="#i-face"/></svg></span><span class="t"><b>Profil & kepribadian</b><small>Nama, Kalem/Ceria/Usil, ulang tahun</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('sleep')"><span class="ic"><svg><use href="#i-moon"/></svg></span><span class="t"><b>Jadwal tidur & rutinitas</b><small>22.00 – 07.00 · briefing pagi</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('face')"><span class="ic"><svg><use href="#i-eye"/></svg></span><span class="t"><b>Wajah & ekspresi</b><small>Gaya mata, pupil, alis, mulut</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('sound')"><span class="ic"><svg><use href="#i-sound"/></svg></span><span class="t"><b>Suara & bicara</b><small>Volume, efek suara, mode jawaban, mikrofon</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('comfort')"><span class="ic"><svg><use href="#i-focus"/></svg></span><span class="t"><b>Fokus & kenyamanan</b><small>Pomodoro, suhu & kelembapan</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+    </div>
+    <div class="card">
+      <button class="row" onclick="go('notif')"><span class="ic"><svg><use href="#i-phone"/></svg></span><span class="t"><b>Notifikasi HP</b><small>3 app · navigasi Maps</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('network')"><span class="ic"><svg><use href="#i-wifi"/></svg></span><span class="t"><b>Jaringan & AI</b><small>Wi-Fi, kunci Gemini, memori</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('privacy')"><span class="ic"><svg><use href="#i-shield"/></svg></span><span class="t"><b>Privasi</b><small>Mikrofon, data, hapus semua</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('update')"><span class="ic"><svg><use href="#i-update"/></svg></span><span class="t"><b>Pembaruan</b><small>Tersedia 2026.10.13</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+      <button class="row" onclick="go('help')"><span class="ic"><svg><use href="#i-help"/></svg></span><span class="t"><b>Bantuan & tentang</b><small>Koneksi, diagnostik, versi</small></span><svg class="chev"><use href="#i-chev"/></svg></button>
+    </div>
+    <div class="card"><button class="row" onclick="go('danger')"><span class="ic" style="color:var(--bad)"><svg><use href="#i-warn"/></svg></span><span class="t"><b style="color:var(--bad)">Zona bahaya</b><small>Restart, reset pabrik, lupakan robot</small></span><svg class="chev"><use href="#i-chev"/></svg></button></div>
+  </section>
+
+  <section class="screen" data-s="profile" data-t="Profil & kepribadian" data-sub>
+    <div class="card pad">
+      <label class="field"><span>Nama robot</span><input class="input" value="AILI"></label>
+      <label class="field"><span>Nama panggilan Anda</span><input class="input" value="Faisal"></label>
+      <span style="display:block;font-size:12.5px;color:var(--sub);margin-bottom:6px">Kepribadian</span>
+      <div class="seg"><button>Kalem</button><button class="on">Ceria</button><button>Usil</button></div>
+      <div class="note" style="padding:6px 0 12px">Mengatur intensitas karakter, frekuensi suara dan sifat awal sekaligus.</div>
+      <label class="field"><span>Ulang tahun Anda (opsional)</span><input class="input" value="17 Mei"></label>
+      <label class="field" style="margin-bottom:0"><span>Gaya bicara (opsional)</span><input class="input" value="Santai, singkat, sesekali bercanda"></label>
+    </div>
+  </section>
+  <section class="screen" data-s="sleep" data-t="Jadwal tidur & rutinitas" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>Jadwal tidur</b><small>Robot tidur, layar redup, tanpa bunyi spontan</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Tidur</b></span><span class="v">22.00</span></div>
+      <div class="row"><span class="t"><b>Bangun</b></span><span class="v">07.00</span></div>
+      <div class="row"><span class="t"><b>Zona waktu</b></span><span class="v">WIB (UTC+7)</span></div>
+    </div>
+    <div class="card">
+      <div class="row"><span class="t"><b>Briefing pagi</b><small>Cuaca dan agenda, dibacakan sekali</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Waktu briefing</b></span><span class="v">07.30</span></div>
+    </div>
+  </section>
+  <section class="screen" data-s="face" data-t="Wajah & ekspresi" data-sub>
+    <div class="card pad">
+      <span style="display:block;font-size:12.5px;color:var(--sub);margin-bottom:6px">Gaya mata</span>
+      <div class="seg"><button class="on">Klasik</button><button>Kontur (EmoOled)</button></div>
+      <div class="note" style="padding:6px 0 0">Pilihan final menunggu perbandingan di perangkat.</div>
+    </div>
+    <div class="card">
+      <div class="row"><span class="t"><b>Wajah hidup</b><small>Napas, lirikan, gerak mikro</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Pupil & kilau</b></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Alis</b><small>Hanya saat ekspresif</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Bulu mata</b><small>Hanya saat lembut</small></span><span class="sw"></span></div>
+      <div class="row"><span class="t"><b>Mulut</b></span><span class="v">Otomatis</span></div>
+      <div class="row"><span class="t"><b>Jangkauan lirikan</b></span><span class="range" style="width:120px"><i><b style="width:70%"></b></i></span></div>
+    </div>
+  </section>
+  <section class="screen" data-s="sound" data-t="Suara & bicara" data-sub>
+    <div class="card pad"><span style="display:block;font-size:12.5px;color:var(--sub);margin-bottom:10px">Volume</span><div class="range"><svg><use href="#i-sound"/></svg><i><b style="width:62%"></b></i></div></div>
+    <div class="card">
+      <div class="row"><span class="t"><b>Robot bicara</b></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Jawaban saat bicara langsung</b></span><span class="v">Suara</span></div>
+      <div class="row"><span class="t"><b>Suara Gemini</b></span><span class="v">Puck</span></div>
+      <div class="row"><span class="t"><b>Cara memulai</b><small>Kata bangun atau sentuh</small></span><span class="v">Kata bangun</span></div>
+    </div>
+    <div class="sec">Efek suara karakter</div>
+    <div class="card">
+      <div class="row"><span class="t"><b>Efek suara</b></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Seberapa sering</b></span><span class="v">Normal</span></div>
+      <div class="row"><span class="t"><b>Sentuh, gerak, notifikasi, kata bangun</b><small>Atur per jenis</small></span><svg class="chev"><use href="#i-chev"/></svg></div>
+    </div>
+    <div class="card"><div class="row"><span class="t"><b>Mikrofon lanjutan</b><small>Ambang suara, jeda bicara</small></span><svg class="chev"><use href="#i-chev"/></svg></div></div>
+  </section>
+  <section class="screen" data-s="comfort" data-t="Fokus & kenyamanan" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>Peringatan kenyamanan ruangan</b><small>Suhu 20–28 °C · kelembapan 30–70 %</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Durasi Pomodoro</b></span><span class="v">25 / 5 / 15</span></div>
+      <div class="row"><span class="t"><b>Reaksi visual proaktif</b></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Ajakan suara proaktif</b><small>Tidak membuka mikrofon</small></span><span class="sw on"></span></div>
+    </div>
+  </section>
+  <section class="screen" data-s="notif" data-t="Notifikasi HP" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>Tampilkan notifikasi di robot</b><small>Izin akses notifikasi Android</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>WhatsApp</b><small>Tampilkan · bacakan</small></span><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="row"><span class="t"><b>Gmail</b><small>Tampilkan</small></span><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="row"><span class="t"><b>Google Maps</b><small>Arah navigasi di layar robot</small></span><span class="sw on"></span></div>
+    </div>
+    <div class="note">Kode OTP dan data sensitif tidak pernah dikirim ke robot.</div>
+  </section>
+  <section class="screen" data-s="network" data-t="Jaringan & AI" data-sub>
+    <div class="card">
+      <div class="row"><span class="ic"><svg><use href="#i-wifi"/></svg></span><span class="t"><b>Wi-Fi 1 · Rumah</b><small>Terhubung</small></span><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="row"><span class="ic"><svg><use href="#i-wifi"/></svg></span><span class="t"><b>Wi-Fi 2 · Kantor</b></span><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="row"><span class="ic"><svg><use href="#i-plus"/></svg></span><span class="t"><b>Tambah Wi-Fi 3</b></span></div>
+    </div>
+    <div class="card">
+      <div class="row"><span class="ic"><svg><use href="#i-key"/></svg></span><span class="t"><b>Kunci Gemini Anda</b><small>Tersimpan di robot · ganti atau hapus</small></span><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="row"><span class="t"><b>Model</b></span><span class="v">gemini-live</span></div>
+      <div class="row"><span class="t"><b>Memori</b><small>Robot boleh mengingat fakta</small></span><span class="sw on"></span></div>
+      <div class="row"><span class="t"><b>Simpan memori otomatis</b></span><span class="sw on"></span></div>
+    </div>
+  </section>
+  <section class="screen" data-s="privacy" data-t="Privasi" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>Matikan mikrofon</b><small>Robot tidak mendengar sama sekali</small></span><span class="sw"></span></div>
+      <div class="row"><span class="t"><b>Diagnostik interaksi lokal</b><small>Tanpa transkrip</small></span><span class="sw"></span></div>
+    </div>
+    <div class="card pad"><b>Hapus semua data</b><div class="note" style="padding:4px 0 12px">Memori robot, diary, cache HP. Setelan tetap.</div><button class="btn danger full">Hapus semua data</button></div>
+  </section>
+  <section class="screen" data-s="update" data-t="Pembaruan" data-sub>
+    <div class="card pad"><b>Versi 2026.10.13 tersedia</b><div class="note" style="padding:4px 0 10px">Terpasang 2026.10.12 · rilis bertanda tangan</div>
+      <div style="font-size:14px;color:var(--sub);line-height:1.6">Robot kini bisa tidur sendiri dan dibangunkan dari app, punya diary mood, dan bisa menari mengikuti musik.</div>
+      <button class="btn full" style="margin-top:14px">Perbarui sekarang</button></div>
+    <div class="note">Robot dan gateway diperbarui berurutan, sekitar 5 menit. Jangan cabut daya.</div>
+  </section>
+  <section class="screen" data-s="help" data-t="Bantuan & tentang" data-sub>
+    <div class="card">
+      <div class="row"><span class="ic"><svg><use href="#i-phone"/></svg></span><span class="t"><b>Koneksi HP</b><small>Terhubung aman · pasangkan ulang</small></span><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="row"><span class="ic"><svg><use href="#i-activity"/></svg></span><span class="t"><b>Diagnostik</b><small>Link, memori, Wi-Fi, BLE, log pairing</small></span><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="row"><span class="ic"><svg><use href="#i-help"/></svg></span><span class="t"><b>Panduan singkat</b></span><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="row"><span class="t"><b>Versi</b><small>App 1.4 · Robot 2026.10.12 · Gateway 2026.10.12</small></span></div>
+    </div>
+  </section>
+  <section class="screen" data-s="danger" data-t="Zona bahaya" data-sub>
+    <div class="card">
+      <div class="row"><span class="t"><b>Restart robot</b></span><span class="tag">S3</span></div>
+      <div class="row"><span class="t"><b>Restart gateway</b></span><span class="tag">C3</span></div>
+      <div class="row"><span class="t"><b style="color:var(--bad)">Reset pabrik</b><small>Hapus semua setelan dan pasangan</small></span></div>
+      <div class="row"><span class="t"><b style="color:var(--bad)">Lupakan robot ini</b><small>Cabut kepercayaan HP ini</small></span></div>
+    </div>
+  </section>
+  </div>
+
+  <div class="composer" id="composer" style="display:none"><input class="input" placeholder="Tulis pesan ke AILI"><button class="btn" aria-label="Kirim"><svg><use href="#i-send"/></svg></button></div>
+  <nav id="nav">
+    <button class="on" data-tab="robot"><span class="pill"><svg><use href="#i-face"/></svg></span>Robot</button>
+    <button data-tab="chat"><span class="pill"><svg><use href="#i-chat"/></svg></span>Ngobrol</button>
+    <button data-tab="play"><span class="pill"><svg><use href="#i-play"/></svg></span>Main & Alat</button>
+    <button data-tab="memories"><span class="pill"><svg><use href="#i-heart"/></svg></span>Kenangan</button>
+    <button data-tab="settings"><span class="pill"><svg><use href="#i-gear"/></svg></span>Setelan</button>
+  </nav>
 </div>
 
-<aside class="side">
-  <h2>Pengganti dashboard · semua lewat BLE</h2>
-  <p>Mockup interaktif (klik tab, geser slider, tambah/hapus memori &amp; pengingat, simulasi update, reset). Semua data contoh; tidak ada koneksi nyata.</p>
-  <table class="map">
-    <tr><th>Layar</th><th>Jalur ke robot</th></tr>
-    <tr><td>Onboarding</td><td>Pindai GATT, bond LESC, handshake v2, SecretSet (Wi-Fi, Gemini)</td></tr>
-    <tr><td>Beranda</td><td>StatusSnapshot (11), SettingsSet (9), Command reboot, <b>companion command (baru)</b>: ekspresi, bicara, jeda, pomodoro</td></tr>
-    <tr><td>Setelan</td><td>SettingsGet/Set (8/9) halaman 0–8</td></tr>
-    <tr><td>Koneksi</td><td>SecretSet (10), status pairing, forget terautentikasi</td></tr>
-    <tr><td>Memori</td><td>MemoryList/Add/Delete/Clear (13–16) + <b>hapus pengalaman (baru)</b></td></tr>
-    <tr><td>Ingat</td><td>ReminderList/Add/Delete (17–19)</td></tr>
-    <tr><td>Lainnya › Aktivitas</td><td><b>Companion command (baru)</b>: activity_*, game_*, learning_*</td></tr>
-    <tr><td>Lainnya › Integrasi</td><td><b>Integrations (baru)</b>: config get/set, token tulis-saja, refresh, clear, status</td></tr>
-    <tr><td>Lainnya › IR / Tes suara</td><td><b>Companion command (baru)</b>: ir_send/learn/replay, sound test</td></tr>
-    <tr><td>Lainnya › Update / Bahaya</td><td>Command ota-start, reboot, factory-reset</td></tr>
-  </table>
-  <p>Cetak tebal = jalur yang belum ada di protokol saat ini (lihat ANDROID_ROBOT_INTEGRATION.md).</p>
-  <ul>
-    <li>Perubahan setelan dikumpulkan lalu disimpan sekali (bar kuning), diverifikasi dengan baca-ulang.</li>
-    <li>Rahasia tidak pernah ditampilkan ulang; hanya status "terpasang".</li>
-    <li>Tanpa sesi HMAC/bond, layar menampilkan "Terputus" dan tombol menulis dinonaktifkan.</li>
-    <li>Pairing awal tetap fisik di robot (tahan sensor kepala 5 dtk); aplikasi hanya memandu lewat layar onboarding.</li>
-    <li>Contoh status error: <code>ContentRejected</code> pada Memori; <code>UpdateBusy</code>, <code>RobotUnavailable</code> sebagai toast.</li><li>Update firmware memutus BLE sampai robot menyala ulang; hasil dibaca setelah tersambung kembali (tidak ada persen langsung).</li><li>Ganti PIN admin dihapus: tanpa dashboard, otorisasi = bond + sesi HMAC.</li>
+<div class="side">
+  <h2>Acuan IA 5 tab (disetujui 2026-10-14)</h2>
+  <p>Klik tab dan baris untuk masuk ke halaman detail.</p>
+  <ul class="principles">
+    <li>Satu warna aksen hangat, sisanya netral. Tanpa gradien, cahaya neon, atau emoji sebagai ikon.</li>
+    <li>Beranda menjawab tiga hal: robot sedang apa, kenapa, dan apa yang bisa dilakukan sekarang.</li>
+    <li>Istilah teknis (nama kunci setelan, VAD, NEC) pindah ke halaman lanjutan; label pakai bahasa sehari-hari.</li>
+    <li>Target sentuh minimal 48 dp, teks dasar 15 sp, kontras tinggi.</li>
   </ul>
-  <p style="margin-top:12px" class="btns"><button class="btn sec" onclick="toggleConn()">Simulasikan putus / sambung</button><button class="btn sec" onclick="onbStart()">Lihat onboarding</button><button class="btn sec" onclick="const b=$('#noWifi');b.style.display=b.style.display==='none'?'flex':'none'">Robot tanpa Wi-Fi</button></p>
-</aside>
+  <h2 style="margin-top:14px">Cakupan fitur (semua fitur app sekarang)</h2>
+  <table>
+    <tr><th>Fitur sekarang</th><th>Lokasi lama</th><th>Lokasi baru</th></tr>
+    <tr class="grp"><td colspan="3">Robot</td></tr>
+    <tr><td>Status robot, mood + alasan</td><td>Beranda</td><td>Robot (wajah cermin)</td></tr>
+    <tr><td>Ajak bicara, jeda/lanjut</td><td>Beranda › Kontrol langsung</td><td>Robot › aksi cepat, Jangan ganggu</td></tr>
+    <tr><td>Tidurkan/Bangunkan, Elus</td><td>Beranda</td><td>Robot › aksi cepat</td></tr>
+    <tr><td>Tampilkan ekspresi</td><td>Beranda</td><td>Robot › Tunjukkan ekspresi</td></tr>
+    <tr><td>Matikan mikrofon</td><td>Beranda</td><td>Robot › Sedang berjalan; Setelan › Privasi</td></tr>
+    <tr class="grp"><td colspan="3">Ngobrol</td></tr>
+    <tr><td>Chat app → robot, mode jawaban</td><td>Chat</td><td>Ngobrol</td></tr>
+    <tr class="grp"><td colspan="3">Main & Alat</td></tr>
+    <tr><td>Permainan sentuh</td><td>Lainnya</td><td>Main & Alat › Tebak sentuh</td></tr>
+    <tr><td>Koin/dadu/suit (play_game)</td><td>(lewat chat)</td><td>Main & Alat › Koin, dadu, suit</td></tr>
+    <tr><td>Aktivitas robot (13), riwayat</td><td>Lainnya</td><td>Main & Alat › Aktivitas</td></tr>
+    <tr><td>Pomodoro (mulai/jeda/lanjut/stop)</td><td>Beranda</td><td>Main & Alat › Pomodoro</td></tr>
+    <tr><td>Pengingat (sekali/harian/timer)</td><td>Pengingat</td><td>Main & Alat › Pengingat</td></tr>
+    <tr><td>IR: profil, belajar, kirim NEC</td><td>Lainnya</td><td>Main & Alat › Remote IR</td></tr>
+    <tr><td>Cuaca, kalender, Home Assistant, status penyedia</td><td>Lainnya</td><td>Main & Alat › Integrasi</td></tr>
+    <tr><td>Tes suara karakter</td><td>Setelan</td><td>Main & Alat › Tes suara</td></tr>
+    <tr class="grp"><td colspan="3">Kenangan</td></tr>
+    <tr><td>Milestone, ulang tahun</td><td>(baru, PD-2.2/2.6)</td><td>Kenangan</td></tr>
+    <tr><td>Diary mood + hapus</td><td>Memori</td><td>Kenangan › Diary mood</td></tr>
+    <tr><td>Fakta memori: lihat/tambah/hapus/hapus semua</td><td>Memori</td><td>Kenangan › Fakta tentang Anda</td></tr>
+    <tr><td>Hapus pengalaman (ringkasan)</td><td>Memori</td><td>Kenangan › Fakta tentang Anda</td></tr>
+    <tr><td>Pembelajaran preferensi, reset</td><td>Lainnya</td><td>Kenangan › Kebiasaan</td></tr>
+    <tr class="grp"><td colspan="3">Setelan</td></tr>
+    <tr><td>Nama robot, nama panggilan, preset, ultah, gaya bicara</td><td>Setelan</td><td>Setelan › Profil & kepribadian</td></tr>
+    <tr><td>Jam tenang, briefing harian, zona waktu</td><td>Setelan</td><td>Setelan › Jadwal tidur & rutinitas</td></tr>
+    <tr><td>Wajah (LivingEyes), mulut, gaya mata</td><td>Setelan</td><td>Setelan › Wajah & ekspresi</td></tr>
+    <tr><td>Suara & bicara, SFX per jenis, frekuensi, mode input, VAD</td><td>Setelan</td><td>Setelan › Suara & bicara</td></tr>
+    <tr><td>Pomodoro & kenyamanan, proaktif visual/suara</td><td>Setelan</td><td>Setelan › Fokus & kenyamanan</td></tr>
+    <tr><td>Notifikasi HP, allowlist bacakan, navigasi Maps</td><td>Setelan</td><td>Setelan › Notifikasi HP</td></tr>
+    <tr><td>Wi-Fi 3 slot, kunci Gemini, model, memori</td><td>Koneksi, Setelan</td><td>Setelan › Jaringan & AI</td></tr>
+    <tr><td>Diagnostik interaksi, hapus semua data</td><td>Setelan, Lainnya</td><td>Setelan › Privasi</td></tr>
+    <tr><td>OTA bertanda tangan + hasil update</td><td>Koneksi</td><td>Setelan › Pembaruan (+ catatan rilis)</td></tr>
+    <tr><td>Pairing & keamanan, sambungan HP, diagnostik, tentang</td><td>Koneksi, Lainnya</td><td>Setelan › Bantuan & tentang</td></tr>
+    <tr><td>Reboot S3/C3, reset pabrik, lupakan robot</td><td>Koneksi, Lainnya</td><td>Setelan › Zona bahaya</td></tr>
+    <tr><td>Onboarding (pindai, pasangkan)</td><td>Onboarding</td><td>Tetap; "kelahiran + beri nama" di PD-4.3</td></tr>
+  </table>
+</div>
 
 <script>
-const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-const titles={home:'Beranda',set:'Setelan',net:'Koneksi',mem:'Memori',rem:'Pengingat',more:'Lainnya'};
-const subs={act:'Aktivitas & permainan',int:'Integrasi',ir:'Remote inframerah',snd:'Tes suara',diag:'Diagnostik',upd:'Pembaruan firmware',dng:'Zona bahaya',abt:'Tentang'};
-let connected=true,dirty=false,tt;
-function show(id,title,tab,back){
-  $$('.view').forEach(v=>v.classList.toggle('on',v.id===id));
-  $$('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
-  $('#ttl').textContent=title;$('#back').style.display=back?'block':'none';
-}
-function go(t){show('v-'+t,titles[t],t,false)}
-function openSub(k){show('v-s-'+k,subs[k],'more',true)}
-$$('nav button').forEach(b=>b.onclick=()=>go(b.dataset.t));
-function pom(t){$('#pomst').textContent=t;toast('Pomodoro: '+t)}
-let irT;function irLearn(){let n=10;clearInterval(irT);irT=setInterval(()=>{n--;$('#irN').textContent=n>0?'Mendengarkan remote… '+n+' dtk':'Selesai · profil disimpan sebagai "last"';if(n<=0)clearInterval(irT)},1000);$('#irN').textContent='Mendengarkan remote… 10 dtk'}
-$('#cues').innerHTML=['wake','happy','curious','affection','thinking','surprise','sad','sleepy','error','success','pickup','shake'].map(c=>`<button class="btn sec" onclick="toast('Suara: ${c}')">${c}</button>`).join('');
-function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('on'),2200)}
-function setDirty(v){dirty=v;$$('.savebar').forEach(b=>b.classList.toggle('on',v))}
-$$('[data-dirty]').forEach(e=>e.addEventListener('input',()=>connected&&setDirty(true)));
-$$('[data-dirty]').forEach(e=>e.addEventListener('change',()=>connected&&setDirty(true)));
-function save(){
-  if(!connected)return toast('Terputus: tidak bisa menyimpan');
-  toast('Menyimpan… (9 halaman)');
-  setTimeout(()=>{setDirty(false);toast('Tersimpan & terverifikasi baca-ulang')},900);
-}
-function toggleConn(){
-  connected=!connected;
-  $('#conn').className='chip'+(connected?'':' off');
-  $('#connTxt').textContent=connected?'Terhubung · aman':'Terputus';
-  $$('.view .btn,.view input,.view select').forEach(b=>b.disabled=!connected);
-  if(!connected)toast('Sesi BLE berakhir · menyambung ulang…');
-}
-function openSheet(k){
-  const s={
-    reboot:`<h2>Reboot robot</h2><p class="note">Pilih target. S3 restart ±1 dtk, C3 ±1,5 dtk.</p>
-      <div class="row"><span>Robot (S3)</span><label class="sw"><input type="checkbox" checked><span></span></label></div>
-      <div class="row"><span>Gateway (C3) — BLE akan putus</span><label class="sw"><input type="checkbox"><span></span></label></div>
-      <div class="btns" style="margin-top:14px"><button class="btn sec" onclick="closeSheet()">Batal</button><button class="btn" onclick="closeSheet();toast('Reboot dijadwalkan')">Reboot</button></div>`,
-    wifi:`<h2>Wi-Fi slot</h2>
-      <div class="field"><label>SSID (maks 32)</label><input type="text"></div>
-      <div class="field"><label>Sandi (maks 64, kosong = jaringan terbuka)</label><input type="password" id="wpw"></div>
-      <div class="row"><span>Tampilkan sandi</span><label class="sw"><input type="checkbox" onchange="$('#wpw').type=this.checked?'text':'password'"><span></span></label></div>
-      <div class="row"><span>Pertahankan sandi lama</span><label class="sw"><input type="checkbox"><span></span></label></div>
-      <div class="btns" style="margin-top:14px"><button class="btn bad" onclick="closeSheet();toast('Slot dikosongkan')">Kosongkan</button><button class="btn" onclick="closeSheet();toast('Terkirim · reboot C3 untuk menerapkan')">Kirim</button></div>`,
-    clearmem:`<h2>Hapus semua memori?</h2><p class="note">Semua fakta di robot dihapus. Tidak bisa dibatalkan.</p>
-      <div class="btns" style="margin-top:14px"><button class="btn sec" onclick="closeSheet()">Batal</button><button class="btn bad" onclick="closeSheet();mem.length=0;renderMem();toast('Memori dihapus')">Hapus semua</button></div>`,
-    ota:`<h2>Mulai update firmware?</h2><p class="note">Robot mengunduh 1.5.0 lewat Wi-Fi dan memasangnya (S3 dulu, lalu C3). Koneksi BLE akan putus beberapa menit; jangan matikan robot.</p>
-      <div class="btns" style="margin-top:14px"><button class="btn sec" onclick="closeSheet()">Batal</button><button class="btn" onclick="closeSheet();ota()">Mulai</button></div>`,
-    forget:`<h2>Lupakan robot ini?</h2><p class="note">Robot mencabut kepercayaan pada HP ini lebih dulu, lalu bond dan kunci sesi di HP dihapus. Bila robot di luar jangkauan, HP tetap menghapus datanya tetapi robot masih mempercayai HP ini sampai dipasangkan ulang atau reset pabrik.</p>
-      <div class="btns" style="margin-top:14px"><button class="btn sec" onclick="closeSheet()">Batal</button><button class="btn bad" onclick="closeSheet();onbStart()">Lupakan</button></div>`,
-    clearexp:`<h2>Hapus pengalaman?</h2><p class="note">Ringkasan percakapan yang disimpan robot dihapus. Fakta memori tidak ikut terhapus.</p>
-      <div class="btns" style="margin-top:14px"><button class="btn sec" onclick="closeSheet()">Batal</button><button class="btn bad" onclick="closeSheet();toast('Pengalaman dihapus')">Hapus</button></div>`,
-    wipe:`<h2>Reset pabrik</h2><p class="note">Menghapus setelan S3 &amp; C3, kredensial HP, dan bond. Sekitar 5 dtk setelah perintah, robot reboot. Ketik <b>WIPE</b> untuk melanjutkan.</p>
-      <div class="field" style="margin-top:10px"><input type="text" id="wipeIn" placeholder="WIPE" oninput="$('#wipeGo').disabled=this.value!=='WIPE'"></div>
-      <div class="btns"><button class="btn sec" onclick="closeSheet()">Batal</button><button class="btn bad" id="wipeGo" disabled onclick="closeSheet();toast('Reset pabrik dijadwalkan (5 dtk)')">Reset</button></div>`
-  };
-  $('#sheetBody').innerHTML=s[k];$('#sheet').classList.add('on');
-}
-function closeSheet(){$('#sheet').classList.remove('on')}
-$('#sheet').onclick=e=>{if(e.target.id==='sheet')closeSheet()};
-
-let mem=[{id:1,k:'owner.name',v:'Faisal',c:'profile'},{id:2,k:'musik_fokus',v:'Suka lo-fi saat fokus',c:'preference'},{id:3,k:'alergi',v:'Alergi kacang',c:'note'}];
-function renderMem(){
-  $('#memc').textContent='('+mem.length+'/96)';
-  $('#memList').innerHTML=mem.length?mem.map(m=>`<div class="item"><div class="t">${esc(m.v)}<small>${esc(m.k)} · ${m.c} · id ${m.id}</small></div><button class="x" onclick="delMem(${m.id})">✕</button></div>`).join(''):'<p class="note">Belum ada memori.</p>';
-}
-function esc(t){return t.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
-function delMem(id){mem=mem.filter(m=>m.id!==id);renderMem();toast('Fakta dihapus')}
-function addMem(){
-  const v=$('#memIn').value.trim(),k=$('#memK').value.trim();if(!v||!k)return;
-  const bad=/\d{6,}|password|sandi|pin\b/i.test(v+k);
-  $('#memErr').style.display=bad?'block':'none';
-  if(bad)return;
-  const ex=mem.find(m=>m.k===k);const c=$('#memC').value.split(' ')[0];
-  if(ex){ex.v=v;ex.c=c;toast('Fakta dengan kunci sama diganti')}else{mem.push({id:(mem.at(-1)?.id||0)+1,k,v,c});toast('Ditambahkan')}
-  $('#memIn').value='';$('#memK').value='';renderMem();
-}
-let rem=[{id:1,k:'Harian',w:'07:30',t:'Minum vitamin'},{id:2,k:'Sekali',w:'Besok 14:00',t:'Rapat tim'}];
-function renderRem(){
-  $('#remc').textContent='('+rem.length+'/8)';
-  $('#remList').innerHTML=rem.length?rem.map(r=>`<div class="item"><div class="t">${r.t.replace(/</g,'&lt;')}<small>${r.k} · ${r.w}</small></div><button class="x" onclick="delRem(${r.id})">✕</button></div>`).join(''):'<p class="note">Belum ada pengingat.</p>';
-}
-function delRem(id){rem=rem.filter(r=>r.id!==id);renderRem();toast('Pengingat dihapus')}
-function addRem(){
-  const t=$('#remTxt').value.trim();if(!t)return;
-  if(rem.length>=8)return toast('Penuh (maks 8)');
-  rem.push({id:(rem.at(-1)?.id||0)+1,k:$('#remType').value,w:$('#remWhen').value,t});$('#remTxt').value='';renderRem();toast('Pengingat ditambahkan');
-}
-let otaT;
-function ota(){
-  $('#updMain').style.display='none';$('#updDone').style.display='none';$('#updRun').style.display='block';
-  connected=false;$('#conn').className='chip off';$('#connTxt').textContent='Update berjalan · terputus';
-  let t=0;otaT=setInterval(()=>{t++;$('#otaEl').textContent=t+' dtk';
-    if(t===3)$('#otaTxt').textContent='Memasang S3 lalu C3…';
-    if(t===6)$('#otaTxt').textContent='Robot menyala ulang · menyambung ulang…';
-    if(t>=8){clearInterval(otaT);connected=true;$('#conn').className='chip';$('#connTxt').textContent='Terhubung · aman';
-      $('#updRun').style.display='none';$('#updDone').style.display='block';toast('Tersambung ulang · update selesai')}},1000);
-}
-renderMem();renderRem();
-$$('.seg').forEach(g=>g.addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')return;[...g.children].forEach(c=>c.classList.toggle('on',c===e.target));connected&&setDirty(true)}));
-
-// Onboarding: izin -> pindai -> pairing -> selesai
-let ob=0,obSel=0,obT;
-const robots=[['RoboDesk-3F2A','−52 dBm','Sonic'],['RoboDesk-91C0','−74 dBm','']];
-function onbStart(){ob=0;$('#onb').classList.add('on');onbRender()}
-function onbClose(){$('#onb').classList.remove('on');go('home')}
-function onbRender(){
-  clearInterval(obT);
-  $$('#onbSteps i').forEach((e,i)=>e.classList.toggle('on',i<=ob));
-  const b=$('#onbBody'),k=$('#onbBtns');
-  if(ob===0){
-    b.innerHTML=`<div style="font-size:42px">📡</div><h2>Hubungkan RoboDesk</h2><p>Aplikasi ini mengatur semua setelan robot lewat Bluetooth. Izin yang dibutuhkan:</p>
-      <div class="card" style="margin-top:14px"><div class="row"><div class="l">Perangkat sekitar<small>Mencari dan terhubung ke robot</small></div><span class="tag ok">diizinkan</span></div>
-      <div class="row"><div class="l">Notifikasi<small>Layanan koneksi latar belakang</small></div><span class="tag ok">diizinkan</span></div>
-      <div class="row"><div class="l">Akses notifikasi HP<small>Meneruskan notifikasi terpilih ke robot</small></div><span class="tag wr">opsional</span></div></div>`;
-    k.innerHTML='<button class="btn" onclick="ob=1;onbRender()">Mulai mencari</button>';
-  }else if(ob===1){
-    b.innerHTML=`<h2>Memindai…</h2><p>Dekatkan HP ke robot dan pastikan robot menyala.</p><div style="margin-top:14px">`+robots.map((r,i)=>`<div class="robot ${i===obSel?'sel':''}" onclick="obSel=${i};onbRender()"><span style="font-size:24px">🤖</span><div style="flex:1"><b>${r[0]}</b><small class="v">${r[2]||'belum dipasangkan'}</small></div><span class="v">${r[1]}</span></div>`).join('')+`</div>`;
-    k.innerHTML='<button class="btn sec" onclick="ob=0;onbRender()">Kembali</button><button class="btn" onclick="ob=2;onbRender()">Pilih robot ini</button>';
-  }else if(ob===2){
-    let n=5;
-    b.innerHTML=`<h2>Buka jendela pairing</h2><p>Di robot <b>${robots[obSel][0]}</b>: tahan <b>sensor kepala</b> selama 5 detik sampai robot berbunyi.</p><div class="ring" id="ring">${n}</div><p style="text-align:center" id="obst">Menunggu jendela pairing terbuka…</p>`;
-    k.innerHTML='<button class="btn sec" onclick="ob=1;onbRender()">Batal</button><button class="btn" id="obGo" disabled onclick="ob=3;onbRender()">Lanjut</button>';
-    obT=setInterval(()=>{n--;$('#ring').textContent=n>0?n:'✓';if(n<=0){clearInterval(obT);$('#obst').textContent='Pairing terbuka · setujui permintaan sandi di HP';$('#obGo').disabled=false}},1000);
-  }else if(ob===3){
-    b.innerHTML=`<div style="font-size:42px;margin-top:30px">✅</div><h2>Terhubung</h2><p>Bond aman dibuat dan sesi terautentikasi dimulai. Robot <b>${robots[obSel][0]}</b> siap diatur.</p>
-      <div class="card" style="margin-top:14px"><div class="row"><span>Bond LESC</span><span class="tag ok">aktif</span></div><div class="row"><span>Sesi HMAC</span><span class="tag ok">aktif</span></div></div>`;
-    k.innerHTML='<button class="btn" onclick="ob=4;onbRender()">Lanjut: atur Wi-Fi</button>';
-  }else if(ob===4){
-    b.innerHTML=`<h2>Wi-Fi robot</h2><p>Robot butuh Wi-Fi untuk Gemini, jam, dan update. Sandi dikirim terenkripsi dan tidak bisa dibaca kembali.</p>
-      <div class="field" style="margin-top:14px"><label>SSID (maks 32)</label><input type="text"></div><div class="field"><label>Sandi (maks 64, kosong = jaringan terbuka)</label><input type="password"></div>`;
-    k.innerHTML='<button class="btn sec" onclick="ob=5;onbRender()">Lewati</button><button class="btn" onclick="toast(\'Wi-Fi terkirim\');ob=5;onbRender()">Kirim</button>';
-  }else{
-    b.innerHTML=`<h2>Kunci API Gemini</h2><p>Dibutuhkan agar robot bisa bercakap. Boleh dilewati dan diatur nanti di tab Koneksi.</p>
-      <div class="field" style="margin-top:14px"><label>Kunci (A-Z a-z 0-9 - _ . · maks 96)</label><input type="password" placeholder="AIza…"></div>`;
-    k.innerHTML='<button class="btn sec" onclick="onbClose()">Lewati</button><button class="btn" onclick="toast(\'Kunci terkirim\');onbClose()">Kirim &amp; selesai</button>';
-  }
-}
+const EXPR=['senang','penasaran','malu','sayang','sedih','kaget','berpikir','setuju','tidak setuju','kedip','tertawa','ngantuk','kesal','pusing','semangat','tenang'];
+const ex=document.getElementById('exprs');EXPR.forEach((e,i)=>{const b=document.createElement('button');b.className='chip'+(i===0?' on':'');b.textContent=e;b.onclick=()=>{[...ex.children].forEach(c=>c.classList.remove('on'));b.classList.add('on')};ex.appendChild(b)});
+const DIARY=[[5,3,2,0],[4,4,3,1],[6,2,3,0],[3,5,4,0],[7,2,2,0],[4,3,3,1],[5,4,2,0]],COL=['#f2b45a','#8fb8d8','#a99be0','#e58f7e'];
+const bars=document.getElementById('bars');DIARY.forEach(d=>{const c=document.createElement('div');d.forEach((v,i)=>{if(!v)return;const s=document.createElement('span');s.style.height=(v*5)+'px';s.style.background=COL[i];c.appendChild(s)});bars.appendChild(c)});
+const screens=[...document.querySelectorAll('.screen')],navs=[...document.querySelectorAll('#nav button')];let stack=[];
+function show(id){screens.forEach(s=>s.classList.toggle('on',s.dataset.s===id));const s=screens.find(s=>s.dataset.s===id);document.getElementById('title').textContent=s.dataset.t;document.getElementById('bar').classList.toggle('sub',s.hasAttribute('data-sub'));document.getElementById('linkpill').style.display=s.hasAttribute('data-sub')?'none':'';document.getElementById('composer').style.display=id==='chat'?'flex':'none';document.getElementById('scroll').scrollTop=0}
+function tab(id){stack=[id];navs.forEach(n=>n.classList.toggle('on',n.dataset.tab===id));show(id)}
+function go(id){stack.push(id);show(id)}
+function back(){if(stack.length>1){stack.pop();show(stack[stack.length-1])}}
+navs.forEach(n=>n.onclick=()=>tab(n.dataset.tab));tab('robot');
+let asleep=false;function sleepToggle(){asleep=!asleep;document.getElementById('oled').classList.toggle('sleep',asleep);document.getElementById('moodTxt').textContent=asleep?'Tidur':'Ngantuk';document.getElementById('moodWhy').textContent=asleep?'ditidurkan dari app':'sudah malam · energi rendah';document.getElementById('sleepLbl').textContent=asleep?'Bangunkan':'Tidurkan'}
 </script>
 </body>
 </html>

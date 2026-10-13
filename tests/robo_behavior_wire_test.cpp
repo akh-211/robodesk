@@ -13,6 +13,8 @@ int main(){RuntimeSettings source;RuntimeSettings::copy(source.geminiApiKey,size
   doc["navigationEnabled"]=2;assert(!roboBehaviorImport(doc.as<JsonObjectConst>(),receiver));doc["navigationEnabled"]=0;
   // PD-2.3/2.6: preset 0..2, birthday both-or-neither; keys optional for older apps.
   assert(doc["personalityPreset"]==1&&doc["ownerBirthMonth"]==0&&doc["ownerBirthDay"]==0);
+  assert(doc["cloudConsent"]==0);doc["cloudConsent"]=2;assert(!roboBehaviorImport(doc.as<JsonObjectConst>(),receiver));doc["cloudConsent"]=1;assert(roboBehaviorImport(doc.as<JsonObjectConst>(),receiver)&&receiver.cloudConsent==1); // PD-4.14
+  assert(doc["faceEyeStyle"]==0);doc["faceEyeStyle"]=2;assert(!roboBehaviorImport(doc.as<JsonObjectConst>(),receiver));doc["faceEyeStyle"]=1;assert(roboBehaviorImport(doc.as<JsonObjectConst>(),receiver)&&receiver.faceEyeStyle==1); // PD-4.2
   doc["personalityPreset"]=3;assert(!roboBehaviorImport(doc.as<JsonObjectConst>(),receiver));doc["personalityPreset"]=2;
   doc["ownerBirthMonth"]=5;assert(!roboBehaviorImport(doc.as<JsonObjectConst>(),receiver));doc["ownerBirthDay"]=32;assert(!roboBehaviorImport(doc.as<JsonObjectConst>(),receiver));
   doc["ownerBirthDay"]=17;assert(roboBehaviorImport(doc.as<JsonObjectConst>(),receiver)&&receiver.personalityPreset==2&&receiver.ownerBirthMonth==5&&receiver.ownerBirthDay==17);

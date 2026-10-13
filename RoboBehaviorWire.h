@@ -68,6 +68,8 @@ inline void roboBehaviorExport(const RuntimeSettings&s,JsonObject out){
   out["personalityPreset"]=s.personalityPreset;
   out["ownerBirthMonth"]=s.ownerBirthMonth;
   out["ownerBirthDay"]=s.ownerBirthDay;
+  out["faceEyeStyle"]=s.faceEyeStyle;
+  out["cloudConsent"]=s.cloudConsent;
 }
 inline bool roboBehaviorSettingsEqual(const RuntimeSettings&a,const RuntimeSettings&b){
   JsonDocument leftDoc,rightDoc;roboBehaviorExport(a,leftDoc.to<JsonObject>());roboBehaviorExport(b,rightDoc.to<JsonObject>());
@@ -203,7 +205,9 @@ inline bool roboBehaviorImport(JsonObjectConst in,RuntimeSettings&out){
   if(!in["personalityPreset"].isNull()){if(!in["personalityPreset"].is<uint8_t>())return false;next.personalityPreset=in["personalityPreset"].as<uint8_t>();}
   if(!in["ownerBirthMonth"].isNull()||!in["ownerBirthDay"].isNull()){if(!in["ownerBirthMonth"].is<uint8_t>()||!in["ownerBirthDay"].is<uint8_t>())return false;
     next.ownerBirthMonth=in["ownerBirthMonth"].as<uint8_t>();next.ownerBirthDay=in["ownerBirthDay"].as<uint8_t>();}
-  if(next.personalityPreset>2||next.ownerBirthMonth>12||next.ownerBirthDay>31||(next.ownerBirthMonth==0)!=(next.ownerBirthDay==0))return false;
+  if(!in["faceEyeStyle"].isNull()){if(!in["faceEyeStyle"].is<uint8_t>())return false;next.faceEyeStyle=in["faceEyeStyle"].as<uint8_t>();}
+  if(!in["cloudConsent"].isNull()){if(!in["cloudConsent"].is<uint8_t>())return false;next.cloudConsent=in["cloudConsent"].as<uint8_t>();}
+  if(next.cloudConsent>1||next.faceEyeStyle>1||next.personalityPreset>2||next.ownerBirthMonth>12||next.ownerBirthDay>31||(next.ownerBirthMonth==0)!=(next.ownerBirthDay==0))return false;
   if(next.inputMode>2||next.timezoneOffsetMin< -720||next.timezoneOffsetMin>840||next.speakerGainMilli<50||next.speakerGainMilli>1000||next.comfortMinTempX10>=next.comfortMaxTempX10||next.comfortMinHumidityX10>=next.comfortMaxHumidityX10)return false;
   out=next;return true;
 }

@@ -130,6 +130,47 @@ object GeminiKeyHelp {
     }
 }
 
+/** PD-4.8 prominent disclosure shown before Android's notification-access settings. */
+const val NOTIFICATION_ACCESS_DISCLOSURE = "Aplikasi membaca notifikasi HP hanya dari aplikasi yang Anda pilih, lalu mengirim judul dan cuplikan " +
+    "singkatnya ke robot lewat Bluetooth terenkripsi agar robot bisa menampilkan atau membacakannya. Kode OTP, kata sandi, dan data sensitif " +
+    "disaring di HP dan tidak dikirim. Tidak ada notifikasi yang dikirim ke server mana pun. Akses bisa dicabut kapan saja di setelan Android."
+
+/** PD-4.14 privacy indicators: one wording for mic and cloud state everywhere in the app. */
+object PrivacyState {
+    const val CONSENT_TEXT = "Saat percakapan aktif, suara dan teks yang Anda kirim diteruskan langsung dari robot ke Google Gemini memakai kunci Anda " +
+        "dan diatur oleh ketentuan Google untuk akun Anda. Kami tidak menyimpan atau menerima audio Anda. Mikrofon bisa dimatikan kapan saja, " +
+        "dan persetujuan ini bisa dicabut di Setelan › Privasi."
+    fun mic(muted: Boolean) = if (muted) "Mikrofon mati" else "Mikrofon aktif"
+    /** null consent = settings not loaded yet. */
+    fun cloud(keyInstalled: Boolean?, consent: Boolean?): String = when {
+        keyInstalled == false -> "Tanpa AI cloud (belum ada kunci)"
+        consent == false -> "AI cloud mati (belum disetujui)"
+        keyInstalled == true && consent == true -> "AI cloud aktif (Gemini)"
+        else -> "-"
+    }
+}
+
+/** PD-4.3 "birth" onboarding: the name the owner gives the robot (settings robotName, max 31). */
+object RobotNaming {
+    const val DEFAULT = "AILI"
+    /** Trimmed name, or null when empty, too long or containing control characters. */
+    fun clean(raw: String): String? {
+        val name = raw.trim()
+        return if (name.isEmpty() || name.length > 31 || name.any { it.isISOControl() }) null else name
+    }
+}
+
+/** PD-4.2 Kenangan: companion age and milestones from the robot's read-only settings keys. */
+object Milestones {
+    val DAYS = listOf(7, 30, 100, 365)
+    fun daysTogether(firstEpoch: Long, nowEpoch: Long): Int =
+        if (firstEpoch <= 0 || nowEpoch < firstEpoch) 0 else ((nowEpoch - firstEpoch) / 86400L).toInt()
+    /** The next milestone day still ahead, or null after a year. */
+    fun next(days: Int): Int? = DAYS.firstOrNull { it > days }
+    /** Milestone days the robot already celebrated (bit i = DAYS[i]). */
+    fun celebrated(mask: Int): List<Int> = DAYS.filterIndexed { i, _ -> mask and (1 shl i) != 0 }
+}
+
 /** Status numbers prepared for the Home/Diagnostics screens. */
 class StatusView(val s: P.StatusSnapshot) {
     fun moodText(hour: Int): String? = MoodText.describe(s.moodId, s.moodCause, s.sleepState, hour)

@@ -1,5 +1,15 @@
 package com.robodesk.phonebridge.ui
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Face
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.layout.heightIn
+import com.robodesk.phonebridge.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,7 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.robodesk.phonebridge.UiNotice
 
-private val NAV_ICONS = listOf("⌂", "⚙", "⌁", "✎", "⏰", "≡")
+private val NAV_ICONS = listOf(Icons.Outlined.Face, Icons.Outlined.Email, Icons.Outlined.PlayArrow, Icons.Outlined.FavoriteBorder, Icons.Outlined.Settings)
 
 /** Whole app: onboarding overlay or tab shell, plus the toast and the sheet layer. */
 @Composable
@@ -50,15 +60,15 @@ private fun MainShell() {
         AppBar()
         app.notice?.let { NoticeBar(it) }
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            when (app.tab) {
+            val sub = app.sub
+            if (sub != null) SubScreen(sub) else when (app.tab) {
                 0 -> HomeScreen()
-                1 -> SettingsScreen()
-                2 -> NetScreen()
+                1 -> ChatScreen()
+                2 -> PlayScreen()
                 3 -> MemoryScreen()
-                4 -> ReminderScreen()
-                else -> MoreScreen()
+                else -> SettingsScreen()
             }
-            val showSave = app.dirty && app.sub == null && app.tab in 0..1
+            val showSave = app.dirty && app.sub == null && (app.tab == 0 || app.tab == 4)
             if (showSave) SaveBar(true, onSave = { app.save() }, enabled = app.canWrite,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 8.dp))
         }
@@ -73,8 +83,8 @@ private fun AppBar() {
     Row(Modifier.fillMaxWidth().background(RoboColors.Panel).padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-            if (sub != null) Text("‹", color = RoboColors.Text, fontSize = 26.sp, modifier = Modifier.clickable { app.sub = null }.padding(horizontal = 10.dp, vertical = 2.dp))
-            Text(if (sub != null) SUB_TITLES[sub].orEmpty() else TAB_TITLES[app.tab], color = RoboColors.Text, fontSize = 20.sp,
+            if (sub != null) Text("‹", color = RoboColors.Text, fontSize = 26.sp, modifier = Modifier.clickable { app.back() }.padding(horizontal = 14.dp, vertical = 6.dp))
+            Text(stringResource(if (sub != null) SUB_TITLES[sub] ?: R.string.app_name else TAB_TITLES[app.tab]), color = RoboColors.Text, fontSize = 20.sp,
                 fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.padding(start = if (sub == null) 4.dp else 0.dp))
         }
         val updating = app.otaStartedAt != 0L && !app.ready
@@ -97,13 +107,13 @@ private fun NavBar() {
     val app = RoboApp
     Row(Modifier.fillMaxWidth().background(RoboColors.Panel).padding(vertical = 6.dp)) {
         TAB_TITLES.forEachIndexed { i, title ->
-            val active = app.tab == i
-            val label = if (i == 4) "Ingat" else title
-            Column(Modifier.weight(1f).clickable { app.openTab(i) }.padding(vertical = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.clip(CircleShape).background(if (active) RoboColors.NavActivePill else RoboColors.Panel).padding(horizontal = 16.dp, vertical = 3.dp)) {
-                    Text(NAV_ICONS[i], color = if (active) RoboColors.Accent else RoboColors.Mute, fontSize = 18.sp)
+            val active = app.tab == i && app.sub == null
+            val label = stringResource(title)
+            Column(Modifier.weight(1f).heightIn(min = 56.dp).clickable { app.openTab(i) }.padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.clip(CircleShape).background(if (active) RoboColors.NavActivePill else RoboColors.Panel).padding(horizontal = 18.dp, vertical = 4.dp)) {
+                    Icon(NAV_ICONS[i], contentDescription = label, tint = if (active) RoboColors.Accent else RoboColors.Mute)
                 }
-                Text(label, color = if (active) RoboColors.Accent else RoboColors.Mute, fontSize = 10.5.sp, maxLines = 1)
+                Text(label, color = if (active) RoboColors.Accent else RoboColors.Mute, fontSize = 11.5.sp, maxLines = 1)
             }
         }
     }

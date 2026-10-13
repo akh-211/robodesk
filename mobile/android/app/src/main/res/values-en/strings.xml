@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AILI</string>
+
+    <string name="tab_robot">Robot</string>
+    <string name="tab_chat">Chat</string>
+    <string name="tab_play">Play &amp; Tools</string>
+    <string name="tab_memories">Memories</string>
+    <string name="tab_settings">Settings</string>
+
+    <string name="sub_activities">Activities &amp; games</string>
+    <string name="sub_reminders">Reminders</string>
+    <string name="sub_ir">IR remote</string>
+    <string name="sub_integrations">Integrations</string>
+    <string name="sub_sound">Character sound test</string>
+    <string name="sub_network">Network &amp; AI</string>
+    <string name="sub_update">Updates</string>
+    <string name="sub_help">Help &amp; about</string>
+    <string name="sub_diagnostics">Diagnostics</string>
+    <string name="sub_about">About</string>
+    <string name="sub_danger">Danger zone</string>
+
+    <string name="play_activities_sub">Robot activities, touch game, habits</string>
+    <string name="play_reminders_sub">Once, daily or timer</string>
+    <string name="play_ir_sub">Send, learn and replay remote profiles</string>
+    <string name="play_integrations_sub">Weather, calendar, Home Assistant</string>
+    <string name="play_sound_sub">Play the robot\'s character sounds</string>
+
+    <string name="settings_network_sub">Wi-Fi, Gemini key, pairing</string>
+    <string name="settings_update_sub">Installed %1$s</string>
+    <string name="settings_update_available">available %1$s</string>
+    <string name="settings_help_sub">Diagnostics and version</string>
+    <string name="settings_danger_sub">Restart, factory reset, forget robot</string>
+    <string name="help_diag_sub">Link, memory, BLE, phone connection</string>
+
+    <string name="eye_style">Eye style</string>
+    <string name="eye_style_classic">Classic</string>
+    <string name="eye_style_contour">Contour</string>
+
+    <string name="memories_days_together">%1$d days together</string>
+    <string name="memories_milestone_day">Day %1$d</string>
+    <string name="memories_celebrated">celebrated</string>
+    <string name="memories_upcoming">upcoming</string>
+    <string name="memories_next">Next: day %1$d · in %2$d days</string>
+    <string name="birth_next">Next: give a name</string>
+    <string name="birth_title">Hello, I just woke up!</string>
+    <string name="birth_sub">Give me a name and pick my personality. You can change it later in Settings.</string>
+    <string name="birth_name">Robot name</string>
+    <string name="birth_owner">What should I call you?</string>
+    <string name="birth_owner_hint">e.g. Faisal</string>
+    <string name="birth_personality">Personality</string>
+    <string name="birth_note">Calm: quiet and gentle. Cheerful: balanced. Playful: more expressive and more sounds.</string>
+    <string name="birth_skip">Skip</string>
+    <string name="birth_done">Name it</string>
+    <string name="sub_privacy">Privacy</string>
+    <string name="settings_privacy_sub">Microphone, cloud AI, delete all data</string>
+    <string name="privacy_now">Right now</string>
+    <string name="privacy_mic">Microphone</string>
+    <string name="privacy_cloud">Cloud AI</string>
+    <string name="privacy_mute">Turn microphone off</string>
+    <string name="privacy_metrics">Local interaction diagnostics (no transcripts)</string>
+    <string name="privacy_consent">Allow voice to be sent to Gemini</string>
+    <string name="privacy_wipe">Delete all data</string>
+</resources>

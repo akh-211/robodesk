@@ -153,6 +153,16 @@ private fun verifySettingsPipeline() {
     check(MoodText.describe(7, 0, 2, 22) == "Ngantuk · sudah malam" && MoodText.describe(7, 0, 2, 14) == "Ngantuk")
     check(MoodText.describe(4, 2, 1, 10) == "Sayang · baru dielus" && MoodText.describe(10, 11, 1, 10) == "Ngambek · disentuh terus")
     check(MoodText.describe(2, 0, 4, 2) == "Tidur nyenyak · sudah malam" && MoodText.describe(0, 0, 0, 10) == null && MoodText.describe(99, 99, 99, 10) == null)
+    // PD-4.14 one wording for mic/cloud state
+    check(PrivacyState.mic(true) == "Mikrofon mati" && PrivacyState.mic(false) == "Mikrofon aktif")
+    check(PrivacyState.cloud(false, true).contains("belum ada kunci") && PrivacyState.cloud(true, false).contains("belum disetujui") && PrivacyState.cloud(true, true).contains("aktif") && PrivacyState.cloud(null, null) == "-")
+    check(PrivacyState.CONSENT_TEXT.contains("Google Gemini") && PrivacyState.CONSENT_TEXT.contains("dicabut"))
+    // PD-4.3 naming at "birth"
+    check(RobotNaming.clean("  Aili  ") == "Aili" && RobotNaming.clean("") == null && RobotNaming.clean("x".repeat(32)) == null && RobotNaming.clean("a\u0007b") == null)
+    // PD-4.2 milestones in Kenangan
+    check(Milestones.daysTogether(1_800_000_000L, 1_800_000_000L + 31 * 86400L + 5) == 31 && Milestones.daysTogether(0, 5) == 0 && Milestones.daysTogether(100, 50) == 0)
+    check(Milestones.next(31) == 100 && Milestones.next(6) == 7 && Milestones.next(365) == null)
+    check(Milestones.celebrated(0b0011) == listOf(7, 30) && Milestones.celebrated(0).isEmpty())
     // PD-4.16 user-owned Gemini key: paste clean-up and friendly checks.
     run {
         val good = "AIza" + "B".repeat(35)
@@ -375,7 +385,7 @@ private fun verifyModelHelpers() {
     check(Allowlist.parse("a.b\r\nc.d;e.f  g.h").toList() == listOf("a.b", "c.d", "e.f", "g.h"))
     // Every controlled key exists exactly once and none is internal.
     check(RobotSettings.CONTROLLED_KEYS.toSet().size == RobotSettings.CONTROLLED_KEYS.size && RobotSettings.CONTROLLED_KEYS.none { it in RobotSettings.INTERNAL_KEYS })
-    check(RobotSettings.CONTROLLED_KEYS.size + RobotSettings.INTERNAL_KEYS.size == 67) { "67 exported keys, got ${RobotSettings.CONTROLLED_KEYS.size + RobotSettings.INTERNAL_KEYS.size}" }
+    check(RobotSettings.CONTROLLED_KEYS.size + RobotSettings.INTERNAL_KEYS.size == 69) { "69 exported keys, got ${RobotSettings.CONTROLLED_KEYS.size + RobotSettings.INTERNAL_KEYS.size}" }
     // Manifest
     check(UpdateManifest.parseVersion("a=b\nversion=20261010\n") == "20261010" && UpdateManifest.parseVersion("version=1.5.0") == "1.5.0" && UpdateManifest.parseVersion("version=$(x)") == null && UpdateManifest.parseVersion("none") == null)
     check(UpdateManifest.isNewer("20261010", 20261009) && !UpdateManifest.isNewer("20261009", 20261009) && UpdateManifest.isNewer("20261009", 0))

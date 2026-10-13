@@ -1,5 +1,7 @@
 package com.robodesk.phonebridge.ui
 
+import androidx.compose.ui.res.stringResource
+import com.robodesk.phonebridge.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -65,6 +67,8 @@ fun SettingsScreen() {
     val app = RoboApp
     val d = app.draft
     ScreenColumn {
+        MenuCard(settingsMenu(app.status?.c3Version?.toString() ?: "?", app.latestVersion?.toString())) // PD-4.2 hub
+        Gap(12)
         if (d == null) {
             RoboCard {
                 Text(if (app.settingsLoading) "Memuat setelan…" else app.settingsError ?: "Setelan belum dimuat", color = RoboColors.Mute)
@@ -151,6 +155,7 @@ private fun ColumnScope.SettingsGroups(d: RobotSettings) {
         Percent("quietGainX100", "Volume saat jam tenang")
     }
     AccordionCard("Wajah (LivingEyes)") {
+        if (d.has("faceEyeStyle")) RoboField(stringResource(R.string.eye_style)) { Segmented(listOf(stringResource(R.string.eye_style_classic), stringResource(R.string.eye_style_contour)), d.int("faceEyeStyle"), { v -> app.edit { it.setInt("faceEyeStyle", v) } }, w) }
         Sw("faceLifeEnabled", "Wajah hidup (perhatian, gerak mikro)")
         Sw("facePupils", "Pupil")
         Sw("faceBrows", "Alis tersedia")

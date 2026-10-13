@@ -1,5 +1,6 @@
 package com.robodesk.phonebridge.ui
 
+import com.robodesk.phonebridge.PrivacyState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -60,8 +61,9 @@ fun HomeScreen() {
     ScreenColumn {
         if (draft != null && app.repo.isIphoneRobot(draft))
             Banner("Robot ini terdaftar untuk iPhone; lakukan reset pabrik (sentuh/serial) agar bisa dipakai dengan Android", "Lihat") { app.openSub("dng") }
-        if (st != null && !st.wifiSlotConfigured) Banner("Wi-Fi robot belum diatur. Robot butuh Wi-Fi untuk Gemini, jam, dan update.", "Atur") { app.openTab(2) }
-        else if (st != null && !st.geminiKey) Banner("Kunci API Gemini belum dipasang. Robot butuh kunci agar bisa bercakap.", "Atur") { app.openTab(2) }
+        if (st != null && !st.wifiSlotConfigured) Banner("Wi-Fi robot belum diatur. Robot butuh Wi-Fi untuk Gemini, jam, dan update.", "Atur") { app.openSub("net") }
+        else if (st != null && st.geminiKey && draft != null && draft.int("cloudConsent") != 1) Banner("AI cloud mati sampai Anda menyetujui pengiriman suara ke Gemini.", "Tinjau") { app.sheet = SheetKind.CLOUD_CONSENT }
+        else if (st != null && !st.geminiKey) Banner("Kunci API Gemini belum dipasang. Robot butuh kunci agar bisa bercakap.", "Atur") { app.openSub("net") }
 
         RoboCard {
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -80,6 +82,7 @@ fun HomeScreen() {
             InfoRow("Link C3 ↔ S3", st?.linkText ?: "-", if (st?.s.let { it != null && it.uartConnected }) RoboColors.Ok else RoboColors.Mute)
             InfoRow("Wi-Fi", st?.wifiText ?: "-")
             InfoRow("Kunci Gemini", if (st == null) "-" else if (st.geminiKey) "Terpasang" else "Belum ada", if (st?.geminiKey == true) RoboColors.Ok else RoboColors.Mute)
+            InfoRow("Privasi", PrivacyState.mic(draft?.bool("privacyMicMuted") == true) + " · " + PrivacyState.cloud(st?.geminiKey, draft?.let { it.int("cloudConsent") == 1 })) // PD-4.14
             InfoRow("Waktu aktif", st?.uptimeText ?: "-")
             InfoRow("Heap bebas C3 / S3", st?.heapText ?: "-", last = true)
         }
@@ -92,7 +95,7 @@ fun HomeScreen() {
                 RoboButton("Cek update", { app.openSub("upd") }, Modifier.weight(1f), ButtonKind.SECONDARY)
             }
             Gap(8)
-            RoboButton("Chat dengan robot", { app.openSub("chat") }, Modifier.fillMaxWidth(), ButtonKind.SECONDARY)
+            RoboButton("Chat dengan robot", { app.openTab(1) }, Modifier.fillMaxWidth(), ButtonKind.SECONDARY)
         }
         LiveControls(st, app.canWrite)
     }

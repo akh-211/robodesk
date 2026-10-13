@@ -83,6 +83,8 @@ struct RuntimeSettings {
   uint8_t personalityPreset;       // PD-2.3: 0 Kalem, 1 Ceria, 2 Usil
   uint8_t ownerBirthMonth;         // PD-2.6: 1..12, 0 = not set (both or neither)
   uint8_t ownerBirthDay;           // 1..31, 0 = not set
+  uint8_t faceEyeStyle;            // PD-4.2: 0 classic, 1 contour (LivingEyes EmoOled)
+  uint8_t cloudConsent;            // PD-4.14: owner agreed to send audio/text to Gemini with their key (0 = never connect)
   // Append-only: keep the original migration-backup prefix readable.
   uint8_t phonePlatform;          // 0 Android bridge, 1 iPhone ANCS
   uint8_t navigationEnabled;
@@ -147,6 +149,8 @@ struct RuntimeSettings {
     personalityPreset = 1;
     ownerBirthMonth = 0;
     ownerBirthDay = 0;
+    faceEyeStyle = 0;
+    cloudConsent = 0;
   }
 
   static void copy(char* dst, size_t cap, const char* src) {
@@ -277,6 +281,8 @@ class RuntimeSettingsStore {
       out.quietEndMin = clampU16(p.getUShort("quietend", out.quietEndMin), 0, 1439);
       out.quietGainX100 = clampU16(p.getUShort("quietgain", out.quietGainX100), 0, 100);
       { const uint8_t v=p.getUChar("preset",out.personalityPreset);out.personalityPreset=v<=2?v:1; }
+      out.faceEyeStyle = p.getUChar("eyestyle", out.faceEyeStyle) ? 1 : 0;
+      out.cloudConsent = p.getUChar("cloudok", out.cloudConsent) ? 1 : 0;
       { const uint8_t m=p.getUChar("bmonth",0),d=p.getUChar("bday",0);if(m>=1&&m<=12&&d>=1&&d<=31){out.ownerBirthMonth=m;out.ownerBirthDay=d;} }
       const uint8_t mode = p.getUChar("mode", out.inputMode);
       out.inputMode = mode <= uint8_t(RuntimeSettings::WakeWord) ? mode : uint8_t(RuntimeSettings::AlwaysListening);
@@ -390,6 +396,8 @@ class RuntimeSettingsStore {
     p.putUChar("preset", s.personalityPreset);
     p.putUChar("bmonth", s.ownerBirthMonth);
     p.putUChar("bday", s.ownerBirthDay);
+    p.putUChar("eyestyle", s.faceEyeStyle);
+    p.putUChar("cloudok", s.cloudConsent);
     p.putUChar("mode", s.inputMode);
     if(ok)ok &= p.putBool("init",true)>0;
     wifiFreeEntriesAfterSave_=p.freeEntries();

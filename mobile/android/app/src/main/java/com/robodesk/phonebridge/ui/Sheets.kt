@@ -1,5 +1,7 @@
 package com.robodesk.phonebridge.ui
 
+import com.robodesk.phonebridge.NOTIFICATION_ACCESS_DISCLOSURE
+import com.robodesk.phonebridge.PrivacyState
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
@@ -73,6 +75,18 @@ fun ColumnScope.SheetContent() {
         }
         SheetKind.CLEAR_MEMORY -> Confirm("Hapus semua memori?", "Semua fakta di robot dihapus. Tidak bisa dibatalkan.", "Hapus semua", enabled = app.canWrite) {
             app.call("Memori dihapus", { d -> app.repo.clearMemory(d) }, onOk = { app.clearMemoryCache() })
+        }
+        SheetKind.CLOUD_CONSENT -> Confirm("Kirim suara ke Gemini?", PrivacyState.CONSENT_TEXT, "Setuju", danger = false, enabled = app.canWrite) {
+            app.setNow("cloudConsent", 1) { app.say(if (it == 1) "AI cloud disetujui" else "Gagal menyimpan persetujuan") }
+        }
+        SheetKind.NOTIF_ACCESS -> {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            Confirm("Izinkan akses notifikasi?", NOTIFICATION_ACCESS_DISCLOSURE, "Lanjut ke setelan Android", danger = false) {
+                context.startActivity(android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        }
+        SheetKind.WIPE_DATA -> Confirm("Hapus semua data?", "Memori robot, ringkasan obrolan, diary mood, dan cache HP dihapus. Setelan dan pasangan tetap. Tidak bisa dibatalkan.", "Hapus semua", enabled = app.canWrite) {
+            app.wipeAllData()
         }
         SheetKind.CLEAR_EXPERIENCES -> Confirm("Hapus pengalaman?", "Ringkasan percakapan yang disimpan robot dihapus. Fakta memori tidak ikut terhapus.", "Hapus", enabled = app.canWrite) {
             app.call("Pengalaman dihapus", { d -> app.repo.experiencesClear(d) })

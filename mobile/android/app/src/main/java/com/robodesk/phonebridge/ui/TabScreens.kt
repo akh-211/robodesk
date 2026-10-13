@@ -1,5 +1,8 @@
 package com.robodesk.phonebridge.ui
 
+import androidx.compose.ui.res.stringResource
+import com.robodesk.phonebridge.R
+import com.robodesk.phonebridge.Milestones
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.os.Build
@@ -95,6 +98,22 @@ private fun ColumnScope.GeminiCard(installed: Boolean?, w: Boolean) {
 
 private val CATEGORIES = listOf("note · catatan", "profile · profil", "preference · preferensi", "routine · rutinitas", "place · tempat", "event · kejadian")
 
+/** PD-4.2 Kenangan: days together and milestones (read-only keys the robot adds to its settings document). */
+@Composable
+private fun ColumnScope.MilestoneCard() {
+    val d = RoboApp.draft ?: return
+    val first = d.int("companionSinceEpoch").toLong()
+    if (first <= 0) return
+    val days = Milestones.daysTogether(first, System.currentTimeMillis() / 1000)
+    RoboCard(stringResource(R.string.memories_days_together, days)) {
+        val done = Milestones.celebrated(d.int("milestonesCelebrated"))
+        Milestones.DAYS.forEachIndexed { i, m ->
+            RoboRow(stringResource(R.string.memories_milestone_day, m), stringResource(if (m in done) R.string.memories_celebrated else R.string.memories_upcoming), last = i == Milestones.DAYS.lastIndex) {}
+        }
+        Milestones.next(days)?.let { Note(stringResource(R.string.memories_next, it, it - days)) }
+    }
+}
+
 @Composable
 fun MemoryScreen() {
     val app = RoboApp
@@ -105,6 +124,7 @@ fun MemoryScreen() {
     var rejected by remember { mutableStateOf(false) }
     LaunchedEffect(app.ready) { app.loadMemory() }
     ScreenColumn {
+        MilestoneCard()
         RoboCard("Fakta yang diingat robot (${app.facts.size}/${P.MAX_FACTS})") {
             if (app.facts.isEmpty()) Note(if (app.memLoading) "Memuat…" else "Belum ada memori.")
             app.facts.forEachIndexed { i, f ->

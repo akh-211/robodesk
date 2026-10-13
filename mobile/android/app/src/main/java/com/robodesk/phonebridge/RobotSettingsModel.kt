@@ -173,7 +173,7 @@ class RobotSettings private constructor(private val original: Map<String, FlatJs
             "navigationEnabled", "notificationAllowlist", "notificationSpeechAllowlist",
             "vadStartX100", "vadEndX100", "vadEndMs", "postSpeakGuardMs", "wakeFollowupMs",
             "masterSound", "privacyMicMuted", "voiceReplyMode", "chatReplyMode",
-            "personalityPreset", "ownerBirthMonth", "ownerBirthDay"
+            "personalityPreset", "ownerBirthMonth", "ownerBirthDay", "faceEyeStyle", "cloudConsent"
         )
 
         fun parse(bytes: ByteArray): RobotSettings? {
@@ -241,7 +241,7 @@ class RobotSettings private constructor(private val original: Map<String, FlatJs
         range("characterIntensity", 0, 2, "Intensitas karakter")
         range("mouthMode", 0, 2, "Mulut")
         range("sonicFrequency", 0, 2, "Frekuensi SFX")
-        range("personalityPreset", 0, 2, "Kepribadian")
+        range("personalityPreset", 0, 2, "Kepribadian"); range("faceEyeStyle", 0, 1, "Gaya mata"); range("cloudConsent", 0, 1, "Persetujuan AI cloud")
         range("ownerBirthMonth", 0, 12, "Bulan lahir"); range("ownerBirthDay", 0, 31, "Tanggal lahir")
         if (has("ownerBirthMonth") && has("ownerBirthDay") && (int("ownerBirthMonth") == 0) != (int("ownerBirthDay") == 0)) e["ownerBirthDay"] = "Isi tanggal dan bulan lahir, atau kosongkan keduanya"
         for (k in listOf("sfxIntensityX100", "quietGainX100", "faceGazeReachX100", "faceMicroX100", "faceSilhouetteX100")) range(k, 0, 200, "Nilai persen")

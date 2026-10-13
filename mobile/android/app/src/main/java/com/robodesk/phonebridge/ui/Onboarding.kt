@@ -1,5 +1,11 @@
 package com.robodesk.phonebridge.ui
 
+import com.robodesk.phonebridge.NOTIFICATION_ACCESS_DISCLOSURE
+import com.robodesk.phonebridge.PrivacyState
+import androidx.compose.ui.res.stringResource
+import com.robodesk.phonebridge.R
+import com.robodesk.phonebridge.RobotNaming
+import com.robodesk.phonebridge.PersonalityPresets
 import android.Manifest
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
@@ -75,7 +81,7 @@ fun OnboardingScreen() {
     LaunchedEffect(Unit) { if (Onb.step == 0 && app.ready && app.hasRobot) Onb.step = 3 }
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            repeat(6) { i -> Box(Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(5.dp)).background(if (i <= Onb.step) RoboColors.Accent else RoboColors.Line)) }
+            repeat(7) { i -> Box(Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(5.dp)).background(if (i <= Onb.step) RoboColors.Accent else RoboColors.Line)) }
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
             when (Onb.step) {
@@ -83,7 +89,8 @@ fun OnboardingScreen() {
                 1 -> StepScan()
                 2 -> StepPairing()
                 3 -> StepConnected()
-                4 -> StepWifi()
+                4 -> StepBirth()
+                5 -> StepWifi()
                 else -> StepGemini()
             }
         }
@@ -124,6 +131,7 @@ private fun StepPermissions() {
             }
         }
     }
+    if (!listener) Note(NOTIFICATION_ACCESS_DISCLOSURE) // PD-4.8: disclosure next to the button (sheets are hidden during onboarding)
     Buttons {
         RoboButton(if (nearby) "Mulai mencari" else "Izinkan & mulai mencari", {
             if (!nearby || !notif) {
@@ -261,7 +269,37 @@ private fun StepConnected() {
         RoboRow("Bond LESC") { Tag(if (bonded) "aktif" else "belum", if (bonded) TagKind.OK else TagKind.WARN) }
         RoboRow("Sesi HMAC", last = true) { Tag(if (session) "aktif" else "belum", if (session) TagKind.OK else TagKind.WARN) }
     }
-    Buttons { RoboButton("Lanjut: atur Wi-Fi", { Onb.step = 4 }, Modifier.weight(1f), enabled = bonded && session) }
+    Buttons { RoboButton(stringResource(R.string.birth_next), { Onb.step = 4 }, Modifier.weight(1f), enabled = bonded && session) }
+}
+
+// ----------------------------------------------------------------------- PD-4.3 kelahiran + beri nama
+
+@Composable
+private fun StepBirth() {
+    val app = RoboApp
+    var name by remember { mutableStateOf(RobotNaming.DEFAULT) }
+    var owner by remember { mutableStateOf("") }
+    var preset by remember { mutableStateOf(1) }
+    // First "awakening": the robot opens its eyes in surprise while the owner names it.
+    LaunchedEffect(app.ready) { if (app.ready) { if (app.draft == null) app.loadSettings(); app.repo.expression(5) { } } }
+    Title(stringResource(R.string.birth_title), stringResource(R.string.birth_sub))
+    Gap(14)
+    RoboField(stringResource(R.string.birth_name)) { TextFieldRobo(name, { name = it }, maxLength = 31) }
+    RoboField(stringResource(R.string.birth_owner)) { TextFieldRobo(owner, { owner = it }, maxLength = 40, placeholder = stringResource(R.string.birth_owner_hint)) }
+    RoboField(stringResource(R.string.birth_personality)) { Segmented(PersonalityPresets.LABELS, preset, { preset = it }) }
+    Note(stringResource(R.string.birth_note))
+    val clean = RobotNaming.clean(name)
+    Buttons {
+        RoboButton(stringResource(R.string.birth_skip), { Onb.step = 5 }, Modifier.weight(1f), ButtonKind.SECONDARY)
+        RoboButton(stringResource(R.string.birth_done), {
+            app.edit { it.setString("robotName", clean ?: RobotNaming.DEFAULT); PersonalityPresets.apply(it, preset) }
+            app.save()
+            val who = owner.trim()
+            if (who.isNotEmpty()) app.call(null, { d -> app.repo.addMemory(1, "owner.name", who, d) })
+            app.repo.expression(0) { }
+            Onb.step = 5
+        }, Modifier.weight(1f), enabled = clean != null && app.draft != null && app.ready)
+    }
 }
 
 // ----------------------------------------------------------------------- 5 Wi-Fi
@@ -276,11 +314,11 @@ private fun StepWifi() {
     RoboField("SSID (maks 32)") { TextFieldRobo(ssid, { ssid = it }, maxLength = 32) }
     RoboField("Sandi (maks 64, kosong = jaringan terbuka)") { PasswordField(password, { password = it }, maxLength = 64) }
     Buttons {
-        RoboButton("Lewati", { Onb.step = 5 }, Modifier.weight(1f), ButtonKind.SECONDARY)
+        RoboButton("Lewati", { Onb.step = 6 }, Modifier.weight(1f), ButtonKind.SECONDARY)
         RoboButton("Kirim", {
             val s = ssid; val p = password
             ssid = ""; password = ""
-            app.call("Wi-Fi terkirim", { d -> app.repo.sendWifi(0, s, p, false, d) }, onOk = { Onb.step = 5 })
+            app.call("Wi-Fi terkirim", { d -> app.repo.sendWifi(0, s, p, false, d) }, onOk = { Onb.step = 6 })
         }, Modifier.weight(1f), enabled = ssid.isNotEmpty() && app.ready)
     }
 }
@@ -300,12 +338,13 @@ private fun StepGemini() {
     RoboField("Kunci") { PasswordField(key, { key = GeminiKeyHelp.normalize(it) }, placeholder = "AIza…", maxLength = 96) }
     val hint = if (key.isEmpty()) null else GeminiKeyHelp.check(key)
     if (hint != null) Note(hint.removePrefix("!"))
+    Note(PrivacyState.CONSENT_TEXT) // PD-4.14: consent is given by sending the key here
     Buttons {
         RoboButton("Lewati", { Onb.step = 0; app.finishOnboarding() }, Modifier.weight(1f), ButtonKind.SECONDARY)
-        RoboButton("Kirim & selesai", {
+        RoboButton("Setuju, kirim & selesai", {
             val k = key
             key = ""
-            app.call("Kunci terkirim", { d -> app.repo.sendGeminiKey(k, d) }, onOk = { Onb.step = 0; app.finishOnboarding() })
+            app.call("Kunci terkirim", { d -> app.repo.sendGeminiKey(k, d) }, onOk = { if (app.draft != null) app.setNow("cloudConsent", 1); Onb.step = 0; app.finishOnboarding() })
         }, Modifier.weight(1f), enabled = key.isNotEmpty() && app.ready && hint?.startsWith("!") != true)
     }
 }

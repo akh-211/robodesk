@@ -867,6 +867,7 @@ void applyFaceSettings(){
   fp.breath=.6f;fp.imperfection=.5f;fp.quirks=true; // PD-1.14 micro life (lib default off)
   robopreset::applyFace(robopreset::clampPreset(runtimeSettings.personalityPreset),fp);
   robot.setFaceLifeProfile(fp);
+  robot.setEyeStyle(runtimeSettings.faceEyeStyle?livingeyes::EyeStyle::EmoOled:livingeyes::EyeStyle::Legacy); // PD-4.2 owner compares on the OLED
   brain.setPersonalityPreset(runtimeSettings.personalityPreset);
   if(runtimeSettings.mouthMode==1)robot.setMouthPolicy(livingeyes::MouthPolicy::Hidden);
   else if(runtimeSettings.mouthMode==2)robot.setMouthPolicy(livingeyes::MouthPolicy::Always);
@@ -1751,7 +1752,7 @@ void serviceGemini(uint32_t now){
   if(geminiSessionHandle[0]&&uint32_t(now-geminiHandleAt)>7200000u)geminiSessionHandle[0]=0;
   if(geminiGoAwayUntil&&((!utteranceActive&&speakerDrained(now)&&voice.state()!=livingeyes::VoiceAiState::Thinking)||int32_t(geminiGoAwayUntil-now)<=1500)){resetGeminiOffline(now);return;}
   if(ROBODESK_DUAL_ROBOT&&memoryWorker.running())return;
-  if(WiFi.status()!=WL_CONNECTED||!runtimeSettings.geminiConfigured()){
+  if(WiFi.status()!=WL_CONNECTED||!runtimeSettings.geminiConfigured()||!runtimeSettings.cloudConsent){ // PD-4.14: no audio to Gemini before consent
     if(gemini.connecting()||gemini.connected()||geminiReady)resetGeminiOffline(now);
     return;
   }

@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.robodesk.phonebridge.R
 import com.robodesk.phonebridge.BridgeCredentialStore
 import com.robodesk.phonebridge.BridgeSettingsClient
 import com.robodesk.phonebridge.ChatController
@@ -39,13 +40,17 @@ import com.robodesk.phonebridge.TrustedRobotStore
 import com.robodesk.phonebridge.UpdateManifest
 
 /** Bottom sheets of the mockup (`openSheet`). [arg] carries the Wi-Fi slot. */
-enum class SheetKind { REBOOT, WIFI, CLEAR_MEMORY, CLEAR_EXPERIENCES, OTA, FORGET, WIPE, CLEAR_INTEGRATIONS, RESET_LEARNING }
+enum class SheetKind { REBOOT, WIFI, CLEAR_MEMORY, CLEAR_EXPERIENCES, OTA, FORGET, WIPE, CLEAR_INTEGRATIONS, RESET_LEARNING, CLOUD_CONSENT, WIPE_DATA, NOTIF_ACCESS }
 
-val TAB_TITLES = listOf("Beranda", "Setelan", "Koneksi", "Memori", "Pengingat", "Lainnya")
+// PD-4.2 five-tab IA (mockup android_app_mockup_5tab.html). Titles live in strings.xml (ID default, EN).
+val TAB_TITLES = listOf(R.string.tab_robot, R.string.tab_chat, R.string.tab_play, R.string.tab_memories, R.string.tab_settings)
 val SUB_TITLES = mapOf(
-    "chat" to "Chat dengan robot", "act" to "Aktivitas & permainan", "int" to "Integrasi", "ir" to "Remote inframerah", "snd" to "Tes suara",
-    "diag" to "Diagnostik", "upd" to "Pembaruan firmware", "dng" to "Zona bahaya", "abt" to "Tentang"
+    "act" to R.string.sub_activities, "int" to R.string.sub_integrations, "ir" to R.string.sub_ir, "snd" to R.string.sub_sound,
+    "rem" to R.string.sub_reminders, "net" to R.string.sub_network, "help" to R.string.sub_help, "diag" to R.string.sub_diagnostics,
+    "upd" to R.string.sub_update, "dng" to R.string.sub_danger, "abt" to R.string.sub_about, "priv" to R.string.sub_privacy
 )
+/** Sub-screens opened from another sub-screen return there on back. */
+val SUB_PARENT = mapOf("diag" to "help", "abt" to "help")
 
 /**
  * One process-wide UI state holder (survives rotation). Everything robot-related goes through [repo]; this class only
@@ -164,7 +169,7 @@ object RoboApp {
         refreshStatus { s -> ota.onStatus(s.s); syncOta() }
     }
 
-    private fun needsStatus() = (sub == null && tab == 0) || sub in listOf("diag", "upd", "act", "ir", "int") || otaStartedAt != 0L
+    private fun needsStatus() = (sub == null && tab == 0) || sub in listOf("diag", "upd", "act", "ir", "int", "net", "help") || otaStartedAt != 0L
 
     private fun housekeeping() {
         val core = RobotLinkHub.core ?: run { searching = false; return }
@@ -363,6 +368,14 @@ object RoboApp {
 
     fun clearMemoryCache() { facts = emptyList(); memRevision = null; MemoryCacheStore.clear(ctx) }
 
+    /** PD-4.14 "hapus semua data" without the dashboard: robot memory + conversation summaries, then the phone caches. Settings stay. */
+    fun wipeAllData() {
+        call<Long>(null, { d -> repo.clearMemory(d) }, onOk = {
+            clearMemoryCache()
+            call<Unit>("Semua data dihapus (memori robot, ringkasan obrolan, diary, cache HP)", { d -> repo.experiencesClear(d) }, onOk = { clearMoodDiary() })
+        })
+    }
+
     // ---------------------------------------------------------------- forget / onboarding exit
 
     val forgetPort = object : ForgetPort {
@@ -451,12 +464,12 @@ object RoboApp {
     // ---------------------------------------------------------------- navigation
 
     fun openTab(index: Int) { tab = index; sub = null }
-    fun openSub(key: String) { tab = 5; sub = key }
+    fun openSub(key: String) { sub = key }
 
     /** Returns true when the back press was consumed. */
     fun back(): Boolean = when {
         sheet != null -> { sheet = null; true }
-        sub != null -> { sub = null; true }
+        sub != null -> { sub = SUB_PARENT[sub]; true }
         tab != 0 -> { tab = 0; true }
         else -> false
     }

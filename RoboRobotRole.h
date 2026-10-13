@@ -50,7 +50,10 @@ inline void roboRobotServiceSettings(uint32_t now){
   const uint8_t*in=roboSettingsInbox;uint8_t*out=roboSettingsReply;memset(out,0,sizeof(roboSettingsReply));memcpy(out,in,5);roboLastLinkOp=in[4];roboLastLinkOpAt=millis();
   const uint8_t op=in[4];uint8_t status=ps::Unsupported;size_t body=0;
   if(op==ps::LinkGetPage&&n==6){
-    uint8_t*doc=roboSettingsDocBuffer(roboSettingsExport);JsonDocument json;roboBehaviorExport(runtimeSettings,json.to<JsonObject>());const size_t length=json.overflowed()?0:measureJson(json);
+    uint8_t*doc=roboSettingsDocBuffer(roboSettingsExport);JsonDocument json;roboBehaviorExport(runtimeSettings,json.to<JsonObject>());
+    // PD-4.2 Kenangan tab: read-only companion age and celebrated milestones (the app keeps unknown keys untouched; import ignores them).
+    {const auto&ms=milestones.state();json["companionSinceEpoch"]=ms.firstEpoch;json["milestonesCelebrated"]=ms.celebrated;json["birthdayYear"]=ownerBirthday.lastYear();}
+    const size_t length=json.overflowed()?0:measureJson(json);
     if(!doc)status=ps::NoMemory;else if(!length||length>ps::DocMax)status=ps::TooLarge;
     else{serializeJson(json,reinterpret_cast<char*>(doc),ps::DocMax+1);body=ps::encodePage(doc,length,in[5],out+ps::ResponseHeader,sizeof(roboSettingsReply)-ps::ResponseHeader,&status);}
   }else if(op==ps::LinkPutPage&&n>=9+ps::PageHeader){

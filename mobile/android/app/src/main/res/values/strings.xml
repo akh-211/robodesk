@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PD-4.2: Bahasa Indonesia (default). English in values-en. Older screens still hold inline text; move them here screen by screen. -->
+<resources>
+    <string name="app_name">AILI</string>
+
+    <string name="tab_robot">Robot</string>
+    <string name="tab_chat">Ngobrol</string>
+    <string name="tab_play">Main &amp; Alat</string>
+    <string name="tab_memories">Kenangan</string>
+    <string name="tab_settings">Setelan</string>
+
+    <string name="sub_activities">Aktivitas &amp; permainan</string>
+    <string name="sub_reminders">Pengingat</string>
+    <string name="sub_ir">Remote IR</string>
+    <string name="sub_integrations">Integrasi</string>
+    <string name="sub_sound">Tes suara karakter</string>
+    <string name="sub_network">Jaringan &amp; AI</string>
+    <string name="sub_update">Pembaruan</string>
+    <string name="sub_help">Bantuan &amp; tentang</string>
+    <string name="sub_diagnostics">Diagnostik</string>
+    <string name="sub_about">Tentang</string>
+    <string name="sub_danger">Zona bahaya</string>
+
+    <string name="play_activities_sub">Aktivitas robot, permainan sentuh, kebiasaan</string>
+    <string name="play_reminders_sub">Sekali, harian, atau timer</string>
+    <string name="play_ir_sub">Kirim, pelajari, dan putar profil remote</string>
+    <string name="play_integrations_sub">Cuaca, kalender, Home Assistant</string>
+    <string name="play_sound_sub">Putar suara karakter robot</string>
+
+    <string name="settings_network_sub">Wi-Fi, kunci Gemini, pairing</string>
+    <string name="settings_update_sub">Terpasang %1$s</string>
+    <string name="settings_update_available">tersedia %1$s</string>
+    <string name="settings_help_sub">Diagnostik dan versi</string>
+    <string name="settings_danger_sub">Restart, reset pabrik, lupakan robot</string>
+    <string name="help_diag_sub">Link, memori, BLE, sambungan HP</string>
+
+    <string name="eye_style">Gaya mata</string>
+    <string name="eye_style_classic">Klasik</string>
+    <string name="eye_style_contour">Kontur</string>
+
+    <string name="memories_days_together">%1$d hari bersama</string>
+    <string name="memories_milestone_day">Hari ke-%1$d</string>
+    <string name="memories_celebrated">dirayakan</string>
+    <string name="memories_upcoming">belum</string>
+    <string name="memories_next">Berikutnya hari ke-%1$d · %2$d hari lagi</string>
+    <string name="birth_next">Lanjut: beri nama</string>
+    <string name="birth_title">Halo, aku baru bangun!</string>
+    <string name="birth_sub">Beri aku nama dan pilih sifatku. Bisa diubah lagi di Setelan.</string>
+    <string name="birth_name">Nama robot</string>
+    <string name="birth_owner">Nama panggilanmu</string>
+    <string name="birth_owner_hint">mis. Kak Faisal</string>
+    <string name="birth_personality">Kepribadian</string>
+    <string name="birth_note">Kalem: tenang dan hemat suara. Ceria: seimbang. Usil: lebih ekspresif dan banyak bunyi.</string>
+    <string name="birth_skip">Lewati</string>
+    <string name="birth_done">Beri nama</string>
+    <string name="sub_privacy">Privasi</string>
+    <string name="settings_privacy_sub">Mikrofon, AI cloud, hapus semua data</string>
+    <string name="privacy_now">Saat ini</string>
+    <string name="privacy_mic">Mikrofon</string>
+    <string name="privacy_cloud">AI cloud</string>
+    <string name="privacy_mute">Matikan mikrofon</string>
+    <string name="privacy_metrics">Diagnostik interaksi lokal (tanpa transkrip)</string>
+    <string name="privacy_consent">Izinkan suara dikirim ke Gemini</string>
+    <string name="privacy_wipe">Hapus semua data</string>
+</resources>
