@@ -864,6 +864,7 @@ void applyFaceSettings(){
   fp.microMotion=float(runtimeSettings.faceMicroX100)/100.f;
   fp.silhouetteGain=float(runtimeSettings.faceSilhouetteX100)/100.f;
   fp.gazeReach=float(runtimeSettings.faceGazeReachX100)/100.f;
+  fp.breath=.6f;fp.imperfection=.5f;fp.quirks=true; // PD-1.14 micro life (lib default off)
   robopreset::applyFace(robopreset::clampPreset(runtimeSettings.personalityPreset),fp);
   robot.setFaceLifeProfile(fp);
   brain.setPersonalityPreset(runtimeSettings.personalityPreset);
@@ -1525,7 +1526,7 @@ void serviceDailyLife(uint32_t now,bool awake,bool busy){
   static bool begun=false;static uint32_t secondAt=0,dreamTickAt=0;static robomilestone::Event pending=robomilestone::Event::None;static robomoments::Dreams dreams(esp_random());
   if(!begun){begun=true;
     Preferences p;if(p.begin("robomile",true)){robomilestone::State s;s.firstEpoch=p.getULong("first",0);s.lastSeenEpoch=p.getULong("last",0);s.celebrated=p.getUChar("cel",0);ownerBirthday.restore(p.getUShort("bdyear",0));p.end();milestones.begin(s);}}
-  if(const uint32_t ms=dreams.update(now,sleepCycle.state()==robosleep::State::DeepSleep)){dreamUntil=now+ms;RoboLog.printf("LEV,BEH,DREAM,ms=%lu\n",(unsigned long)ms);}
+  if(const uint32_t ms=dreams.update(now,sleepCycle.state()==robosleep::State::DeepSleep)){dreamUntil=now+ms;requestSonic(livingeyes::SonicCue::Snore,livingeyes::SonicPriority::Ambient,.25f,now);RoboLog.printf("LEV,BEH,DREAM,ms=%lu\n",(unsigned long)ms);} // snore is ambient: quiet hours/budget drop it
   if(int32_t(dreamUntil-now)>0&&uint32_t(now-dreamTickAt)>=180u){dreamTickAt=now;robot.lookAt(float(int32_t(esp_random()%41u)-20)/100.f,0,200);} // small eye tremor
   const bool calm=awake&&!busy&&!arbTracker.running(now).active;
   if(dailyRhythm.morning(clockSynced,localMinuteOfDay,brainDayIndex,sonicQuietNow(),pirState&&calm)){ // first presence after quiet hours, once a day
@@ -1577,6 +1578,12 @@ void serviceBrain(uint32_t now){
     if(loudSoundPending){loudSoundPending=false;if(sleepCycle.state()==robosleep::State::Awake||sleepCycle.state()==robosleep::State::Drowsy){arbTracker.start(roboarb::Tier::Emotion,now,1500);brain.applyExpression("surprised",.85f,false,roboarb::clipPriority(roboarb::Tier::Emotion));alertAt=now+800u;RoboLog.println("LEV,BEH,LOUD");}}
     if(alertAt&&int32_t(now-alertAt)>=0){alertAt=0;brain.applyExpression("curious",.6f,false,roboarb::clipPriority(roboarb::Tier::Emotion));}
   }
+  { // PD-1.14 hourly sneeze/hiccup from FaceLife (never while busy); the sound goes through the spontaneous budget.
+    const livingeyes::FaceQuirk quirk=robot.takeFaceQuirk();
+    if(quirk!=livingeyes::FaceQuirk::None&&sleepAwake&&!busy&&!dnd){const bool sneeze=quirk==livingeyes::FaceQuirk::Sneeze;arbTracker.start(roboarb::Tier::Micro,now,1200);
+      robot.play(sneeze?livingeyes::Clip::Startle:livingeyes::Clip::Surprise,roboarb::clipPriority(roboarb::Tier::Micro));requestSonic(sneeze?livingeyes::SonicCue::Surprise:livingeyes::SonicCue::Curious,livingeyes::SonicPriority::Ambient,.3f,now);
+      RoboLog.printf("LEV,BEH,QUIRK,kind=%s\n",sneeze?"sneeze":"hiccup");}
+  }
   { // PD-3.2 dance along: sway the gaze on each beat, a happy hop every 4th beat.
     static livingeyes::ActivitySession danceSession;static uint8_t beats=0;
     const robodance::Event ev=danceEvent;danceEvent=robodance::Event::None;const bool dancing=danceSession.snapshot(now).state==livingeyes::SessionState::Active;const uint32_t beatMs=danceTracker.intervalMs();
@@ -1589,7 +1596,7 @@ void serviceBrain(uint32_t now){
     if(anyTouch)motionMood.pet(now);
     const robomotion::Event motionEvents[2]={motionMoodEvent,motionMood.update(now)};motionMoodEvent=robomotion::Event::None;
     for(const robomotion::Event me:motionEvents){
-      if(me==robomotion::Event::Annoyed)brain.applyExpression("annoyed",.35f,false,roboarb::clipPriority(roboarb::Tier::Owner));
+      if(me==robomotion::Event::Annoyed){brain.applyExpression("dizzy",.5f,false,roboarb::clipPriority(roboarb::Tier::Owner));requestSonic(livingeyes::SonicCue::Dizzy,livingeyes::SonicPriority::Character,.45f,now);} // PD-1.8b
       else if(me==robomotion::Event::Fall){arbTracker.start(roboarb::Tier::Safety,now,1500);brain.applyExpression("surprised",1.f,false,roboarb::clipPriority(roboarb::Tier::Safety));}
       else if(me==robomotion::Event::FallSad)brain.applyExpression("sad",.45f,false,roboarb::clipPriority(roboarb::Tier::Emotion));
       else if(me==robomotion::Event::PutDown||me==robomotion::Event::Recovered)brain.applyExpression("happy",.45f,true);
@@ -1613,8 +1620,8 @@ void serviceBrain(uint32_t now){
         }
       }
     }
-    if(te==robotouch::Event::Annoyed)brain.applyExpression("annoyed",.35f,false,roboarb::clipPriority(roboarb::Tier::Owner));
-    else if(te==robotouch::Event::SulkStart){sulkFace.start(now,esp_random());brain.applyExpression("sulking",.4f,false,roboarb::clipPriority(roboarb::Tier::Emotion));}
+    if(te==robotouch::Event::Annoyed){brain.applyExpression("annoyed",.35f,false,roboarb::clipPriority(roboarb::Tier::Owner));requestSonic(livingeyes::SonicCue::Hmph,livingeyes::SonicPriority::Character,.4f,now);} // PD-1.8b one short hmph, never repeated
+    else if(te==robotouch::Event::SulkStart){sulkFace.start(now,esp_random());requestSonic(livingeyes::SonicCue::Hmph,livingeyes::SonicPriority::Character,.35f,now);brain.applyExpression("sulking",.4f,false,roboarb::clipPriority(roboarb::Tier::Emotion));}
     else if(te==robotouch::Event::SulkEnd)sulkFace.stop(now);
     {const robosulk::Gaze g=sulkFace.gaze(now);if(g.update){robot.lookAt(g.x,g.y,g.holdMs);if(g.x!=0)brain.applyExpression("sulking",.4f,true);}
      const char*recover=sulkFace.recovery(now);if(recover)brain.applyExpression(recover,.5f,false,roboarb::clipPriority(roboarb::Tier::Emotion));}

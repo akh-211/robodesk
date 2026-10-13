@@ -1,5 +1,5 @@
 {
   "format": "robodesk-livingeyes-sha256-v1",
-  "sha256": "75dd27680fd89a7b5de702bb2ddcabb60b63ff36334b2eb50b5797fc7bc2b123",
-  "source": "LivingEyes macro-session API for bounded RoboDesk companion activities; host-tested hook, with device qualification pending."
+  "sha256": "76eac6cc635318666eb6312d7793573d1ea019cbd7d8d82930ca11d5d8dabba1",
+  "source": "LivingEyes 3 commits to feature/emo-oled: EmoOLED style merged, hmph/dizzy/snore cues + tempo jitter, opt-in FaceLife breath/imperfection/quirks; check.py green; device qualification pending."
 }
