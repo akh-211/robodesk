@@ -51,7 +51,7 @@ int main() {
   assert(out[4] == ps::ChatReplying && ps::get16(out + 6) == 306 && out[10] == ps::ChatChunkMax && body == ps::ChatPollHeader + ps::ChatChunkMax);
   pollPayload(poll, turn, ps::ChatChunkMax);
   assert(chat.handle(ps::LinkChatPoll, poll, 6, 1700, true, out, sizeof(out), body) == ps::Ok && ps::get16(out + 8) == ps::ChatChunkMax && out[10] == 306 - ps::ChatChunkMax);
-  chat.complete(2000); assert(chat.state() == ps::ChatDone && !chat.active());
+  chat.complete(2000); assert(chat.active()); chat.tick(2000 + PhoneChat::TextQuietMs + 1); assert(chat.state() == ps::ChatDone && !chat.active());
   // Reply length is capped
   assert(chat.handle(ps::LinkChatSend, req, n, 3000, true, out, sizeof(out), body) == ps::Ok && ps::get32(out) == 2);
   chat.takePending(text, sizeof(text)); for (int i = 0; i < 10; ++i) chat.appendReply(long_, 3100); assert(chat.replyLength() == ps::ChatReplyMax);
@@ -68,10 +68,30 @@ int main() {
   chat.tick(60100 + PhoneChat::WipeAfterMs + 1); assert(chat.state() == ps::ChatIdle && chat.replyLength() == 0 && chat.reply()[0] == 0);
   // complete() with no reply is a failure, offline() too
   assert(chat.handle(ps::LinkChatSend, req, n, 500000, true, out, sizeof(out), body) == ps::Ok);
-  chat.takePending(text, sizeof(text)); chat.complete(500100); assert(chat.state() == ps::ChatFailed);
+  chat.takePending(text, sizeof(text)); chat.complete(500100); assert(chat.active());
+  chat.tick(500050); assert(chat.active());  // stale `now` must not finish or wipe
+  chat.tick(500100 + PhoneChat::NoTextMs + 1); assert(chat.state() == ps::ChatFailed);
+  chat.tick(500090); assert(chat.state() == ps::ChatFailed);  // stale `now` must not wipe a just-finished turn
+  // transcript arriving after turnComplete is still collected
+  assert(chat.handle(ps::LinkChatSend, req, n, 520000, true, out, sizeof(out), body) == ps::Ok);
+  chat.takePending(text, sizeof(text)); chat.complete(520100); chat.appendReply("halo", 520300); chat.tick(520400); assert(chat.active());
+  chat.tick(520300 + PhoneChat::TextQuietMs + 1); assert(chat.state() == ps::ChatDone && chat.replyLength() == 4);  // stale `now` (older than the callback timestamp) must not wipe a just-finished turn
   assert(chat.handle(ps::LinkChatSend, req, n, 600000, true, out, sizeof(out), body) == ps::Ok);
   chat.offline(600050); assert(chat.state() == ps::ChatQueued);  // not sent yet: survives a reconnect
   chat.takePending(text, sizeof(text)); chat.offline(600100); assert(chat.state() == ps::ChatFailed && chat.fail() == ps::ChatFailOffline);
+  { // local command hook: handled offline (ready=false), answered at once, never queued for Gemini; others pass through
+    PhoneChat c2; static int calls = 0;
+    c2.setCommandHook([](const char* t, char* reply, size_t cap) { ++calls; if (strcmp(t, "/status")) return false; snprintf(reply, cap, "WiFi OFF"); return true; });
+    uint8_t rq[64], ot[64]; size_t bd = 0, k = sendPayload(rq, "/status");
+    assert(c2.handle(ps::LinkChatSend, rq, k, 1000, false, ot, sizeof(ot), bd) == ps::Ok && bd == 4 && c2.state() == ps::ChatDone && !strcmp(c2.reply(), "WiFi OFF"));
+    uint8_t pl[6]; pollPayload(pl, 0, 0);
+    assert(c2.handle(ps::LinkChatPoll, pl, 6, 1100, false, ot, sizeof(ot), bd) == ps::Ok && ot[4] == ps::ChatDone);
+    k = sendPayload(rq, "halo");
+    assert(c2.handle(ps::LinkChatSend, rq, k, 1200, false, ot, sizeof(ot), bd) == ps::RobotUnavailable);   // not a command, Gemini offline
+    assert(c2.handle(ps::LinkChatSend, rq, k, 1300, true, ot, sizeof(ot), bd) == ps::Ok && c2.state() == ps::ChatQueued);
+    k = sendPayload(rq, "/status");
+    assert(c2.handle(ps::LinkChatSend, rq, k, 1400, true, ot, sizeof(ot), bd) == ps::Busy && calls == 3);   // a running Gemini turn is never clobbered
+  }
   puts("PASS: chat protocol shape, one turn at a time, chunked reply, caps, timeouts and RAM wipe");
   return 0;
 }

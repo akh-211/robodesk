@@ -14,7 +14,7 @@ This drawing is generated from explicit paths in [draw_dual_board_wiring.py](../
 flowchart LR
   phone[Phone / browser] <-->|Wi-Fi or BLE| c3[ESP32-C3 gateway]
   cloud[Google / GitHub / NTP] <-->|TLS / network| c3
-  c3 <-->|3.3 V UART: GPIO3/5 to GPIO18/17| s3[ESP32-S3 robot]
+  c3 <-->|3.3 V UART: GPIO3/6 to GPIO18/17| s3[ESP32-S3 robot]
   s3 <--> audio[INMP441 / MAX98357A]
   s3 <--> sensors[OLED / sensors / touch / PIR]
   s3 <--> ir[IR receiver / transistor blaster]
@@ -30,7 +30,7 @@ All branches share ground. Each ESP32 board uses its own 3.3 V regulator.
 
 | Connection | ESP32-S3 | ESP32-C3 / peripheral |
 |---|---:|---|
-| UART S3 → C3 | GPIO17 TX | C3 GPIO5 RX |
+| UART S3 → C3 | GPIO17 TX | C3 GPIO6 RX |
 | UART C3 → S3 | GPIO18 RX | C3 GPIO3 TX |
 | Common reference | GND | C3 GND; all peripheral GND |
 | I2C SDA / SCL | GPIO8 / GPIO9 | OLED, MPU6050, AHT20, BMP280 |

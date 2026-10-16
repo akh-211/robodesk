@@ -47,7 +47,8 @@ object BridgeSettingsProtocol {
     const val ACTIVITY_ID_MAX = 13
 
     /** Command op 4 ids and op 11 cue ids = index in these lists (BLE_SETTINGS_PROTOCOL.md section 8.2). */
-    val EXPRESSIONS = listOf("happy", "curious", "shy", "love", "sad", "surprised", "thinking", "agree", "disagree", "wink", "laugh", "sleepy")
+    val EXPRESSIONS = listOf("happy", "curious", "shy", "love", "sad", "surprised", "thinking", "agree", "disagree", "wink", "laugh", "sleepy",
+        "annoyed", "dizzy", "excited", "calm", "bored", "proud", "anxious", "relieved", "mischievous", "lonely")
     val SOUND_CUES = listOf("wake", "happy", "curious", "affection", "thinking", "surprise", "sad", "sleepy", "error", "success", "pickup", "shake")
     const val DEFAULT_TIMEOUT_MS = 5_000L
     const val SLOW_TIMEOUT_MS = 10_000L

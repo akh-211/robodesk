@@ -33,7 +33,7 @@ inline uint8_t roboRobotRunLiveCommand(const uint8_t*p,size_t n,uint32_t session
   namespace ps=PhoneSettingsProtocol;ps::Command command{};ps::LiveAction live{};
   if(ps::decodeCommand(p,n,session,command)!=ps::Ok||!ps::isLiveCommand(command.op)||!ps::liveCommandAction(command,live))return ps::BadRequest;
   if(firmwareUpdateActive||roboRobotUpdating)return ps::UpdateBusy;
-  static ps::RemoteRateLimit remoteLimit;if(ps::remoteRateLimited(command.op)&&!remoteLimit.allow(millis()))return ps::Rejected;
+  static ps::RemoteRateLimit remoteLimit;if(ps::remoteRateLimited(command.op)&&!remoteLimit.allow(millis())){RoboLog.printf("LEV,CMD,RATE_LIMITED,op=%u,id=%u\n",unsigned(command.op),unsigned(command.id));return ps::Rejected;}
   bool ok=false;
   if(!strcmp(live.action,"sound_test"))ok=dashboardSoundTest(nullptr,live.value);
   else if(!strcmp(live.action,"experiences_clear"))ok=brain.clearExperiences(millis());
@@ -79,6 +79,7 @@ inline void roboRobotServiceSettings(uint32_t now){
     if(firmwareUpdateActive||roboRobotUpdating)status=ps::UpdateBusy;
     else status=phoneChat.handle(op,in+9,n-9,millis(),geminiReady&&gemini.connected(),out+ps::ResponseHeader,sizeof(roboSettingsReply)-ps::ResponseHeader,body);
     if(status==ps::Ok&&op==ps::LinkChatSend)RoboLog.println("LEV,CHAT,QUEUED");
+    if(op==ps::LinkChatPoll){static uint8_t lastState=255;static uint32_t lastTurn=0;if(phoneChat.state()!=lastState||phoneChat.turn()!=lastTurn){lastState=phoneChat.state();lastTurn=phoneChat.turn();RoboLog.printf("LEV,CHAT,POLL,turn=%lu,state=%u,fail=%u,wipes=%lu,finAge=%lu\n",(unsigned long)lastTurn,unsigned(lastState),unsigned(phoneChat.fail()),(unsigned long)phoneChat.wipes(),(unsigned long)(millis()-phoneChat.finishedAt()));}}
   }
   else if(op>=ps::LinkMemoryList&&op<=ps::LinkReminderDelete&&n>=9){
     // Memory/reminder kinds: data = BLE session u32 + the BLE payload. Lists reuse the export buffer.

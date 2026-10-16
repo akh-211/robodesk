@@ -11,6 +11,10 @@ interface ChatPort {
 class ChatMessage(val fromRobot: Boolean, text: String, status: Status) {
     enum class Status { SENDING, WAITING, ANSWERING, DONE, FAILED }
 
+    /** Set on the user's line when the robot took it as an AI turn: the answer comes on the robot's screen/speaker, not here. */
+    var handedToRobot: Boolean = false
+        internal set
+
     var text: String = text
         internal set
     var status: Status = status
@@ -19,6 +23,7 @@ class ChatMessage(val fromRobot: Boolean, text: String, status: Status) {
     /** Indonesian reason when [status] is FAILED. */
     var error: String? = null
         internal set
+
 }
 
 /**
@@ -31,6 +36,8 @@ class ChatController(private val port: ChatPort, private val now: () -> Long, pr
     private var turn = 0L
     private var received = java.io.ByteArrayOutputStream()
     private var polling = false
+    private var pollAt = 0L
+    private var mine: ChatMessage? = null
     private var sending = false
     private var errors = 0
     private var startedAt = 0L
@@ -58,6 +65,7 @@ class ChatController(private val port: ChatPort, private val now: () -> Long, pr
                 is Res.Ok -> {
                     mine.status = ChatMessage.Status.DONE
                     turn = res.value
+                    this.mine = mine
                     received = java.io.ByteArrayOutputStream()
                     startedAt = now()
                     reply = ChatMessage(true, "", ChatMessage.Status.WAITING).also { items.add(it) }
@@ -73,9 +81,12 @@ class ChatController(private val port: ChatPort, private val now: () -> Long, pr
     fun tick() {
         val t = turn
         val r = reply
-        if (t == 0L || r == null || polling) return
+        if (t == 0L || r == null) return
+        if (polling && now() - pollAt > POLL_STUCK_MS) polling = false
+        if (polling) return
         if (now() - startedAt > replyDeadlineMs) return fail(r, "Robot tidak menjawab tepat waktu")
         polling = true
+        pollAt = now()
         port.poll(t, received.size()) { res ->
             polling = false
             if (turn != t) return@poll
@@ -89,6 +100,8 @@ class ChatController(private val port: ChatPort, private val now: () -> Long, pr
 
     private fun apply(r: ChatMessage, p: P.ChatPoll) {
         if (p.turn != turn || p.state == 0) return fail(r, "Jawaban robot tidak tersedia lagi")
+        // A Gemini turn: the robot answers on its screen / speaker, so the app stops here instead of streaming the reply.
+        if (p.state in 1..3) { mine?.handedToRobot = true; items.remove(r); return finish() }
         if (p.offset == received.size() && p.chunk.isNotEmpty()) received.write(p.chunk)
         val text = String(received.toByteArray(), Charsets.UTF_8)
         if (text.isNotEmpty()) { r.text = text; r.status = ChatMessage.Status.ANSWERING }
@@ -119,6 +132,7 @@ class ChatController(private val port: ChatPort, private val now: () -> Long, pr
     companion object {
         const val REPLY_DEADLINE_MS = 100_000L
         const val MAX_ERRORS = 5
+        const val POLL_STUCK_MS = 8_000L
 
         fun failText(code: Int): String = when (code) {
             1 -> "Robot gagal mengirim pesan ke Gemini"

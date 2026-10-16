@@ -8,6 +8,7 @@
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/x509_crt.h>
 #include <esp_crt_bundle.h>
+#include "RoboLog.h"
 #include "RoboDualRuntime.h"
 #include "RoboTunnelProtocol.h"
 
@@ -39,7 +40,7 @@ class RoboLinkTlsClient:public NetworkClient {
     if(insecure_){mbedtls_ssl_conf_authmode(&s.conf,MBEDTLS_SSL_VERIFY_NONE);}
     else{
       // Certificate validity needs wall time; the C3 supplies NTP over the link.
-      const time_t now=RoboDual.epoch();if(!now)return false;
+      const time_t now=RoboDual.epoch();if(!now){RoboLog.println("LEV,TLSDBG,NO_EPOCH");return false;}
       timeval tv{};tv.tv_sec=now;settimeofday(&tv,nullptr);
       if(bundle_){if(esp_crt_bundle_attach(&s.conf)!=0)return false;}
       else{
@@ -53,7 +54,7 @@ class RoboLinkTlsClient:public NetworkClient {
     mbedtls_ssl_set_bio(&s.ssl,this,bioSend,bioRecv,nullptr);
     const uint32_t start=millis();int r;
     while((r=mbedtls_ssl_handshake(&s.ssl))!=0){
-      if((r!=MBEDTLS_ERR_SSL_WANT_READ&&r!=MBEDTLS_ERR_SSL_WANT_WRITE)||!tunnelUp()||uint32_t(millis()-start)>=handshakeMs_)return false;
+      if((r!=MBEDTLS_ERR_SSL_WANT_READ&&r!=MBEDTLS_ERR_SSL_WANT_WRITE)||!tunnelUp()||uint32_t(millis()-start)>=handshakeMs_){RoboLog.printf("LEV,TLSDBG,HANDSHAKE_FAIL,r=-0x%04x,tunnelUp=%u,ms=%lu,flags=0x%lx\n",unsigned(-r),unsigned(tunnelUp()),(unsigned long)(millis()-start),(unsigned long)mbedtls_ssl_get_verify_result(&s.ssl));return false;}
       delay(1);
     }
     established_=true;return true;
@@ -88,14 +89,15 @@ public:
   void setInsecure(){insecure_=true;}
   void setHandshakeTimeout(unsigned long seconds){handshakeMs_=seconds*1000UL<8000UL?8000UL:uint32_t(seconds*1000UL);}
   int connect(const char*host,uint16_t port,int32_t timeout)override{
-    if(!host||!RoboDual.link.connected()||!RoboDual.internet)return 0;
+    if(!host||!RoboDual.link.connected()||!RoboDual.internet){RoboLog.printf("LEV,TLSDBG,PRECOND,host=%u,link=%u,internet=%u\n",unsigned(host!=nullptr),unsigned(RoboDual.link.connected()),unsigned(RoboDual.internet));return 0;}
     uint8_t open[robotunnel::OpenMax];
     stop();generation_=esp_random();if(!generation_)generation_=1;RoboDual.tcpGeneration=generation_;RoboDual.clearTcp();
     const size_t n=robotunnel::encodeOpen(open,sizeof(open),generation_,host,port,robotunnel::RawTcp);
-    if(!n||!RoboDual.link.send(robolink::TcpOpen,open,n,0,100)){stop();return 0;}
+    if(!n||!RoboDual.link.send(robolink::TcpOpen,open,n,0,100)){RoboLog.printf("LEV,TLSDBG,OPEN_SEND_FAIL,n=%u\n",unsigned(n));stop();return 0;}
     const uint32_t start=millis();bool up=false;
     while(uint32_t(millis()-start)<uint32_t(timeout>0?timeout:5000)){if(tunnelUp()){up=true;break;}if(!RoboDual.link.connected())break;delay(1);}
-    if(!up||!startTls(host)){stop();return 0;}
+    if(!up){RoboLog.printf("LEV,TLSDBG,TUNNEL_TIMEOUT,ms=%lu,gen=%lu,rxGen=%lu,tcpConn=%u,link=%u\n",(unsigned long)(millis()-start),(unsigned long)generation_,(unsigned long)RoboDual.tcpGeneration,unsigned(RoboDual.tcpConnected),unsigned(RoboDual.link.connected()));stop();return 0;}
+    if(!startTls(host)){stop();return 0;}
     return 1;
   }
   int connect(const char*h,uint16_t p)override{return connect(h,p,6000);}

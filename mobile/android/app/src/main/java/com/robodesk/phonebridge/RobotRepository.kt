@@ -297,7 +297,7 @@ class RobotRepository(private val client: BridgeSettingsClient, private val nowS
 
     // Chat with the robot (kinds 25/26)
     private fun chatErr(r: Res.Err): Res.Err = when (r.status) {
-        P.Status.ROBOT_UNAVAILABLE -> Res.Err("Robot belum terhubung ke Gemini · pastikan Wi-Fi robot dan kunci Gemini aktif", r.uncertain, r.status)
+        P.Status.ROBOT_UNAVAILABLE -> Res.Err("Robot belum terhubung ke Gemini · pastikan Wi-Fi robot dan kunci Gemini aktif (perintah seperti /status tetap bisa)", r.uncertain, r.status)
         P.Status.BUSY -> Res.Err("Robot masih mengerjakan pesan sebelumnya", r.uncertain, r.status)
         else -> r
     }

@@ -430,7 +430,7 @@ private:
     if(!cfg.apiKey||!cfg.apiKey[0]||!cfg.model||!cfg.voice)return false;
     tls_.stop(); tls_.setTimeout(3); tls_.setHandshakeTimeout(4);
     if(cfg.insecureTls||!cfg.rootCaPem||!cfg.rootCaPem[0])tls_.setInsecure(); else tls_.setCACert(cfg.rootCaPem);
-    if(!tls_.connect(HOST,PORT,ROBODESK_DUAL_ROBOT?6500:2500)){reconnectAt_=millis()+2500;return false;}
+    if(!tls_.connect(HOST,PORT,ROBODESK_DUAL_ROBOT?6500:2500)){RoboLog.println("LEV,GEMINI,DBG,tls_connect_fail");reconnectAt_=millis()+2500;return false;}
     uint8_t randomKey[16]; for(size_t i=0;i<sizeof(randomKey);i+=4){uint32_t r=esp_random();memcpy(randomKey+i,&r,4);} char key[32];base64Encode(randomKey,sizeof(randomKey),key,sizeof(key));
     char req[1024];
     int rn=snprintf(req,sizeof(req),
@@ -438,7 +438,7 @@ private:
       cfg.apiKey,HOST,key);
     if(rn<=0||size_t(rn)>=sizeof(req)||tls_.write(reinterpret_cast<const uint8_t*>(req),rn)!=size_t(rn)){tls_.stop();reconnectAt_=now+2500;return false;}
     char headers[1536];headers[0]=0;
-    if(!readHttpHeaders(headers,sizeof(headers),5000)||!headerContains(headers," 101 ")||!websocketAcceptMatches(headers,key)){tls_.stop();reconnectAt_=now+2500;return false;}
+    if(!readHttpHeaders(headers,sizeof(headers),5000)||!headerContains(headers," 101 ")||!websocketAcceptMatches(headers,key)){{char l[64];size_t k=0;while(headers[k]&&headers[k]!='\r'&&headers[k]!='\n'&&k<sizeof(l)-1){l[k]=headers[k];++k;}l[k]=0;RoboLog.printf("LEV,GEMINI,DBG,ws_upgrade_fail,status=%s\n",l);}tls_.stop();reconnectAt_=now+2500;return false;}
     const bool directNb=tls_.enableDirectNonBlocking();
     connected_=true;++connects_;lastRxAt_=lastTxAt_=millis();heartbeatPending_=false;
     RoboLog.printf("LEV,GEMINI,TLS_RX_MODE,direct=1,nonblock=%u,fd=%d\n",unsigned(directNb),tls_.socketFd());

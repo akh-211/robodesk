@@ -16,6 +16,16 @@ fun utf8Field(value: String, maxBytes: Int): String {
 }
 
 // Notification text is not a stable Maps API. Unknown maneuvers remain unknown.
+private const val UNITS = "kilometers?|kilometres?|km|meters?|metres?|miles?|mi|feet|ft|yards?|yd|m"
+private val DISTANCE_ONLY = Regex("^\\s*\\d+(?:[.,]\\d+)?\\s*($UNITS)\\s*$", RegexOption.IGNORE_CASE)
+private fun unitMeters(unit: String): Double = when (unit) {
+    "km", "kilometer", "kilometers", "kilometre", "kilometres" -> 1000.0
+    "mi", "mile", "miles" -> 1609.344
+    "ft", "feet" -> 0.3048
+    "yd", "yard", "yards" -> 0.9144
+    else -> 1.0
+}
+
 object MapsNavigationParser {
     fun parse(title: String, body: String, subtext: String, navigationCategory: Boolean): NavigationInstruction? {
         val text = "$title $body $subtext".lowercase(Locale.ROOT)
@@ -32,12 +42,19 @@ object MapsNavigationParser {
             Regex("\\b(turn right|belok kanan)\\b").containsMatchIn(text) -> "right"
             Regex("\\b(roundabout|bundaran)\\b").containsMatchIn(text) -> "roundabout"
             Regex("\\b(continue straight|head straight|go straight|terus lurus|lurus)\\b").containsMatchIn(text) -> "straight"
+            Regex("\\b(exit|ramp|fork|take the|jalan keluar|pintu keluar|percabangan|persimpangan|ambil)\\b[^|]*\\b(left|kiri)\\b").containsMatchIn(text) -> "slight_left"
+            Regex("\\b(exit|ramp|fork|take the|jalan keluar|pintu keluar|percabangan|persimpangan|ambil)\\b[^|]*\\b(right|kanan)\\b").containsMatchIn(text) -> "slight_right"
+            Regex("\\b(merge|bergabung|masuk ke jalan)\\b").containsMatchIn(text) -> "straight"
             else -> "unknown"
         }
         if (!navigationCategory && state == "active" && turn == "unknown") return null
-        val distance = Regex("(?<![\\d.,])(\\d+(?:[.,]\\d+)?)\\s*(km|m|kilometer|meter)\\b").find("$title $body".lowercase(Locale.ROOT))
-        val meters = distance?.let { ((it.groupValues[1].replace(',','.').toDoubleOrNull() ?: 0.0) * if(it.groupValues[2] == "km" || it.groupValues[2] == "kilometer") 1000 else 1).roundToInt().coerceIn(0,1000000) } ?: -1
-        val eta = Regex("\\b\\d+\\s*(?:h|hr|hour|jam)\\s*\\d*\\s*(?:min|minute|menit)?\\b|\\b\\d+\\s*(?:min|minute|menit)\\b").find("$subtext $body".lowercase(Locale.ROOT))?.value.orEmpty()
-        return NavigationInstruction(state,turn,meters,title.ifBlank { body },eta)
+        val distance = Regex("(?<![\\d.,])(\\d+(?:[.,]\\d+)?)\\s*($UNITS)\\b").find("$title $body".lowercase(Locale.ROOT))
+        val meters = distance?.let { ((it.groupValues[1].replace(',','.').toDoubleOrNull() ?: 0.0) * unitMeters(it.groupValues[2])).roundToInt().coerceIn(0,1000000) } ?: -1
+        val etaText = "$subtext $body".lowercase(Locale.ROOT)
+        val duration = Regex("\\b\\d+\\s*(?:h|hr|hour|jam)\\s*\\d*\\s*(?:min|minute|menit)?\\b|\\b\\d+\\s*(?:min|minute|menit)\\b").find(etaText)?.value.orEmpty()
+        val clock = Regex("\\b\\d{1,2}[:.]\\d{2}(?:\\s?[ap]m)?\\b").find(etaText)?.value.orEmpty()
+        val eta = listOf(duration, clock).filter { it.isNotEmpty() }.joinToString(" ")
+        val road = if (title.isNotBlank() && !DISTANCE_ONLY.matches(title)) title else body.ifBlank { title }
+        return NavigationInstruction(state,turn,meters,road,eta)
     }
 }

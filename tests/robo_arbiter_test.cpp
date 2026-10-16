@@ -73,5 +73,20 @@ int main() {
   tracker.clear();
   assert(!tracker.running(20).active);
   std::cout << "PASS: arbitration tiers, interrupt/defer/drop, queue admission and tracker expiry\n";
+  { // Overlay policy: no bottom-row collisions, autonomous behavior waits for a free stage.
+    roboarb::OverlayState o;
+    assert(roboarb::micBannerAllowed(o, true) && !roboarb::micBannerAllowed(o, false));
+    assert(roboarb::stripAllowed(o, false) && !roboarb::stripAllowed(o, true));
+    o.notification = true;
+    assert(!roboarb::micBannerAllowed(o, true) && !roboarb::stripAllowed(o, false));
+    o = roboarb::OverlayState(); o.passkey = true;
+    assert(!roboarb::micBannerAllowed(o, true));
+    o = roboarb::OverlayState(); o.game = true;
+    assert(!roboarb::micBannerAllowed(o, true) && !roboarb::stripAllowed(o, false));
+    o = roboarb::OverlayState();
+    assert(roboarb::autonomousAllowed(Running(), o) && !roboarb::autonomousAllowed(on(Tier::Micro), o));
+    o.navigation = true;
+    assert(!roboarb::autonomousAllowed(Running(), o));
+  }
   return 0;
 }

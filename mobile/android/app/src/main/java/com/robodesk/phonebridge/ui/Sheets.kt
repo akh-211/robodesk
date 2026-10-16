@@ -2,7 +2,17 @@ package com.robodesk.phonebridge.ui
 
 import com.robodesk.phonebridge.NOTIFICATION_ACCESS_DISCLOSURE
 import com.robodesk.phonebridge.PrivacyState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -15,6 +25,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.sp
+
+// Groups of expression ids (index = BridgeSettingsProtocol.EXPRESSIONS) for the picker sheet.
+private val EXPRESSION_GROUPS = listOf(
+    "Senang" to listOf(0, 10, 14, 3, 17, 9),
+    "Penasaran & berpikir" to listOf(1, 6, 5, 20),
+    "Sedih & cemas" to listOf(4, 21, 2, 18, 13),
+    "Respons" to listOf(7, 8, 12),
+    "Tenang & energi" to listOf(15, 19, 11, 16),
+)
+
+@Composable
+private fun ExpressionChip(label: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(99.dp)
+    Box(Modifier.clip(shape).background(if (selected) RoboColors.Accent else RoboColors.BtnSecondary)
+        .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 14.dp, vertical = 9.dp)) {
+        Text(label, color = if (selected) RoboColors.BtnPrimaryText else RoboColors.Text, fontSize = 14.sp)
+    }
+}
 
 @Composable
 private fun SheetTitle(text: String) = Text(text, color = RoboColors.Text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
@@ -114,6 +142,23 @@ fun ColumnScope.SheetContent() {
         }
         SheetKind.CLEAR_INTEGRATIONS -> Confirm("Hapus semua integrasi?", "Alamat, token, entitas, lokasi cuaca, dan URL kalender dihapus dari robot.", "Hapus semua", enabled = app.canWrite) {
             app.call("Semua integrasi dihapus", { d -> app.repo.clearIntegrations(d) })
+        }
+        SheetKind.EXPRESSION -> @OptIn(ExperimentalLayoutApi::class) {
+            SheetTitle("Pilih ekspresi")
+            Note("Ketuk untuk langsung menampilkannya di robot.")
+            EXPRESSION_GROUPS.forEach { (group, ids) ->
+                Text(group, color = RoboColors.Mute, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ids.forEach { id ->
+                        ExpressionChip(EXPRESSION_LABELS[id].substringAfter("· "), id == app.exprPicked, app.canWrite) {
+                            app.exprPicked = id
+                            app.call("Ekspresi ditampilkan di robot", { d -> app.repo.expression(id, d) })
+                        }
+                    }
+                }
+            }
+            Gap(14)
+            RoboButton("Tutup", { app.sheet = null }, Modifier.fillMaxWidth(), ButtonKind.SECONDARY)
         }
         SheetKind.RESET_LEARNING -> Confirm("Atur ulang pembelajaran?", "Data preferensi yang dipelajari robot dihapus.", "Atur ulang", enabled = app.canWrite) {
             app.call("Pembelajaran diatur ulang", { d -> app.repo.learning(2, d) }, onOk = { app.refreshStatus() })

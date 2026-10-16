@@ -14,7 +14,8 @@ int main(){
   assert(strstr(call("remember_fact",R"({"key":"drink","value":"kopi","source_quote":"Saya suka kopi","category":"preference"})"),"completed"));brain.transcripts().finish(130,false);
   assert(brain.companionState().addSummary("Kopi saat sarapan bersama keluarga",1,1800000000u,150));assert(brain.companionState().addSummary("Hujan turun saat perjalanan pulang",2,1800000001u,120));
   const char*topicRecall=call("recall_memory",R"({"query":""})");assert(strstr(topicRecall,"drink")&&strstr(topicRecall,"Kopi saat sarapan"));
-  char prompt[4600];brain.buildSystemPrompt(prompt,sizeof(prompt),"RoboDesk","",20833);assert(strstr(prompt,"Kopi saat sarapan")&&strstr(prompt,"Hujan turun"));assert(strstr(prompt,"general 14+ audience")&&strstr(prompt,"119 ext 8")&&strstr(prompt,"Never claim to be human")&&strlen(prompt)+400<sizeof(prompt)); // PD-4.15 fence, prompt headroom
+  char prompt[4600];brain.buildSystemPrompt(prompt,sizeof(prompt),"RoboDesk","",20833);assert(strlen(prompt)<4200); // promptEsc in GeminiLiveDirect.h is 4800
+  assert(strstr(prompt,"pet-like desk companion")&&strstr(prompt,"express_character on most replies"));assert(strstr(prompt,"Kopi saat sarapan")&&strstr(prompt,"Hujan turun"));assert(strstr(prompt,"general 14+ audience")&&strstr(prompt,"119 ext 8")&&strstr(prompt,"Never claim to be human")&&strlen(prompt)+400<sizeof(prompt)); // PD-4.15 fence, prompt headroom
   char turn[900],longSensorContext[500];memset(longSensorContext,'x',sizeof(longSensorContext)-1);longSensorContext[sizeof(longSensorContext)-1]=0;brain.setSensorContext(longSensorContext);
   companion::ActivityTracker activity;
   activity.sync(uint8_t(companion::CompanionActivityId::CuriousLook),100,true);auto activityContext=activity.promptContext(150);
@@ -58,21 +59,30 @@ int main(){
   mockWriteBudget=0;assert(!brain.reserveBackground(64000,12));assert(brain.companionState().backgroundRequests==0);mockWriteBudget=-1;assert(brain.save(64001));assert(brain.reserveBackground(64002,12));assert(brain.companionState().backgroundRequests==1);assert(brain.releaseBackgroundReservation(64003));assert(brain.companionState().backgroundRequests==0);
   assert(strstr(call("express_character",R"({"emotion":"happy","intensity":0.2})"),"accepted"));assert(brain.actions().pop(200,true,action)&&action.intensity==.2f);assert(strstr(call("express_character",R"({"emotion":"unknown"})"),"rejected"));
   {// PD-1.12 single emotion map: every tool enum value resolves, level 1..3 sets intensity, mood names alias in.
-    size_t count=0;const auto*emotions=roboemotion::table(count);const char*schema=strstr(brain.toolsJson(),"\"express_character\"");assert(schema&&count==16);
+    size_t count=0;const auto*emotions=roboemotion::table(count);const char*schema=strstr(brain.toolsJson(),"\"express_character\"");assert(schema&&count==22);
     const char*intensityAt=strstr(schema,"\"intensity\"");for(size_t i=0;i<count;++i){char quoted[24];snprintf(quoted,sizeof(quoted),"\"%s\"",emotions[i].name);const char*at=strstr(schema,quoted);assert(at&&at<intensityAt);}
     const char*moods[]={"sleepy","subdued","affectionate","curious","restless","cheerful","calm","happy","surprised","sulking"};for(auto*m:moods)assert(roboemotion::find(m));
-    assert(!strcmp(roboemotion::canonical("sulking"),"annoyed")&&roboemotion::find("sulking")->expression==livingeyes::Expression::Suspicious&&roboemotion::clampFor(*roboemotion::find("sulking"),1.f)<=.45f);
+    assert(!strcmp(roboemotion::canonical("sulking"),"annoyed")&&roboemotion::find("sulking")->expression==livingeyes::Expression::Annoyed&&roboemotion::clampFor(*roboemotion::find("sulking"),1.f)<=.45f);
     assert(!roboemotion::find("unknown")&&!roboemotion::find("")&&!roboemotion::find(nullptr));
     assert(strstr(call("express_character",R"({"emotion":"dizzy","level":3})"),"accepted"));assert(brain.actions().pop(200,true,action)&&action.intensity==1.f&&!strcmp(action.label,"dizzy"));
     assert(strstr(call("express_character",R"({"emotion":"annoyed","level":1})"),"accepted"));assert(brain.actions().pop(200,true,action)&&action.intensity==.35f);
     assert(strstr(call("express_character",R"({"emotion":"excited","level":9})"),"accepted"));assert(brain.actions().pop(200,true,action)&&action.intensity==.65f);
     assert(strstr(call("express_character",R"({"emotion":"calm"})"),"accepted"));assert(brain.actions().pop(200,true,action)&&!strcmp(action.label,"calm"));}
+  {// PD-5.1 distinct emotions: two emotions may share an eye expression only when clip AND cue both differ; strong looks and own cues.
+    size_t count=0;const auto*em=roboemotion::table(count);
+    for(size_t i=0;i<count;++i)for(size_t j=i+1;j<count;++j){const auto&a=em[i];const auto&b=em[j];const bool sameExpr=a.expression==b.expression;const bool clipDiffers=a.clip!=b.clip;const bool cueDiffers=a.hasCue!=b.hasCue||(a.hasCue&&a.cue!=b.cue);assert(!sameExpr||(clipDiffers&&cueDiffers));}
+    assert(roboemotion::find("shy")->expression!=roboemotion::find("dizzy")->expression);
+    assert(roboemotion::find("annoyed")->cue==livingeyes::SonicCue::Hmph&&roboemotion::find("dizzy")->cue==livingeyes::SonicCue::Dizzy);
+    const auto*love=roboemotion::find("love");assert(roboemotion::expressionFor(*love,.65f)==livingeyes::Expression::Adoring&&roboemotion::expressionFor(*love,1.f)==livingeyes::Expression::Heart);
+    assert(roboemotion::expressionFor(*roboemotion::find("sad"),1.f)==livingeyes::Expression::Crying&&roboemotion::expressionFor(*roboemotion::find("surprised"),1.f)==livingeyes::Expression::Shock&&roboemotion::expressionFor(*roboemotion::find("dizzy"),1.f)==livingeyes::Expression::Fail);
+    assert(roboemotion::expressionFor(*roboemotion::find("happy"),.35f)==livingeyes::Expression::Smile&&roboemotion::expressionFor(*roboemotion::find("happy"),.65f)==livingeyes::Expression::Happy);
+    const char*const fresh[]={"bored","proud","anxious","relieved","mischievous","lonely"};for(const char*n:fresh)assert(roboemotion::find(n));assert(roboemotion::expressionFor(*roboemotion::find("proud"),1.f)==livingeyes::Expression::Cool);}
   assert(brain.forget("owner.name",63000));assert(!*brain.ownerName());static RoboBrain restarted;static livingeyes::RelationshipMemory restoredRelationships;restarted.begin(nullptr,&restoredRelationships,64000);assert(restarted.restored());assert(!*restarted.ownerName());assert(restarted.memory().findKey("drink")>=0);
   Preferences meta;meta.begin("brainmeta");meta.clear();meta.end();mockFiles.clear();
   livingeyes::SemanticMemory legacy;legacy.reset();assert(legacy.remember(livingeyes::SemanticMemoryKind::Profile,"owner.name","Lama",255,0,true));uint8_t bytes[livingeyes::SemanticMemory::WireSize];size_t written=0;assert(legacy.serialize(bytes,sizeof(bytes),written));Preferences old;old.begin("robobrain");old.putBytes("mem",bytes,written);old.end();
   mockWriteBudget=8;static RoboBrain migrating;static livingeyes::RelationshipMemory migratingRelationships;assert(migrating.begin(nullptr,&migratingRelationships,100));assert(!strcmp(migrating.ownerName(),"Lama"));mockWriteBudget=-1;
   static RoboBrain migrationRestart;static livingeyes::RelationshipMemory migrationRelationships;assert(migrationRestart.begin(nullptr,&migrationRelationships,100));assert(!strcmp(migrationRestart.ownerName(),"Lama"));assert(migrationRestart.storageGeneration()==1);old.begin("robobrain");assert(old.getBytesLength("mem")==written);old.end();
-  JsonDocument tools;assert(!deserializeJson(tools,brain.toolsJson()));assert(tools[0]["functionDeclarations"].size()==11);auto externalTool=tools[0]["functionDeclarations"][6];assert(externalTool["parameters"]["required"][0]=="category");assert(externalTool["parameters"]["properties"]["category"]["enum"].size()==3);
+  JsonDocument tools;assert(!deserializeJson(tools,brain.toolsJson()));assert(tools[0]["functionDeclarations"].size()==12);auto externalTool=tools[0]["functionDeclarations"][6];assert(externalTool["parameters"]["required"][0]=="category");assert(externalTool["parameters"]["properties"]["category"]["enum"].size()==3);
   { // PD-3.1 play_game: locally drawn, fair, outcome consistent with the hands
     brain.setGameSeed(12345);unsigned faces[7]={},heads=0;JsonDocument r;companion::Action drain;
     for(unsigned i=0;i<6000;++i){assert(!deserializeJson(r,call("play_game",R"({"game":"dice"})")));const unsigned v=r["result"].as<unsigned>();assert(r["status"]=="completed"&&v>=1&&v<=6);++faces[v];while(brain.actions().pop(200,true,drain)){}}
@@ -82,6 +92,9 @@ int main(){
     for(unsigned i=0;i<30;++i){assert(!deserializeJson(r,call("play_game",R"({"game":"suit","choice":"rock"})")));const char*robot=r["robot"]|"";const char*outcome=r["outcome"]|"";
       assert(!strcmp(outcome,!strcmp(robot,"rock")?"draw":!strcmp(robot,"paper")?"robot_wins":"user_wins"));while(brain.actions().pop(200,true,drain)){}}
     assert(!deserializeJson(r,call("play_game",R"({"game":"suit"})"))&&r["status"]=="completed"&&r["robot"].is<const char*>()&&!r["outcome"].is<const char*>());while(brain.actions().pop(200,true,drain)){}
+    for(unsigned i=0;i<200;++i){assert(!deserializeJson(r,call("play_game",R"({"game":"guess","number":3})")));const int n=r["robot_number"]|0;assert(r["status"]=="completed"&&n>=1&&n<=5&&r["outcome"]==(n==3?"correct":"wrong"));while(brain.actions().pop(200,true,drain)){}}
+    assert(strstr(call("play_game",R"({"game":"guess","number":9})"),"rejected"));
+    assert(!deserializeJson(r,call("play_game",R"({"game":"eight_ball"})"))&&r["status"]=="completed"&&r["answer"].is<const char*>());while(brain.actions().pop(200,true,drain)){}
     assert(strstr(call("play_game",R"({"game":"lottery"})"),"rejected"));
   }
   brain.setExternalContext("Weather cache: sunny. ","Home Assistant light.living_room=on. ","Calendar cache: private meeting. ");

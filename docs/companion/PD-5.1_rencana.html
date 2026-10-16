@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PD-5.1 Rencana Animasi</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#16181d;--mute:#5d6470;--line:#dde1e7;--acc:#2563eb;--bad:#c2410c;--badbg:#ffedd5;--ok:#15803d;--okbg:#dcfce7;--new:#6d28d9;--newbg:#ede9fe}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1115;--card:#181b21;--ink:#e8eaee;--mute:#9aa3b0;--line:#2b303a;--acc:#6ea0ff;--bad:#fdba74;--badbg:#3a2412;--ok:#86efac;--okbg:#123020;--new:#c4b5fd;--newbg:#27204a}}
+:root[data-theme="dark"]{--bg:#0f1115;--card:#181b21;--ink:#e8eaee;--mute:#9aa3b0;--line:#2b303a;--acc:#6ea0ff;--bad:#fdba74;--badbg:#3a2412;--ok:#86efac;--okbg:#123020;--new:#c4b5fd;--newbg:#27204a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:26px;margin:0 0 4px}
+h2{font-size:19px;margin:36px 0 10px;border-bottom:1px solid var(--line);padding-bottom:6px}
+p.sub{color:var(--mute);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:10px 0}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);background:var(--bg)}
+tr:last-child td{border-bottom:0}
+code{font:13px ui-monospace,Consolas,monospace}
+.bad{background:var(--badbg);color:var(--bad);border-radius:4px;padding:1px 6px}
+.ok{background:var(--okbg);color:var(--ok);border-radius:4px;padding:1px 6px}
+.new{background:var(--newbg);color:var(--new);border-radius:4px;padding:1px 6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.step{counter-increment:s}
+.step h3{margin:0 0 4px;font-size:16px}
+.step h3::before{content:counter(s);display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%;background:var(--acc);color:#fff;margin-right:8px;font-size:13px}
+ol.steps{counter-reset:s;padding:0;list-style:none}
+.warn{border-left:4px solid var(--bad)}
+.eyes{display:flex;gap:6px;justify-content:center;margin:6px 0}
+.eye{width:26px;height:26px;border-radius:50%;background:var(--ink)}
+ul{margin:6px 0;padding-left:20px}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:4px 10px;cursor:pointer}
+</style>
+</head>
+<body>
+<main>
+<h1>PD-5.1 · Rencana pengayaan animasi &amp; perilaku</h1>
+<p class="sub">Status: <b>rencana, belum ada kode diubah.</b> Disetujui: boleh mengubah LivingEyes (dan pin-nya). Menunggu OK akhir dari pemilik sebelum implementasi.</p>
+
+<h2>1 · Masalah: emosi terlalu mirip</h2>
+<div class="card">Sumber: <code>RoboEmotionMap.h</code>. Sel <span class="bad">oranye</span> = nilai yang dipakai lebih dari satu emosi sehingga hasil terlihat/terdengar sama.</div>
+<div class="scroll"><table>
+<tr><th>Emosi</th><th>Ekspresi</th><th>Clip</th><th>Cue suara</th></tr>
+<tr><td>happy</td><td><span class="bad">Happy</span></td><td>Happy</td><td><span class="bad">Happy</span></td></tr>
+<tr><td>curious</td><td>Curious</td><td><span class="bad">Curious</span></td><td>Curious</td></tr>
+<tr><td>shy</td><td><span class="bad">Nervous</span></td><td>Shy</td><td><span class="bad">Giggle</span></td></tr>
+<tr><td>love</td><td>Love</td><td>Love</td><td>Affection</td></tr>
+<tr><td>sad</td><td>Sad</td><td>Sad</td><td><span class="bad">Sad</span></td></tr>
+<tr><td>surprised</td><td>Surprised</td><td>Surprise</td><td>Surprise</td></tr>
+<tr><td>thinking</td><td>Thinking</td><td>Think</td><td>Thinking</td></tr>
+<tr><td>agree</td><td><span class="bad">Smile</span></td><td>Agree</td><td>Success</td></tr>
+<tr><td>disagree</td><td><span class="bad">Normal</span></td><td>Disagree</td><td>Failure</td></tr>
+<tr><td>wink</td><td><span class="bad">Smile</span></td><td>Wink</td><td><span class="bad">Happy</span></td></tr>
+<tr><td>laugh</td><td><span class="bad">Happy</span></td><td>Giggle</td><td><span class="bad">Giggle</span></td></tr>
+<tr><td>sleepy</td><td>Tired</td><td>Sleepy</td><td>Yawn</td></tr>
+<tr><td>annoyed</td><td>Suspicious</td><td>Annoyed</td><td><span class="bad">Sad</span> (belum ada "hmph")</td></tr>
+<tr><td>dizzy</td><td><span class="bad">Nervous</span></td><td><span class="bad">Curious</span> (belum ada clip)</td><td>Shake</td></tr>
+<tr><td>excited</td><td>Excited</td><td>Laugh</td><td><span class="bad">Giggle</span></td></tr>
+<tr><td>calm</td><td><span class="bad">Normal</span></td><td>DoubleBlink</td><td><span class="bad">Happy</span></td></tr>
+</table></div>
+<div class="card warn"><b>Pasangan paling bentrok:</b> happy/laugh (ekspresi), happy/wink/calm (cue), shy/laugh/excited (cue Giggle), shy/dizzy (ekspresi), annoyed/sad (cue), curious/dizzy (clip).</div>
+
+<h2>2 · Langkah kerja</h2>
+<ol class="steps">
+<li class="card step"><h3>Audit &amp; tabel pembeda</h3>Tabel 16 emosi sudah ada di atas. Tambah ke host test aturan: tiap pasangan emosi harus berbeda minimal pada satu dari ekspresi / clip / cue, dan tidak boleh identik pada ketiganya.</li>
+<li class="card step"><h3>Bedakan yang bentrok (termasuk ubah LivingEyes)</h3>
+<div class="scroll"><table>
+<tr><th>Emosi</th><th>Perubahan</th><th>Lokasi</th></tr>
+<tr><td>dizzy</td><td><span class="new">clip baru Dizzy</span> (mata spiral/goyang) + cue Dizzy</td><td>LivingEyes + SonicCue</td></tr>
+<tr><td>annoyed</td><td><span class="new">cue Hmph</span> (menggantikan Sad), alis menurun</td><td>SonicCue</td></tr>
+<tr><td>disagree</td><td>ekspresi sendiri (mata menyipit/geleng), cue Nope</td><td>EmotionMap + SonicCue</td></tr>
+<tr><td>calm</td><td><span class="new">clip Breathe</span> (kedip lambat, napas) + cue lembut</td><td>LivingEyes + SonicCue</td></tr>
+<tr><td>wink</td><td>cue Tink pendek</td><td>SonicCue</td></tr>
+<tr><td>excited</td><td>cue Cheer (naik cepat), pupil membesar</td><td>SonicCue</td></tr>
+<tr><td>shy</td><td>ekspresi Shy sendiri (mata turun+melirik), cue Squeak</td><td>LivingEyes + SonicCue</td></tr>
+<tr><td>laugh vs happy</td><td>laugh: mata bergetar/menyipit; happy tetap tenang</td><td>EmotionMap</td></tr>
+</table></div>
+<p>LivingEyes: tambah clip, perbarui <code>tools/livingeyes-pin.json</code>, catat di docs.</p></li>
+<li class="card step"><h3>Emosi baru (6)</h3>
+<div class="grid">
+<div class="card"><b>bored</b> · bosan<br><small>pemicu: lama tanpa interaksi + energi sedang. Mata setengah, lirik malas.</small></div>
+<div class="card"><b>proud</b> · bangga<br><small>pemicu: aktivitas/permainan selesai. Mata naik, dagu terangkat.</small></div>
+<div class="card"><b>anxious</b> · cemas<br><small>pemicu: suara keras berulang, baterai rendah. Mata gelisah.</small></div>
+<div class="card"><b>relieved</b> · lega<br><small>pemicu: pulih dari sulk/jatuh. Kedip panjang lalu senyum.</small></div>
+<div class="card"><b>mischievous</b> · usil<br><small>pemicu: aktivitas play. Mata miring, lirik bergantian.</small></div>
+<div class="card"><b>lonely</b> · kesepian<br><small>pemicu: sendiri lama sebelum seek_social. Pandang ke pintu/pinggir.</small></div>
+</div>
+<p>Tiap emosi: alias di <code>canonical()</code>, clip, cue, dan nama di dashboard/app.</p></li>
+<li class="card step"><h3>Variasi perilaku</h3>
+<ul>
+<li>Pola <code>VariantPicker</code> (4 varian anti-ulang) diperluas ke idle, aktivitas, dan reaksi suara.</li>
+<li>Reaksi waktu: sambut pagi, protes begadang, bosan siang hari.</li>
+<li>Reaksi kejadian: bangga setelah aktivitas, lega setelah sulk, usil saat main, cemas saat suara keras berulang.</li>
+<li>Semua lewat <code>RoboArbiter</code> (tier Micro/Activity/Emotion) sehingga Safety dan Owner tetap menang.</li>
+</ul></li>
+<li class="card step"><h3>Verifikasi</h3>Host test (23 suite + uji pembeda emosi), build <code>-Board both</code>, <code>git diff --check</code>. Tampilan OLED fisik, latensi, dan suara <b>tidak saya klaim lulus</b>; dicatat sebagai uji perangkat tertunda di TASKS.md.</li>
+</ol>
+
+<h2>3 · Risiko &amp; batasan</h2>
+<div class="card warn"><ul>
+<li>Flash C3 sudah 95 % (sisa ±81 KB); perubahan di S3 saja, jangan memindah BLE.</li>
+<li>Cue suara baru memakai anggaran bunyi (<code>RoboSoundBudget.h</code>) dan jam tenang; perlu tidak membuat robot lebih berisik.</li>
+<li>LivingEyes ada di luar repo (<code>LivingEyes-merge</code>); perubahan harus di-pin dan diuji build dulu.</li>
+<li>Estimasi sentuh file: <code>RoboEmotionMap.h</code>, <code>RoboBrain.h</code>, <code>RoboIdleActions.h</code>, <code>RoboTouchMood.h</code>, SonicCue, RoboDesk .ino, tests, LivingEyes, pin.</li>
+</ul></div>
+
+<h2>4 · Urutan eksekusi setelah OK</h2>
+<div class="card">Tahap A (tabel + test pembeda + perbaikan cue) → Tahap B (clip LivingEyes) → Tahap C (emosi baru) → Tahap D (variasi perilaku) → build &amp; host test per tahap. Tiap tahap dilaporkan singkat.</div>
+</main>
+</body>
+</html>

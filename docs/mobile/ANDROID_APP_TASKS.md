@@ -82,7 +82,7 @@ Mockup `#v-home`. Sumber: `StatusSnapshot` (kind 11, schema 2).
 - [ ] Kartu "Status robot": Link C3↔S3 (+ `linkAge` ms), Wi-Fi (slot + RSSI), Kunci Gemini (configFlags bit0), Waktu aktif, Heap C3/S3 (KiB).
 - [ ] Aksi cepat: switch "Matikan mikrofon" (`privacyMicMuted`), "Suara utama" (`masterSound`) → ikut SaveBar; tombol "Reboot…" (sheet) dan "Cek update" (→ tab Lainnya).
 - [ ] Banner kuning "Wi-Fi robot belum diatur…" + tombol Atur (→ Koneksi) bila tak ada slot Wi-Fi terkonfigurasi (`configFlags`); banner serupa untuk kunci Gemini belum ada.
-- [ ] Kartu "Kontrol langsung": Ekspresi (12 pilihan: happy, curious, shy, love, sad, surprised, thinking, agree, disagree, wink, laugh, sleepy) + "Tampilkan"; tombol "Ajak bicara" (talk), "Jeda robot" (pause), "Lanjutkan" (resume); Pomodoro Mulai/Jeda/Lanjut/Henti dengan status ("berhenti / fokus mm:ss / dijeda") dari status langsung robot. Semua = jalur kontrol baru (lihat ANDROID_ROBOT_INTEGRATION.md I1).
+- [ ] Kartu "Kontrol langsung": Ekspresi (22 pilihan: 12 awal + annoyed, dizzy, excited, calm, bored, proud, anxious, relieved, mischievous, lonely) + "Tampilkan"; tombol "Ajak bicara" (talk), "Jeda robot" (pause), "Lanjutkan" (resume); Pomodoro Mulai/Jeda/Lanjut/Henti dengan status ("berhenti / fokus mm:ss / dijeda") dari status langsung robot. Semua = jalur kontrol baru (lihat ANDROID_ROBOT_INTEGRATION.md I1).
 - [ ] Polling StatusSnapshot 3–5 dtk hanya saat Beranda/Lainnya terlihat.
 
 ## A5. Tab Setelan (SettingsGet/Set, 9 halaman)

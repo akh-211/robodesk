@@ -41,7 +41,7 @@ int main() {
   // Ethics fence: a sulk blocks nothing the owner relies on, has no sound of its own and stays low-key.
   for (uint8_t d = 0; d < uint8_t(robosulk::Duty::Count); ++d) assert(!robosulk::sulkBlocks(robosulk::Duty(d)));
   const roboemotion::Emotion* sulk = roboemotion::find("sulking");
-  assert(sulk && !sulk->hasCue && sulk->expression == livingeyes::Expression::Suspicious);
+  assert(sulk && !sulk->hasCue && sulk->expression == livingeyes::Expression::Annoyed);
   assert(roboemotion::clampFor(*sulk, 1.f) <= .45f);
   assert(robotouch::TouchMood::SulkMaxMs <= 180000u);
   std::cout << "PASS: sulk face turns away with glances back, shy->happy recovery, ethics fence (no blocking, no sound, low intensity, <=3 min)\n";

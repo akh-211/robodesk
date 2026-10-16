@@ -30,8 +30,10 @@ import com.robodesk.phonebridge.BridgeSettingsProtocol as P
 import com.robodesk.phonebridge.LiveAvailability
 import kotlinx.coroutines.delay
 
-private val EXPRESSION_LABELS = listOf("happy · senang", "curious · penasaran", "shy · malu", "love · sayang", "sad · sedih", "surprised · kaget",
-    "thinking · berpikir", "agree · setuju", "disagree · tidak setuju", "wink · kedip", "laugh · tertawa", "sleepy · ngantuk")
+val EXPRESSION_LABELS = listOf("happy · senang", "curious · penasaran", "shy · malu", "love · sayang", "sad · sedih", "surprised · kaget",
+    "thinking · berpikir", "agree · setuju", "disagree · tidak setuju", "wink · kedip", "laugh · tertawa", "sleepy · ngantuk",
+    "annoyed · kesal", "dizzy · pusing", "excited · semangat", "calm · tenang", "bored · bosan", "proud · bangga", "anxious · cemas",
+    "relieved · lega", "mischievous · usil", "lonely · kesepian")
 
 @Composable
 fun Banner(text: String, action: String, onAction: () -> Unit) {
@@ -104,20 +106,17 @@ fun HomeScreen() {
 @Composable
 private fun LiveControls(st: com.robodesk.phonebridge.StatusView?, w: Boolean) {
     val app = RoboApp
-    var expr by remember { mutableStateOf(0) }
     val a = LiveAvailability(st?.s)
     RoboCard("Kontrol langsung") {
         RoboField("Ekspresi (expression)") {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                SelectBox(EXPRESSION_LABELS, expr, { expr = it }, Modifier.weight(2f), enabled = w)
-                RoboButton("Tampilkan", { app.call("Ekspresi ditampilkan di robot", { d -> app.repo.expression(expr, d) }) }, Modifier.weight(1f), enabled = w)
-            }
+            RoboButton("Pilih ekspresi · " + EXPRESSION_LABELS.getOrElse(app.exprPicked) { "" }.substringAfter("· "), { app.sheet = SheetKind.EXPRESSION }, Modifier.fillMaxWidth(), ButtonKind.SECONDARY, w)
         }
         ButtonRow {
             RoboButton("Ajak bicara", { app.call("Robot mulai mendengarkan (talk)", { d -> app.repo.talk(d) }) }, Modifier.weight(1f), ButtonKind.SECONDARY, w)
             RoboButton("Jeda robot", { app.call("Robot dijeda", { d -> app.repo.pause(d) }) }, Modifier.weight(1f), ButtonKind.SECONDARY, w)
             RoboButton("Lanjutkan", { app.call("Robot dilanjutkan", { d -> app.repo.resume(d) }) }, Modifier.weight(1f), ButtonKind.SECONDARY, w)
         }
+        Gap(8)
         ButtonRow { // PD-2.5 / PD-3.3
             RoboButton("Tidurkan", { app.call("Robot ditidurkan", { d -> app.repo.rest(true, d) }, onOk = { app.refreshStatus() }) }, Modifier.weight(1f), ButtonKind.SECONDARY, w)
             RoboButton("Bangunkan", { app.call("Robot dibangunkan", { d -> app.repo.rest(false, d) }, onOk = { app.refreshStatus() }) }, Modifier.weight(1f), ButtonKind.SECONDARY, w)

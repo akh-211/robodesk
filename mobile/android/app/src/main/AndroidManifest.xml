@@ -16,13 +16,13 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
     </queries>
-    <application android:theme="@android:style/Theme.Material.NoActionBar" android:label="RoboDesk Bridge" android:usesCleartextTraffic="false" android:allowBackup="true" android:fullBackupContent="@xml/backup_rules" android:dataExtractionRules="@xml/data_extraction_rules">
+    <application android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:theme="@android:style/Theme.Material.NoActionBar" android:label="@string/app_name" android:usesCleartextTraffic="false" android:allowBackup="true" android:fullBackupContent="@xml/backup_rules" android:dataExtractionRules="@xml/data_extraction_rules">
         <activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>
         <service android:name=".RobotLinkService" android:exported="false" android:foregroundServiceType="connectedDevice" />
         <receiver android:name=".RobotLinkBootReceiver" android:exported="false">
             <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/><action android:name="android.intent.action.MY_PACKAGE_REPLACED"/></intent-filter>
         </receiver>
-        <service android:name=".RoboNotificationListener" android:label="RoboDesk notification bridge" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" android:exported="true">
+        <service android:name=".RoboNotificationListener" android:label="@string/app_name" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" android:exported="true">
             <intent-filter><action android:name="android.service.notification.NotificationListenerService"/></intent-filter>
         </service>
     </application>

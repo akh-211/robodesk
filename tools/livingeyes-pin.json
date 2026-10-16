@@ -1,5 +1,5 @@
 {
   "format": "robodesk-livingeyes-sha256-v1",
-  "sha256": "76eac6cc635318666eb6312d7793573d1ea019cbd7d8d82930ca11d5d8dabba1",
-  "source": "LivingEyes 3 commits to feature/emo-oled: EmoOLED style merged, hmph/dizzy/snore cues + tempo jitter, opt-in FaceLife breath/imperfection/quirks; check.py green; device qualification pending."
+  "sha256": "f495862eec38a1a196a42ee5acf52aaad95ec0f1ef8573f860a009960043708c",
+  "source": "LivingEyes 3 commits to feature/emo-oled: EmoOLED style merged, hmph/dizzy/snore cues + tempo jitter, opt-in FaceLife breath/imperfection/quirks; check.py green; device qualification pending; PD-5.1: +14 expressions (Shy, Agree, Disagree, Annoyed, Calm, Bored, Proud, Anxious, Relieved, Mischievous, Lonely, Wonder, Startled, Adoring) + Clip::Breathe, using existing ArcDown/Sweat/MarkQuestion/MarkExclaim/Hearts; uncommitted in LivingEyes checkout; check.py green; device qualification pending; PD-6.2: MindEvent::Isolation + CharacterMind::setSocialTimeScale; PD-6.4: CharacterMind::nudge; check.py green."
 }

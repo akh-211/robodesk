@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Opsi Tangan, Mic &amp; Prop Genggam (OLED 128x64)</title>
+<style>
+  :root{--bg:#0e1116;--card:#171c24;--line:#2a3140;--tx:#e6e9ef;--mut:#8b94a7;--acc:#4cc2ff;--ok:#5be3a0}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,Segoe UI,sans-serif;padding:20px 16px 60px}
+  h1{font-size:20px;margin:0 0 4px} h2{font-size:15px;margin:28px 0 10px;color:var(--acc)}
+  p.s{color:var(--mut);margin:0 0 16px;max-width:760px}
+  .wrap{max-width:1000px;margin:0 auto}
+  .top{display:grid;grid-template-columns:minmax(0,520px) 1fr;gap:18px;align-items:start}
+  @media(max-width:820px){.top{grid-template-columns:1fr}}
+  canvas{display:block;width:100%;image-rendering:pixelated;background:#000;border-radius:8px;border:1px solid var(--line)}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+  label{display:block;font-size:13px;color:var(--mut);margin:10px 0 3px}
+  select,input[type=range]{width:100%} select{background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:6px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap} .row label{margin:0;display:flex;gap:6px;align-items:center}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+  .card{background:var(--card);border:2px solid var(--line);border-radius:10px;padding:8px;cursor:pointer;transition:border-color .15s}
+  .card:hover{border-color:#44506a} .card.sel{border-color:var(--ok)}
+  .card b{display:block;font-size:13px;margin-top:6px} .card span{font-size:12px;color:var(--mut)}
+  button{background:var(--acc);color:#04202e;border:0;border-radius:8px;padding:9px 14px;font-weight:600;cursor:pointer}
+  #out{margin-top:10px;font-family:ui-monospace,Consolas,monospace;font-size:13px;color:var(--ok);word-break:break-word}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Opsi Tangan, Mic &amp; Prop Genggam</h1>
+  <p class="s">Tangan melayang tanpa lengan, diperbesar 1,35x. Pratinjau piksel 1-bit 128x64 (halo hitam, bentuk putih, detail hitam). Pilih gaya tangan, prop, dan perlakuan 1 atau 2 tangan. Tangkai/tali bisa dipanjangkan dengan slider (payung &amp; balon sampai di atas mata). Setelah cocok tekan <b>Salin pilihan</b> dan kirim ke Claude.</p>
+
+  <div class="top">
+    <div>
+      <canvas id="main" width="512" height="256"></canvas>
+      <div class="row" style="margin-top:10px">
+        <label><input type="checkbox" id="anim" checked> animasi goyang</label>
+        <label><input type="checkbox" id="eyes" checked> tampilkan mata</label>
+        <label>warna <select id="col" style="width:auto"><option value="#ffffff">putih</option><option value="#66d9ff">biru</option><option value="#ffd45e">kuning</option></select></label>
+      </div>
+    </div>
+    <div class="panel">
+      <label>Pilihan: <span id="v1"></span></label>
+      <label>Perlakuan tangan</label>
+      <select id="h2">
+        <option value="none">1 tangan (tangan lain sembunyi)</option>
+        <option value="wave" selected>1 tangan + tangan lain melambai</option>
+        <option value="fist">1 tangan + tangan lain mengepal</option>
+        <option value="two">2 tangan memegang prop</option>
+      </select>
+      <div id="twoNote" style="font-size:12px;color:var(--mut);margin-top:4px"></div>
+      <label>Panjang tangkai / tali <span id="plv"></span></label><input type="range" id="pl" min="1" max="4" step="0.1" value="1">
+      <label>Posisi X <input type="range" id="px" min="10" max="118" value="64"></label>
+      <label>Posisi Y <input type="range" id="py" min="30" max="70" value="52"></label>
+      <label>Sudut (1 tangan) <input type="range" id="pa" min="-100" max="100" value="-20"></label>
+      <label>Buka jari (tanpa prop) <input type="range" id="po" min="0" max="100" value="100"></label>
+      <div style="margin-top:12px"><button id="copy">Salin pilihan</button></div>
+      <div id="out"></div>
+    </div>
+  </div>
+
+  <h2>1. Desain dasar tangan (kiri: mengepal, kanan: terbuka)</h2>
+  <div class="grid" id="handGrid"></div>
+
+  <h2>2. Mic</h2>
+  <div class="grid" id="g_mic"></div>
+  <h2>3. Alat genggam 1 tangan (bisa juga 2 tangan: tangan kedua memegang di bawah)</h2>
+  <div class="grid" id="g_alat"></div>
+  <h2>4. Alat 2 tangan (dipegang kedua sisi)</h2>
+  <div class="grid" id="g_dua"></div>
+</div>
+
+<script>
+// ---------- buffer 1-bit ----------
+class G{
+  constructor(){this.b=new Uint8Array(128*64)}
+  clear(){this.b.fill(0)}
+  px(x,y,c){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=128||y>=64)return;this.b[y*128+x]=c}
+  circle(x,y,r,c){const R=Math.ceil(r)+1;for(let j=-R;j<=R;j++)for(let i=-R;i<=R;i++)if(i*i+j*j<=r*r+r*.7)this.px(x+i,y+j,c)}
+  line(x0,y0,x1,y1,c){const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0),1);for(let i=0;i<=n;i++)this.px(x0+(x1-x0)*i/n,y0+(y1-y0)*i/n,c)}
+  cap(a,b,r,c){const n=Math.max(Math.abs(b[0]-a[0]),Math.abs(b[1]-a[1]),1);for(let i=0;i<=n;i++)this.circle(a[0]+(b[0]-a[0])*i/n,a[1]+(b[1]-a[1])*i/n,r,c)}
+}
+
+// ---------- gaya tangan: sh(g,F,c,gr,op,side,hold) ----------
+const HANDS=[
+ {id:'bulat',name:'Bulat (saat ini, jari 1,6x lebih panjang)',note:'telapak bulat + 3 jari panjang; kepal = 3 buku jari',
+  sh(g,F,c,gr,op,s,hold){const th=s*1.3;g.circle(...F(0,0),5+gr,c);
+    g.circle(...F(5.5*Math.sin(th),5.5*Math.cos(th)),2+gr,c);
+    if(hold)return;
+    if(op>.25){const d=1.6*(5+2*op);for(let f=-1;f<=1;f++){const a=f*.55;g.cap(F(3.2*Math.sin(a),3.2*Math.cos(a)),F(d*Math.sin(a),d*Math.cos(a)),1+gr*.7,c)}}
+    else for(let f=-1;f<=1;f++)g.circle(...F(f*2.4,4.6),1.3+gr*.7,c)}},
+ {id:'mitten',name:'Mitten / sarung bulat',note:'kepalan gembung, ibu jari terpisah',
+  sh(g,F,c,gr,op,s,hold){g.cap(F(0,0),F(0,hold?1:5+2*op),4.2+gr,c);g.cap(F(s*3.5,1),F(s*(6+2*op),3+3*op),1.6+gr,c);
+    if(c===1&&!hold&&op<.3){g.px(...F(-1.5,5),0);g.px(...F(1.5,5),0)}}},
+];
+
+// ---------- prop 1 tangan: pr(g,F,c,gr,t,P) ; P={x,side,L} ----------
+const PROPS=[
+ // ===== mic =====
+ {id:'mic_bola',name:'Mic bola (klasik)',note:'kepala bulat + kisi silang',grp:'mic',
+  pr(g,F,c,gr){g.cap(F(0,0),F(0,7),1.2+gr,c);g.circle(...F(0,11),4.2+gr,c);
+    if(c===1){g.line(...F(-3,11),...F(3,11),0);g.line(...F(0,8),...F(0,14),0)}}},
+ {id:'mic_retro',name:'Mic retro (oval)',note:'kapsul tinggi + pita',grp:'mic',
+  pr(g,F,c,gr){g.cap(F(0,0),F(0,7),1.1+gr,c);g.cap(F(0,9),F(0,14),3.3+gr,c);
+    if(c===1){for(let v=9;v<=14;v+=2)g.line(...F(-2,v),...F(2,v),0);g.line(...F(-3.4,7.4),...F(3.4,7.4),1)}}},
+ {id:'mic_ramping',name:'Mic ramping',note:'tipis, kepala kecil; hemat piksel',grp:'mic',
+  pr(g,F,c,gr){g.cap(F(0,0),F(0,10),1.5+gr,c);g.circle(...F(0,12.5),2.8+gr,c);if(c===1){g.px(...F(0,12.5),0);g.px(...F(0,6),0)}}},
+ {id:'mic_kabel',name:'Mic berkabel',note:'mic bola + kabel ke bawah layar',grp:'mic',
+  pr(g,F,c,gr,t,P){g.cap(F(0,0),F(0,7),1.2+gr,c);g.circle(...F(0,11),4.2+gr,c);
+    const p0=F(0,-2),p1=F(-14,-12),p2=[P.x+(P.side>0?16:-16),72];
+    for(let i=0;i<=24;i++){const k=i/24,x=(1-k)*(1-k)*p0[0]+2*(1-k)*k*p1[0]+k*k*p2[0],y=(1-k)*(1-k)*p0[1]+2*(1-k)*k*p1[1]+k*k*p2[1];
+      if(c===1)g.px(x,y,1);else g.circle(x,y,gr*.5,c)}
+    if(c===1){g.line(...F(-3,11),...F(3,11),0);g.line(...F(0,8),...F(0,14),0)}}},
+ // ===== alat 1 tangan =====
+ {id:'payung',name:'Payung (tangkai panjang)',note:'tinggikan sampai di atas mata',grp:'alat',dl:2.7,
+  pr(g,F,c,gr,t,P){const S=12*P.L;g.cap(F(0,0),F(0,S),.8+gr,c);
+    for(let a=-1.5;a<=1.5;a+=.1)g.cap(F(0,S),F(Math.sin(a)*11,S+Math.cos(a)*5.5),.9+gr,c);
+    if(c===1)for(const a of[-.9,0,.9])g.line(...F(0,S),...F(Math.sin(a)*10.5,S+Math.cos(a)*5.2),0)}},
+ {id:'balon',name:'Balon (tali panjang)',note:'tali bisa dipanjangkan, balon melayang di atas mata',grp:'alat',dl:2.8,
+  pr(g,F,c,gr,t,P){const sx=Math.sin(t*3)*1.5,Sl=6*P.L;
+    for(let i=0;i<10;i++){const k=i/10,k2=(i+1)/10;g.cap(F(sx*k*k,Sl*k),F(sx*k2*k2,Sl*k2),.4+gr,c)}
+    g.circle(...F(sx,Sl+6),5.2+gr,c);g.cap(F(sx-1.5,Sl+.5),F(sx+1.5,Sl+.5),.8+gr,c);
+    if(c===1){g.px(...F(sx-2,Sl+8),0);g.px(...F(sx-2.5,Sl+7),0);g.px(...F(sx-1.5,Sl+9),0)}}},
+ {id:'lightstick',name:'Lightstick (konser)',note:'tabung + sinar berkedip',grp:'alat',dl:1.3,
+  pr(g,F,c,gr,t,P){const T=13*P.L;g.cap(F(0,0),F(0,T),2.2+gr,c);g.circle(...F(0,T+2),2.5+gr,c);
+    if(c===1){for(let v=3;v<T-1;v+=3)g.px(...F(0,v),0);const r=4+((t*8|0)%3)*1.5,p=F(0,T+2);
+      for(let k=0;k<8;k++){const a=k*Math.PI/4;g.line(p[0]+Math.cos(a)*r,p[1]+Math.sin(a)*r,p[0]+Math.cos(a)*(r+2),p[1]+Math.sin(a)*(r+2),(k+((t*6)|0))%2?1:0)}}}},
+ {id:'wand',name:'Tongkat bintang',note:'tangkai tipis + bintang berkelip',grp:'alat',dl:1.2,
+  pr(g,F,c,gr,t,P){const S=11*P.L;g.cap(F(0,0),F(0,S),.8+gr,c);const p=F(0,S+4);g.circle(...p,2.2+gr,c);
+    for(const[dx,dy,l]of[[0,-1,4.5],[0,1,4.5],[-1,0,4.5],[1,0,4.5],[-.7,-.7,3],[.7,-.7,3],[-.7,.7,3],[.7,.7,3]])g.cap(p,[p[0]+dx*l,p[1]+dy*l],.5+gr*.7,c);
+    if(c===1&&((t*4)|0)%2)g.px(p[0]+8,p[1]-5,1)}},
+ {id:'megafon',name:'Megafon',note:'corong + gelombang suara',grp:'alat',
+  pr(g,F,c,gr,t){g.cap(F(0,0),F(0,3),1.5+gr,c);
+    for(let k=0;k<=10;k++){const v=3+k,h=2+k*.45;g.cap(F(-h,v),F(h,v),.9+gr,c)}
+    if(c===1){g.line(...F(-6.5,13),...F(6.5,13),0);const ph=(t*3)%1;for(let i=0;i<2;i++){const r=3+((i+ph)%2)*4,p=F(0,15);
+      for(let a=-.9;a<=.9;a+=.15)g.px(p[0]+Math.sin(a)*r*1.2,p[1]-Math.cos(a)*r*.8,1)}}}},
+ {id:'bendera',name:'Bendera (tiang panjang)',note:'tiang bisa dipanjangkan, kain bergelombang',grp:'alat',dl:1.5,
+  pr(g,F,c,gr,t,P){const T=18*P.L;g.cap(F(0,0),F(0,T),.7+gr,c);
+    for(let u=0;u<=11;u++){const w=Math.sin(t*7+u*.6)*1.4*(u/11);g.cap(F(u+1,T-7+w),F(u+1,T+w),.6+gr,c)}
+    if(c===1)for(let u=2;u<=10;u++){const w=Math.sin(t*7+u*.6)*1.4*(u/11);g.px(...F(u+1,T-3.5+w),0)}}},
+ {id:'kipas',name:'Kipas lipat',note:'setengah lingkaran berusuk',grp:'alat',
+  pr(g,F,c,gr,t){g.cap(F(0,0),F(0,4),1.2+gr,c);for(let a=-1.05;a<=1.05;a+=.07)g.cap(F(0,4),F(Math.sin(a)*13,4+Math.cos(a)*13),.8+gr,c);
+    if(c===1)for(let a=-.9;a<=.91;a+=.3)g.line(...F(0,5),...F(Math.sin(a)*12,4+Math.cos(a)*12),0)}},
+ {id:'papan',name:'Papan hati (tiang)',note:'papan kecil bergambar ♥, tiang bisa dipanjangkan',grp:'alat',dl:1.3,
+  pr(g,F,c,gr,t,P){const S=9*P.L;g.cap(F(0,0),F(0,S),.8+gr,c);
+    for(let v=S;v<=S+10;v++)g.cap(F(-7,v),F(7,v),.6+gr,c);
+    if(c===1){[[-2,7],[2,7],[-3,6],[3,6],[-2,5],[0,5],[2,5],[-1,4],[1,4],[0,3]].forEach(([u,v])=>g.px(...F(u,S+v),0))}}},
+ {id:'pompom',name:'Pom-pom',note:'pemandu sorak, serat berputar',grp:'alat',
+  pr(g,F,c,gr,t){g.cap(F(0,0),F(0,4),1.2+gr,c);g.circle(...F(0,10),4.4+gr,c);
+    for(let k=0;k<12;k++){const a=k*.52+t*2;g.cap(F(Math.sin(a)*4.5,10+Math.cos(a)*4.5),F(Math.sin(a)*7.2,10+Math.cos(a)*7.2),.5+gr*.6,c)}
+    if(c===1){g.px(...F(-1.5,10),0);g.px(...F(1.5,11.5),0);g.px(...F(0,8.5),0)}}},
+ {id:'buket',name:'Buket bunga',note:'3 bunga + daun',grp:'alat',
+  pr(g,F,c,gr,t){g.cap(F(0,0),F(0,7),1.6+gr,c);g.cap(F(0,7),F(-5,9.5),.6+gr,c);g.cap(F(0,7),F(5,9.5),.6+gr,c);
+    for(const[u,v]of[[-3.4,11],[0,13.6],[3.4,11]])g.circle(...F(u,v),2.5+gr,c);
+    if(c===1)for(const[u,v]of[[-3.4,11],[0,13.6],[3.4,11]])g.px(...F(u,v),0)}},
+ {id:'eskrim',name:'Es krim',note:'kerucut + scoop + ceri',grp:'alat',
+  pr(g,F,c,gr,t){for(let k=0;k<=9;k++){const h=.4+k*.38;g.cap(F(-h,k),F(h,k),.7+gr,c)}
+    g.circle(...F(0,12),4.4+gr,c);g.circle(...F(1.2,16.2),1.4+gr,c);
+    if(c===1){for(let v=2;v<=8;v+=2){g.px(...F(-.8,v),0);g.px(...F(.8,v+1),0)}g.px(...F(1.2,16.2),0)}}},
+ {id:'cangkir',name:'Cangkir kopi',note:'uap bergoyang',grp:'alat',
+  pr(g,F,c,gr,t){for(let v=1;v<=8;v++)g.cap(F(-4,v),F(4,v),.7+gr,c);g.circle(...F(6,4.5),2.6+gr,c);
+    if(c===1){g.circle(...F(6,4.5),1.2,0);g.line(...F(-3,7),...F(3,7),0);
+      for(let i=-1;i<=1;i++)for(let k=0;k<4;k++)g.px(...F(i*2.6+Math.sin(t*4+i+k*.9)*1.2,10+k*1.6),1)}}},
+ {id:'kamera',name:'Kamera',note:'lensa + lampu kilat berkedip',grp:'alat',
+  pr(g,F,c,gr,t){for(let v=0;v<=8;v++)g.cap(F(-7,v),F(7,v),.7+gr,c);for(let v=9;v<=10.5;v+=.5)g.cap(F(-3,v),F(3,v),.6+gr,c);
+    g.circle(...F(0,4),3.4+gr,c);
+    if(c===1){g.circle(...F(0,4),2.5,0);g.circle(...F(0,4),1,1);if((t*2|0)%2)g.circle(...F(8.5,10),1.2,1)}}},
+ {id:'hp',name:'Ponsel',note:'layar berkedip notifikasi',grp:'alat',
+  pr(g,F,c,gr,t){for(let v=0;v<=11;v++)g.cap(F(-3.6,v),F(3.6,v),.6+gr,c);
+    if(c===1){for(let v=1.5;v<=9.5;v+=.5)g.line(...F(-2.5,v),...F(2.5,v),0);g.line(...F(-1.6,8.4),...F(1.6,8.4),1);if((t*3|0)%2)g.circle(...F(0,5),.9,1)}}},
+ {id:'lilin',name:'Lilin ulang tahun',note:'api berkedip',grp:'alat',
+  pr(g,F,c,gr,t){const f=Math.sin(t*9)*.6;g.cap(F(0,0),F(0,7),1.3+gr,c);
+    g.circle(...F(f,10.3),1.8+gr,c);g.cap(F(f,10.3),F(f*1.6,12.8),.6+gr,c);
+    if(c===1){g.px(...F(f,9.9),0);for(let v=1;v<7;v+=2)g.px(...F(0,v),0)}}},
+];
+
+// ---------- prop 2 tangan: pr2(g,c,gr,t,A,B,P) dalam koordinat layar ----------
+const rowsX=(g,x1,x2,y1,y2,c,gr)=>{for(let yy=Math.round(y1-gr);yy<=Math.round(y2+gr);yy++)g.line(x1-gr,yy,x2+gr,yy,c)};
+const PROPS2=[
+ {id:'spanduk',name:'Spanduk',note:'dua tiang + kain bergelombang, garis teks',grp:'dua',gap:24,
+  pr2(g,c,gr,t,A,B){const top=A[1]-26,wv=x=>Math.sin(t*5+x*.18)*1.5;
+    g.cap(A,[A[0],top],.5+gr,c);g.cap(B,[B[0],top],.5+gr,c);
+    for(let x=A[0];x<=B[0];x++)for(const dx of gr?[-1,0,1]:[0])g.line(x+dx,top+1+wv(x)-gr,x+dx,top+13+wv(x)+gr,c);
+    if(c===1)for(let x=A[0]+4;x<B[0]-4;x+=4)g.line(x,top+7+wv(x),x+2,top+7+wv(x),0)}},
+ {id:'buku',name:'Buku terbuka',note:'dua halaman + tulang punggung',grp:'dua',gap:18,
+  pr2(g,c,gr,t,A,B,P){const cx=P.cx,y=P.y;
+    for(let x=A[0]-5;x<=B[0]+5;x++){const d=Math.abs(x-cx)/(B[0]-cx+5),tp=y-5-d*9;for(const dx of gr?[-1,0,1]:[0])g.line(x+dx,tp-gr,x+dx,tp+13+gr,c)}
+    if(c===1){g.line(cx,y-6,cx,y+8,0);for(let k=0;k<3;k++){g.line(cx-13,y-5+k*3,cx-4,y-5+k*3,0);g.line(cx+4,y-5+k*3,cx+13,y-5+k*3,0)}}}},
+ {id:'hadiah',name:'Kotak hadiah',note:'pita silang + simpul',grp:'dua',gap:18,
+  pr2(g,c,gr,t,A,B,P){const cx=P.cx,y=P.y;rowsX(g,cx-15,cx+15,y-19,y-1,c,gr);
+    g.circle(cx-3,y-22,2.1+gr*.5,c);g.circle(cx+3,y-22,2.1+gr*.5,c);
+    if(c===1){g.line(cx,y-19,cx,y-1,0);g.line(cx+1,y-19,cx+1,y-1,0);g.line(cx-15,y-10,cx+15,y-10,0);g.px(cx,y-22,0);g.px(cx+1,y-22,0)}}},
+ {id:'setir',name:'Setir',note:'cincin + jari-jari berputar',grp:'dua',gap:15,
+  pr2(g,c,gr,t,A,B,P){const cx=P.cx,y=P.y,R=15,rot=P.anim?Math.sin(t*2)*.5:0;
+    for(let k=0;k<44;k++){const a=k*Math.PI/22;g.circle(cx+Math.cos(a)*R,y+Math.sin(a)*R,1.1+gr,c)}
+    g.circle(cx,y,2.4+gr,c);
+    for(const a0 of[0,2.1,4.2])g.cap([cx,y],[cx+Math.cos(a0+rot+Math.PI/2)*R,y+Math.sin(a0+rot+Math.PI/2)*R],.5+gr*.7,c)}},
+ {id:'gitar',name:'Gitar mini',note:'tangan kiri di leher, kanan memetik',grp:'dua',gap:12,
+  pos:(cx,y,t,an)=>[[cx-12,y-9],[cx+9,y+2+(an?Math.sin(t*8)*2:0)]],
+  pr2(g,c,gr,t,A,B,P){const Cb=[P.cx+6,P.y+3],Ne=[P.cx-28,P.y-22];
+    g.cap(Cb,Ne,.9+gr,c);g.circle(Cb[0],Cb[1],5.2+gr,c);g.circle(Cb[0]-5,Cb[1]-4.2,4+gr,c);g.circle(Ne[0],Ne[1],1.5+gr,c);
+    if(c===1){g.circle(Cb[0],Cb[1],1.6,0)}}},
+ {id:'bingkai',name:'Bingkai foto',note:'dua tangan di sudut bawah, ada wajah kecil',grp:'dua',gap:16,
+  pr2(g,c,gr,t,A,B,P){const cx=P.cx,y=P.y;rowsX(g,cx-19,cx+19,y-22,y+1,c,gr);
+    if(c===1){rowsX(g,cx-16,cx+16,y-19,y-2,0,0);g.px(cx-5,y-14,1);g.px(cx+5,y-14,1);g.px(cx-5,y-9,1);g.px(cx-3,y-7.5,1);g.px(cx-1,y-7,1);g.px(cx+1,y-7,1);g.px(cx+3,y-7.5,1);g.px(cx+5,y-9,1)}}},
+];
+
+// ---------- komposisi ----------
+function mkProxy(g0,K){return {px:(a,b,c)=>g0.px(a,b,c),line:(a,b,c,d,e)=>g0.line(a,b,c,d,e),circle:(a,b,r,c)=>g0.circle(a,b,r*K,c),cap:(p,q,r,c)=>g0.cap(p,q,r*K,c)}}
+const GRIP2=9;
+function drawHand(g0,o){
+  const {x,y,a,side}=o,sn=Math.sin(a),cs=Math.cos(a),K=o.k||1.35,L=o.L||1;
+  const F=(u,v)=>[x+K*(u*cs+v*sn),y+K*(u*sn-v*cs)];
+  const F2=(u,v)=>F(u,v-GRIP2);
+  const g=mkProxy(g0,K),hold=o.prop,H=o.hand,op=hold?0:o.op,P={x,side,L};
+  const grip=(Fx,c,gr)=>{g.circle(...Fx(0,-.5),3.4+gr,c);if(c===1)for(const v of[-1,1.2])g.line(...Fx(-2.8,v),...Fx(2.8,v),0)};
+  for(const pass of[0,1]){
+    const c=pass,gr=pass?0:1.6;
+    if(hold&&o.second)g.cap(F(0,0),F(0,-GRIP2),1.2+gr,c);        // tangkai diperpanjang ke bawah untuk tangan kedua
+    H.sh(g,F,c,gr,op,side,!!hold);
+    if(hold){hold.pr(g,F,c,gr,o.t,P);grip(F,c,gr);
+      if(o.second){H.sh(g,F2,c,gr,0,-side,true);grip(F2,c,gr)}}
+  }
+}
+function drawTwo(g0,o){
+  const K=o.k||1.35,pr=o.prop,H=o.hand,cx=o.x,y=o.y,t=o.t,g=mkProxy(g0,K);
+  const pos=pr.pos?pr.pos(cx,y,t,o.anim):[[cx-pr.gap,y],[cx+pr.gap,y]],A=pos[0],B=pos[1];
+  for(const pass of[0,1]){const c=pass,gr=pass?0:1.6;
+    pr.pr2(g,c,gr,t,A,B,{cx,y,anim:o.anim});
+    [[A,1],[B,-1]].forEach(([p,s])=>{const F=(u,v)=>[p[0]+K*u,p[1]-K*v];H.sh(g,F,c,gr,0,s,true);g.circle(...F(0,-.5),3.4+gr,c);if(c===1)for(const v of[-1,1.2])g.line(...F(-2.8,v),...F(2.8,v),0)})}
+}
+const S={hand:HANDS[0],prop:PROPS[0]};
+function eyes(g,t){const bl=(Math.sin(t*.9)>.97)?3:0;
+  for(const ex of[22,74]){for(let j=0;j<30-bl*8;j++)for(let i=0;i<32;i++){const dx=Math.min(i,31-i),dy=Math.min(j,29-bl*8-j);if(dx+dy>=3||(dx>=1&&dy>=1))g.px(ex+i,12+bl*4+j,1)}
+    g.circle(ex+16,27,5,0)}}
+function scene(g,t,cfg){
+  g.clear();if(cfg.eyes)eyes(g,t);
+  const sw=cfg.anim?Math.sin(t*3):0,pr=S.prop;
+  if(pr&&pr.pr2){drawTwo(g,{x:cfg.x,y:cfg.y+(cfg.anim?-1.5*Math.abs(sw):0),prop:pr,hand:S.hand,t,anim:cfg.anim});return}
+  const m1={x:cfg.x+4*sw,y:cfg.y-(cfg.anim?2*Math.abs(sw):0),a:cfg.a/100+(cfg.anim?.15*Math.sin(t*2):0),op:cfg.op,side:1,hand:S.hand,prop:pr,t,L:cfg.L,second:cfg.h2==='two'&&!!pr};
+  if(cfg.h2!=='none'&&!m1.second){const wv=cfg.anim?Math.sin(t*4):0,left=cfg.x>64,wave=cfg.h2==='wave'||cfg.h2==='two';
+    drawHand(g,{x:left?18:110,y:wave?46+2*wv:56,a:wave?(left?-.4:.4)+.5*wv*(left?-1:1):.3,op:wave?1:0,side:-1,hand:S.hand,prop:null,t})}
+  drawHand(g,m1);
+}
+function blit(g,cv,colHex){
+  const off=blit.off||(blit.off=document.createElement('canvas'));off.width=128;off.height=64;
+  const ctx=off.getContext('2d'),im=ctx.createImageData(128,64),col=parseInt(colHex.slice(1),16);
+  for(let i=0;i<8192;i++){const k=i*4,on=g.b[i];im.data[k]=on?(col>>16):0;im.data[k+1]=on?(col>>8&255):0;im.data[k+2]=on?(col&255):0;im.data[k+3]=255}
+  ctx.putImageData(im,0,0);const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.drawImage(off,0,0,cv.width,cv.height)}
+
+// ---------- UI ----------
+const $=id=>document.getElementById(id);
+const cfg=()=>({x:+$('px').value,y:+$('py').value,a:+$('pa').value,op:+$('po').value/100,L:+$('pl').value,anim:$('anim').checked,eyes:$('eyes').checked,h2:$('h2').value});
+const handCards=[],propCards=[];
+function mk(parent,item,list,onsel){
+  const d=document.createElement('div');d.className='card';d.innerHTML='<canvas width="256" height="128"></canvas><b>'+item.name+'</b><span>'+item.note+'</span>';
+  d.onclick=()=>onsel(item);parent.appendChild(d);list.push({d,item,cv:d.querySelector('canvas')});return d}
+HANDS.forEach(h=>mk($('handGrid'),h,handCards,i=>{S.hand=i;refreshSel()}));
+const pick=i=>{S.prop=i;$('pl').value=i&&i.dl||1;refreshSel()};
+mk($('g_mic'),{id:'none',name:'Tanpa prop (tangan kosong)',note:'hanya tangan'},propCards,()=>pick(null));
+PROPS.forEach(p=>mk($('g_'+p.grp),p,propCards,pick));
+PROPS2.forEach(p=>mk($('g_dua'),p,propCards,pick));
+function refreshSel(){
+  handCards.forEach(c=>c.d.classList.toggle('sel',c.item===S.hand));
+  propCards.forEach(c=>c.d.classList.toggle('sel',c.item===S.prop||(c.item.id==='none'&&!S.prop)));
+  $('v1').textContent=S.hand.name+' + '+(S.prop?S.prop.name:'tanpa prop');
+  $('twoNote').textContent=S.prop&&S.prop.pr2?'Prop ini selalu 2 tangan (pilihan perlakuan diabaikan).':'';
+  $('out').textContent='';
+}
+refreshSel();
+$('copy').onclick=()=>{const p=S.prop;const t='Tangan: '+S.hand.id+' | Prop: '+(p?p.name+' ['+p.id+']':'tanpa prop')+' | Perlakuan: '+(p&&p.pr2?'2 tangan':$('h2').value)+' | Panjang tangkai/tali: x'+(+$('pl').value).toFixed(1);
+  $('out').textContent=t;if(navigator.clipboard)navigator.clipboard.writeText(t).catch(()=>{})};
+const g=new G(),gs=new G(),t0=performance.now();
+function frame(now){
+  const t=(now-t0)/1000,c=cfg(),col=$('col').value;$('plv').textContent='x'+c.L.toFixed(1);
+  scene(g,t,c);blit(g,$('main'),col);
+  handCards.forEach(k=>{gs.clear();
+    drawHand(gs,{x:36,y:50,a:-.2,op:0,side:1,hand:k.item,prop:null,t});
+    drawHand(gs,{x:92,y:50,a:.2,op:1,side:-1,hand:k.item,prop:null,t});blit(gs,k.cv,col)});
+  propCards.forEach(k=>{gs.clear();const it=k.item,none=it.id==='none';
+    if(it.pr2)drawTwo(gs,{x:64,y:46,prop:it,hand:S.hand,t,anim:c.anim});
+    else drawHand(gs,{x:64,y:(it.dl||1)>1.5?60:50,a:-.3+(c.anim?.15*Math.sin(t*2):0),op:none?1:0,side:1,hand:S.hand,prop:none?null:it,t,L:it.dl||1});
+    blit(gs,k.cv,col)});
+  requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

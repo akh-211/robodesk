@@ -373,7 +373,7 @@ int main() {
     assert(decode({ps::CommandIr, 1, 0xff, 0xff, 0xff, 0xff}) == ps::Ok && ps::liveCommandAction(c, a) && !strcmp(a.value, "ffffffff"));
     // Out of range, wrong length and bad names = BadRequest (never reaches the S3).
     const std::vector<Bytes> bad = {
-      {ps::CommandExpression}, {ps::CommandExpression, 12}, {ps::CommandExpression, 0, 0}, {ps::CommandTalk, 0}, {ps::CommandPause}, {ps::CommandPause, 4},
+      {ps::CommandExpression}, {ps::CommandExpression, ps::ExpressionCount}, {ps::CommandExpression, 0, 0}, {ps::CommandTalk, 0}, {ps::CommandPause}, {ps::CommandPause, 4},
       {ps::CommandPomodoro, 0}, {ps::CommandPomodoro, 5}, {ps::CommandActivity}, {ps::CommandActivity, 0}, {ps::CommandActivity, 8},
       {ps::CommandActivity, 1}, {ps::CommandActivity, 1, 0}, {ps::CommandActivity, 1, 14}, {ps::CommandActivity, 1, 5, 0}, {ps::CommandActivity, 2, 5},
       {ps::CommandGame, 0}, {ps::CommandGame, 3}, {ps::CommandLearning, 3}, {ps::CommandLearning}, {ps::CommandSoundTest, 12}, {ps::CommandSoundTest},
@@ -386,9 +386,9 @@ int main() {
     Bytes name15 = {ps::CommandIr, 2, 15}; name15.insert(name15.end(), 15, 'a'); assert(decode(name15) == ps::Ok && c.nameLength == 15);
     Bytes dashed = {ps::CommandIr, 3, 7, 'a', '-', 'B', '_', '9', ' ', 'z'}; assert(decode(dashed) == ps::Ok);
     assert(decode({16}) == ps::Unsupported && decode({0}) == ps::Unsupported && !ps::isLiveCommand(3) && !ps::isLiveCommand(16) && ps::isLiveCommand(ps::CommandPet));
-    // Remote expression/pet/sleep: >= 1.5 s apart and <= 12 per minute; other live ops are not limited.
-    { ps::RemoteRateLimit rl; uint32_t t = 0xFFFFFFFFu - 20000u; assert(rl.allow(t) && !rl.allow(t + 1499) && rl.allow(t + 1500));
-      unsigned granted = 2; for (uint32_t k = 3000; k < 60000; k += 1500) granted += rl.allow(t + k) ? 1u : 0u; assert(granted == ps::RemoteRateLimit::PerWindow);
+    // Remote expression/pet/sleep: >= 0.4 s apart and <= 40 per minute; other live ops are not limited.
+    { ps::RemoteRateLimit rl; uint32_t t = 0xFFFFFFFFu - 20000u; assert(rl.allow(t) && !rl.allow(t + ps::RemoteRateLimit::GapMs - 1) && rl.allow(t + ps::RemoteRateLimit::GapMs));
+      unsigned granted = 2; for (uint32_t k = 2 * ps::RemoteRateLimit::GapMs; k < 60000; k += ps::RemoteRateLimit::GapMs) granted += rl.allow(t + k) ? 1u : 0u; assert(granted == ps::RemoteRateLimit::PerWindow);
       assert(rl.allow(t + 60000) && ps::remoteRateLimited(ps::CommandPet) && ps::remoteRateLimited(ps::CommandRest) && ps::remoteRateLimited(ps::CommandExpression) && !ps::remoteRateLimited(ps::CommandTalk)); }
     // The S3 link carries session + payload; the longest request (IR learn, 15-byte name) fits the exchange and a UART Settings frame.
     assert(ps::LinkCommand == 12 && ps::LinkCommand != ps::LinkReboot && 4 + 1 + 4 + name15.size() <= 512);

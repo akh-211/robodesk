@@ -40,7 +40,7 @@ import com.robodesk.phonebridge.TrustedRobotStore
 import com.robodesk.phonebridge.UpdateManifest
 
 /** Bottom sheets of the mockup (`openSheet`). [arg] carries the Wi-Fi slot. */
-enum class SheetKind { REBOOT, WIFI, CLEAR_MEMORY, CLEAR_EXPERIENCES, OTA, FORGET, WIPE, CLEAR_INTEGRATIONS, RESET_LEARNING, CLOUD_CONSENT, WIPE_DATA, NOTIF_ACCESS }
+enum class SheetKind { REBOOT, WIFI, CLEAR_MEMORY, CLEAR_EXPERIENCES, OTA, FORGET, WIPE, CLEAR_INTEGRATIONS, RESET_LEARNING, CLOUD_CONSENT, WIPE_DATA, NOTIF_ACCESS, EXPRESSION }
 
 // PD-4.2 five-tab IA (mockup android_app_mockup_5tab.html). Titles live in strings.xml (ID default, EN).
 val TAB_TITLES = listOf(R.string.tab_robot, R.string.tab_chat, R.string.tab_play, R.string.tab_memories, R.string.tab_settings)
@@ -68,6 +68,7 @@ object RoboApp {
     var sub by mutableStateOf<String?>(null)
     var sheet by mutableStateOf<SheetKind?>(null)
     var sheetArg by mutableIntStateOf(0)
+    var exprPicked by mutableIntStateOf(0) // last expression sent from the picker sheet
     var onboarding by mutableStateOf(false)
     var hasRobot by mutableStateOf(false)
     var foreground by mutableStateOf(false)
@@ -121,8 +122,8 @@ object RoboApp {
     var chatVersion by mutableIntStateOf(0)
         private set
     val chat = ChatController(object : ChatPort {
-        override fun send(text: String, done: Done<Long>) = repo.chatSend(text, done)
-        override fun poll(turn: Long, offset: Int, done: Done<P.ChatPoll>) = repo.chatPoll(turn, offset, done)
+        override fun send(text: String, done: Done<Long>) = repo.chatSend(text) { r -> main.post { done(r) } }
+        override fun poll(turn: Long, offset: Int, done: Done<P.ChatPoll>) = repo.chatPoll(turn, offset) { r -> main.post { done(r) } }
     }, { SystemClock.elapsedRealtime() })
     /** Last connection steps from [LinkDiag], shown on the pairing step. */
     var diag by mutableStateOf("")

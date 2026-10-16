@@ -320,7 +320,7 @@ waits for a result. Status: `RobotUnavailable` (UART link down or no reply in 3 
 
 | op | Name | Payload | Companion action |
 |---|---|---|---|
-| 4 | expression | `04 id` — id 0..11: happy, curious, shy, love, sad, surprised, thinking, agree, disagree, wink, laugh, sleepy | `expression` (cooldown 0.7 s → `Rejected`) |
+| 4 | expression | `04 id` — id 0..21: happy, curious, shy, love, sad, surprised, thinking, agree, disagree, wink, laugh, sleepy, annoyed, dizzy, excited, calm, bored, proud, anxious, relieved, mischievous, lonely (id 12..21 added by PD-5.2; append-only) | `expression` (cooldown 0.7 s → `Rejected`) |
 | 5 | talk | `05` | `talk` (opens the conversation window; busy/cooldown 1.5 s → `Rejected`) |
 | 6 | pause/resume initiative | `06 mode` — 0 resume, 1 pause until resumed, 2 pause 15 min, 3 pause 1 h | `resume` / `pause` value 0, 900, 3600 |
 | 7 | pomodoro | `07 sub` — 1 start, 2 pause, 3 resume, 4 stop | `pomodoro_start/pause/resume/stop` |

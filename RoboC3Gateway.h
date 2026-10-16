@@ -3,6 +3,7 @@
 #include <WiFi.h>
 #include <ArduinoJson.h>
 #include <esp_rom_sys.h>
+#include <esp_sntp.h>
 #include <esp_heap_caps.h>
 #if CONFIG_IDF_TARGET_ESP32C3 && !ARDUINO_USB_CDC_ON_BOOT
 #include <hal/usb_serial_jtag_ll.h>
@@ -684,7 +685,7 @@ if(gatewayBleReady)gatewayBle.service(millis());gatewayTraceMin("ble");gatewaySe
   gatewayTraceMin("loop-pre");gatewayServiceKey();gatewayTraceMin("key");gatewayServiceTcp();gatewayTraceMin("tcp");gatewayServiceUpdate();gatewayServiceBleOta();gatewayTraceMin("update");
   const bool externalSafe=WiFi.status()==WL_CONNECTED&&!gatewaySuspended&&!gatewayUpdateBusy()&&!gatewayConnecting&&!RoboDual.tcpConnected;
   roboexternal::service(millis(),externalSafe);
-  const bool wifi=WiFi.status()==WL_CONNECTED;if(wifi&&!gatewayWifiPrevious)configTime(long(gatewaySettings.timezoneOffsetMin)*60,0,"pool.ntp.org","time.google.com");gatewayWifiPrevious=wifi;gatewayServiceSetupApRecovery(millis());
+  const bool wifi=WiFi.status()==WL_CONNECTED;if(wifi&&!gatewayWifiPrevious)configTime(long(gatewaySettings.timezoneOffsetMin)*60,0,"pool.ntp.org","time.google.com");gatewayWifiPrevious=wifi;{static uint32_t ntpAt=0;if(wifi&&time(nullptr)<1700000000&&uint32_t(millis()-ntpAt)>=15000){ntpAt=millis();configTime(long(gatewaySettings.timezoneOffsetMin)*60,0,"pool.ntp.org","time.google.com");IPAddress ntpIp;const bool ntpDns=WiFi.hostByName("pool.ntp.org",ntpIp)==1;RoboLog.printf("LEV,CLOCK,NTP_RETRY,rssi=%d,dns=%d,ip=%s,gw=%s,dnsSrv=%s,sync=%d\n",int(WiFi.RSSI()),int(ntpDns),ntpIp.toString().c_str(),WiFi.gatewayIP().toString().c_str(),WiFi.dnsIP().toString().c_str(),int(esp_sntp_get_sync_status()));}}gatewayServiceSetupApRecovery(millis());
   static uint8_t wifiRounds=0;if(wifi||!gatewayWifiAt)wifiRounds=0;if(!wifi&&uint32_t(millis()-gatewayWifiAt)>(wifiRounds<5?12000u:wifiRounds<10?30000u:60000u)){if(wifiRounds<255)++wifiRounds;gatewayBeginWifi(uint8_t((gatewayWifiIndex+1)%3));}if(!wifi&&millis()>15000)gatewayStartSetupApThrottled();
   if(uint32_t(millis()-gatewayClockAt)>=1000){gatewayClockAt=millis();uint8_t clock[10]{};robolink::put32(clock,uint32_t(time(nullptr)));clock[4]=wifi&&!gatewaySuspended;clock[5]=gatewayValidKey()&&!gatewaySuspended;clock[6]=uint8_t((gatewayBleReady?1:0)|(gatewayBle.connected()?2:0)|(gatewayBle.pairingOpen(millis())?4:0)|((ROBODESK_PHONE_BLE_ROBOT&&gatewayBleOwnerSafe)?8:0));RoboDual.link.send(robolink::Clock,clock,sizeof(clock));}
   if(!roboexternal::busy()&&wifi&&!gatewayUpdateBusy()&&RoboDual.link.connected()&&!RoboDual.tcpConnected&&uint32_t(millis()-gatewayExternalContextAt)>=30000u&&gatewayHeapAllowsOptional()){char weather[180]{},homeAssistant[400]{},calendar[240]{};const uint32_t now=millis();roboexternal::contextText(weather,sizeof(weather),now,"weather");roboexternal::contextText(homeAssistant,sizeof(homeAssistant),now,"home_assistant");roboexternal::contextText(calendar,sizeof(calendar),now,"calendar");JsonDocument args;args["weather"]=weather;args["home_assistant"]=homeAssistant;args["calendar"]=calendar;gatewayExternalContextAt=millis();gatewayRpc("/_external/context",HTTP_POST,args.as<JsonObjectConst>(),1000);}

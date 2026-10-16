@@ -62,4 +62,15 @@ class Tracker {
   uint32_t until_ = 0;
   bool active_ = false;
 };
+
+// Panel overlays: full-screen owners (passkey, navigation, notification card) and the touch-game strip claim the bottom
+// rows; the MIC OFF banner and alert/pairing strips yield to them instead of painting over them.
+struct OverlayState {
+  bool passkey = false, navigation = false, notification = false, game = false;
+};
+inline bool overlayOwnsBottom(const OverlayState& o) { return o.passkey || o.navigation || o.notification || o.game; }
+inline bool micBannerAllowed(const OverlayState& o, bool micMuted) { return micMuted && !overlayOwnsBottom(o); }
+inline bool stripAllowed(const OverlayState& o, bool micMuted) { return !overlayOwnsBottom(o) && !micMuted; }
+// Autonomous eye behavior opens only while nothing owns the stage (no running lease, no conversation, no overlay).
+inline bool autonomousAllowed(const Running& running, const OverlayState& o) { return !running.active && !o.navigation && !o.notification; }
 }  // namespace roboarb

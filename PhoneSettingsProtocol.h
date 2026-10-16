@@ -63,9 +63,10 @@ constexpr uint8_t ActivityStart = 1, ActivityPause = 2, ActivityResume = 3, Acti
                   ActivityFavorite = 6, ActivityHistoryClear = 7, ActivityIdMax = 13;
 constexpr uint8_t IrSend = 1, IrLearn = 2, IrReplay = 3;
 constexpr size_t IrNameMax = 15;
-constexpr uint8_t ExpressionCount = 12, SoundCueCount = 12;
+constexpr uint8_t ExpressionCount = 22, SoundCueCount = 12;
 inline const char* const ExpressionNames[ExpressionCount] = {"happy", "curious", "shy", "love", "sad", "surprised", "thinking",
-                                                             "agree", "disagree", "wink", "laugh", "sleepy"};
+                                                             "agree", "disagree", "wink", "laugh", "sleepy",
+                                                             "annoyed", "dizzy", "excited", "calm", "bored", "proud", "anxious", "relieved", "mischievous", "lonely"};
 inline const char* const SoundCueNames[SoundCueCount] = {"wake", "happy", "curious", "affection", "thinking", "surprise", "sad",
                                                          "sleepy", "error", "success", "pickup", "shake"};
 constexpr uint8_t RebootGateway = 1, RebootRobot = 2;
@@ -342,8 +343,8 @@ inline bool liveCommandAction(const Command& c, LiveAction& out) {
 // PD-3.3: remote expression/pet/sleep commands at most one per 1.5 s and 12 per minute (no remote spamming the robot).
 class RemoteRateLimit {
  public:
-  static constexpr uint32_t GapMs = 1500, WindowMs = 60000;
-  static constexpr uint8_t PerWindow = 12;
+  static constexpr uint32_t GapMs = 400, WindowMs = 60000;
+  static constexpr uint8_t PerWindow = 40;
   bool allow(uint32_t now) {
     if (count_ && uint32_t(now - lastAt_) < GapMs) return false;
     if (!count_ || uint32_t(now - windowAt_) >= WindowMs) { windowAt_ = now; count_ = 0; }

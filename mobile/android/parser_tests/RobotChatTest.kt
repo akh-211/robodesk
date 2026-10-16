@@ -69,7 +69,7 @@ private fun verifyChatController() {
     check(chat.send("Halo  robot") && port.sent == listOf("Halo robot") && chat.busy)
     check(!chat.send("lagi") && port.sent.size == 1)                                       // one turn at a time
     check(chat.messages.size == 2 && !chat.messages[0].fromRobot && chat.messages[1].fromRobot && chat.messages[1].status == ChatMessage.Status.WAITING)
-    port.pollScript = { t, o -> if (o == 0) chatBody(t, 3, 0, 12, 0, "Halo, ") else chatBody(t, 4, 0, 12, o, "dunia!") }
+    port.pollScript = { t, o -> if (o == 0) chatBody(t, 4, 0, 12, 0, "Halo, ") else chatBody(t, 4, 0, 12, o, "dunia!") }
     chat.tick()
     check(chat.messages[1].text == "Halo, " && chat.messages[1].status == ChatMessage.Status.ANSWERING && chat.busy)
     chat.tick()
@@ -81,7 +81,7 @@ private fun verifyChatController() {
     check(chat.send("halo"))
     val bytes = "kopi é".toByteArray(Charsets.UTF_8)
     port.pollScript = { t, o ->
-        if (o == 0) Res.Ok(P.ChatPoll(t, 3, 0, bytes.size, 0, bytes.copyOfRange(0, 6)))      // cuts "é" after its first byte
+        if (o == 0) Res.Ok(P.ChatPoll(t, 4, 0, bytes.size, 0, bytes.copyOfRange(0, 6)))      // cuts "é" after its first byte
         else Res.Ok(P.ChatPoll(t, 4, 0, bytes.size, o, bytes.copyOfRange(o, bytes.size)))
     }
     chat.tick(); chat.tick()
@@ -100,18 +100,24 @@ private fun verifyChatController() {
     chat.tick(); check(chat.messages.last().status == ChatMessage.Status.FAILED && !chat.busy)
     // Poll errors: tolerated a few times, then the turn fails; success resets the counter.
     check(chat.send("cek")); var n = 0
-    port.pollScript = { t, o -> if (++n <= 4) Res.Err("Tidak ada respons dari robot") else chatBody(t, 3, 0, 4, o, "ok") }
+    port.pollScript = { t, o -> if (++n <= 4) Res.Err("Tidak ada respons dari robot") else chatBody(t, 4, 0, 2, o, "ok") }
     repeat(4) { chat.tick() }; check(chat.busy)
-    chat.tick(); check(chat.messages.last().text == "ok")
-    port.pollScript = { _, _ -> Res.Err("Tidak ada respons dari robot") }
+    chat.tick(); check(chat.messages.last().text == "ok" && !chat.busy)
+    check(chat.send("cek lagi")); port.pollScript = { _, _ -> Res.Err("Tidak ada respons dari robot") }
     repeat(5) { chat.tick() }
     check(chat.messages.last().status == ChatMessage.Status.FAILED && !chat.busy)
     // Deadline: no terminal state within the limit fails the turn without another poll.
     port = FakePort(0L); chat = ChatController(port, { port.clock }, 1000L)
-    check(chat.send("lambat")); port.pollScript = { t, o -> chatBody(t, 2, 0, 0, o, "") }
+    check(chat.send("lambat")); port.pollScript = { t, o -> chatBody(t, 4, 0, 50, o, "") }
     chat.tick(); check(chat.busy)
     port.clock = 1500L; val before = port.polls.size; chat.tick()
     check(!chat.busy && chat.messages.last().status == ChatMessage.Status.FAILED && port.polls.size == before)
+    // A Gemini turn (queued/thinking/replying): the app stops after the first poll; the answer is on the robot, not in the app.
+    port = FakePort(0L); chat = ChatController(port, { port.clock })
+    check(chat.send("ceritakan sesuatu")); port.pollScript = { t, _ -> chatBody(t, 2, 0, 0, 0, "") }
+    chat.tick()
+    check(!chat.busy && chat.messages.size == 1 && chat.messages[0].handedToRobot && chat.messages[0].status == ChatMessage.Status.DONE)
+    chat.tick(); check(port.polls.size == 1)
     // clear() wipes the history and abandons a running turn; a late poll answer is ignored.
     port = FakePort(0L); chat = ChatController(port, { port.clock })
     check(chat.send("rahasia"))

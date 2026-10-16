@@ -15,6 +15,7 @@ struct RoboMemorySnapshot {
   uint32_t internalLargestBlock = 0;
   uint32_t psramFree = 0;
   uint32_t psramLargestBlock = 0;
+  uint32_t psramMinimumFree = 0;
 };
 
 inline RoboMemorySnapshot roboMemorySnapshot() {
@@ -27,6 +28,7 @@ inline RoboMemorySnapshot roboMemorySnapshot() {
   snapshot.internalLargestBlock = uint32_t(heap_caps_get_largest_free_block(internalCaps));
   snapshot.psramFree = uint32_t(heap_caps_get_free_size(psramCaps));
   snapshot.psramLargestBlock = uint32_t(heap_caps_get_largest_free_block(psramCaps));
+  snapshot.psramMinimumFree = uint32_t(heap_caps_get_minimum_free_size(psramCaps));
 #endif
   return snapshot;
 }

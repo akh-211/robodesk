@@ -347,7 +347,7 @@ private fun verifyPagingAndBounds() {
     check(P.parseStatus(ByteArray(57)) == null && P.parseStatus(ByteArray(59).also { it[0] = 1 }) == null && P.parseStatus(ByteArray(64).also { it[0] = 2 }) == null && P.parseStatus(ByteArray(66).also { it[0] = 2 }) != null)
     check(P.parseStatus(ByteArray(75).also { it[0] = 3 }) == null && P.parseStatus(ByteArray(76).also { it[0] = 3 }) != null && P.parseStatus(ByteArray(80).also { it[0] = 4 }) != null)
     // Live command builders refuse anything outside the documented bounds (same as the firmware shape check).
-    check(P.expression(12) == null && P.expression(-1) == null && P.expression(11) != null && P.soundTest(12) == null && P.soundTest(11) != null)
+    check(P.expression(22) == null && P.expression(-1) == null && P.expression(21) != null && P.soundTest(12) == null && P.soundTest(11) != null)
     check(P.pauseInitiative(4) == null && P.pomodoro(0) == null && P.pomodoro(5) == null && P.pomodoro(4) != null)
     check(P.activity(1) == null && P.activity(1, 0) == null && P.activity(1, 14) == null && P.activity(1, 13) != null && P.activity(0) == null && P.activity(8) == null)
     check(P.activity(5, 3) == null && P.activity(7) != null && P.game(0) == null && P.game(3) == null && P.learning(3) == null && P.learning(2) != null)
